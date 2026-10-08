@@ -134,6 +134,7 @@ const trunkFwd = (deg) => sag(90 - deg); // chest facing direction
  *          'ik': hands at rig.hands { x, y } or params hx, hy (or hxN / hyN / hxF / hyF), grip width rig.grip,
  *          elbows toward rig.pole [x, y, outward]
  *          'ik-bar': hands on a back-squat bar
+ *          armsN / armsF override one side (rig.handsN / rig.handsF for its hand)
  */
 export function solve(tpl, P) {
   const r = tpl.rig;
@@ -186,7 +187,8 @@ export function solve(tpl, P) {
   const placeArms = () => {
     for (const [S, side] of [['N', -1], ['F', 1]]) {
       const sh = j['shoulder' + S];
-      if (r.arms === 'fk') {
+      const armMode = r['arms' + S] || r.arms; // per-side override (one-arm rows: one hand on the bench)
+      if (armMode === 'fk') {
         const shA = P['sh' + S] ?? P.sh ?? 0;
         const elA = shA + (P['el' + S] ?? P.el ?? 0);
         const abd = P['abd' + S] ?? P.abd ?? 4;
@@ -197,14 +199,15 @@ export function solve(tpl, P) {
       } else {
         let target;
         let pole;
-        if (r.arms === 'ik-bar') {
+        if (armMode === 'ik-bar') {
           j.bar = add(j.pelvis, barLocal());
           target = add(j.bar, [0, r.barSide === 'front' ? 0.02 : -0.02, side * r.grip]);
           pole = r.barSide === 'front' ? norm(add(mul(fwd, 1), [0, 0.2, side * 0.45])) : norm(add(mul(fwd, -1), [0, -0.9, side * 0.35]));
         } else {
-          const hx = P['hx' + S] ?? P.hx ?? r.hands.x;
-          const hy = P['hy' + S] ?? P.hy ?? r.hands.y;
-          target = [hx, hy, side * (r.grip ?? 0.25)];
+          const hands = r['hands' + S] || r.hands;
+          const hx = P['hx' + S] ?? P.hx ?? hands.x;
+          const hy = P['hy' + S] ?? P.hy ?? hands.y;
+          target = [hx, hy, hands.z != null ? side * hands.z : side * (r.grip ?? 0.25)];
           const pl = r.pole || [0.35, -0.6, 0.75];
           pole = norm([pl[0], pl[1], side * pl[2]]);
         }

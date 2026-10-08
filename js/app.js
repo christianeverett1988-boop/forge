@@ -238,7 +238,11 @@ function migrateInventory(rows) {
 }
 
 async function boot() {
-  loadPhotoIndex(); // which exercises have demo photos (none until the photo script has been run)
+  // Which exercises have demo photos. If the index arrives after the player has drawn, redraw so the demo
+  // box picks the photos up.
+  loadPhotoIndex().then((ix) => {
+    if (Object.keys(ix.ids).length && location.hash === '#/play') render();
+  });
   document.title = APP_NAME;
   setupServiceWorker();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

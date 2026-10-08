@@ -1,6 +1,6 @@
-# Silhouette demo coverage (v0.3.1)
+# Silhouette demo coverage (v0.3.1.1)
 
-221 of 280 exercises (79%) have an animated silhouette, from 114 motion templates. What each figure holds (barbell, dumbbell, kettlebell, cable, band) comes from the exercise, so one template covers several exercises.
+221 of 280 exercises (79%) have an animated silhouette, from 116 motion templates. What each figure holds (barbell, dumbbell, kettlebell, cable, band) comes from the exercise, so one template covers several exercises.
 
 Everything else shows its start/end photos (where free-exercise-db has them) or the muscle list.
 
@@ -153,12 +153,14 @@ Mostly cardio machines, boxing, mobility drills, side-on (frontal-plane) moves l
 - **pike_pushup**: pike_pushup, pike_pushup_elevated
 - **hspu**: hspu_wall, hspu_negative
 - **handstand**: handstand_chest_to_wall, handstand_freestanding, wall_walk
-- **row_bent**: bb_bent_row, bb_pendlay_row, db_bent_row, db_one_arm_row, kb_row
+- **row_bent**: bb_bent_row, bb_pendlay_row, db_bent_row, kb_row
+- **row_one_arm**: db_one_arm_row
 - **row_band**: band_bent_row
 - **row_seated**: cable_seated_row, cable_one_arm_row, band_seated_row, band_row, machine_seated_row
 - **row_chest_supported**: db_chest_supported_row
 - **inverted_row**: inverted_row
-- **pulldown**: cable_lat_pulldown, machine_lat_pulldown, machine_close_grip_pulldown, machine_underhand_pulldown, band_lat_pulldown
+- **pulldown**: machine_lat_pulldown, machine_close_grip_pulldown, machine_underhand_pulldown
+- **pulldown_kneeling**: cable_lat_pulldown, band_lat_pulldown
 - **straight_arm_pulldown**: cable_straight_arm_pulldown, band_straight_arm_pulldown
 - **pullover**: db_pullover
 - **dead_hang**: dead_hang

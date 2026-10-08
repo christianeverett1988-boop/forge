@@ -11,7 +11,7 @@ import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { historyIndex, unit } from '../workouts/plan.js';
 import { exerciseRecords } from '../workouts/history.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
-import { photoLoop, hasPhotos, loadPhotoIndex } from '../ui/photos.js';
+import { photoLoop, hasPhotos, loadPhotoIndex, photoFallback } from '../ui/photos.js';
 import { bodyMap, exerciseValues } from '../ui/bodymap.js';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -20,12 +20,12 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', 
  * Open the How-To sheet for an exercise. `extra(body, close)` lets a caller add its own controls at the
  * bottom (the library adds "Never suggest this" and custom-exercise delete).
  */
-export async function openHowTo(id, { extra } = {}) {
+export function openHowTo(id, { extra } = {}) {
   const ex = exerciseById(id);
   if (!ex) return;
-  await loadPhotoIndex();
+  // Open straight away, even on a weak signal: the Photos view joins in when the photo index arrives.
   const fig = hasFigure(id);
-  const pics = hasPhotos(id);
+  let pics = hasPhotos(id);
   let view = fig ? 'figure' : pics ? 'photos' : 'map';
   const favs = () => (state.settings && state.settings.favorites) || [];
   const u = unit();
@@ -38,10 +38,7 @@ export async function openHowTo(id, { extra } = {}) {
     body.innerHTML = `
       <div class="stack howto">
         <div class="ht-demo" data-demo></div>
-        ${fig && pics ? `
-        <div class="seg ht-seg" role="tablist" aria-label="Demo">
-          <button role="tab" data-view="figure">Figure</button><button role="tab" data-view="photos">Photos</button>
-        </div>` : ''}
+        <div data-viewseg></div>
         <div class="ht-actions">
           <button class="ht-act" data-fav aria-pressed="false"><span aria-hidden="true" data-favicon>☆</span><small>Favourite</small></button>
           <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▶</span><small>Watch on YouTube</small></a>
@@ -77,22 +74,46 @@ export async function openHowTo(id, { extra } = {}) {
       </div>`;
 
     const demo = $('[data-demo]', body);
-    const showView = () => {
+    const mapHtml = () => bodyMap(exerciseValues(ex), { size: 'small' });
+    const paintToggle = () => {
+      const seg = $('[data-viewseg]', body);
+      if (!seg || !(fig && pics)) return;
+      seg.innerHTML = `<div class="seg ht-seg" role="tablist" aria-label="Demo">
+          <button role="tab" data-view="figure">Figure</button><button role="tab" data-view="photos">Photos</button>
+        </div>`;
+      $$('[data-view]', body).forEach((b) => (b.onclick = () => { view = b.dataset.view; showView(); }));
+    };
+    const markView = () => {
       $$('[data-view]', body).forEach((b) => {
         b.classList.toggle('on', b.dataset.view === view);
         b.setAttribute('aria-selected', String(b.dataset.view === view));
       });
+    };
+    const showView = () => {
+      markView();
       if (view === 'figure') {
         demo.innerHTML = '<div class="fig-wrap"></div>';
         mountFigure(demo.firstChild, ex);
       } else if (view === 'photos') {
         demo.innerHTML = photoLoop(id, ex.name);
+        photoFallback(demo, mapHtml()); // offline and not cached: the muscle map, not a blank box
       } else {
-        demo.innerHTML = bodyMap(exerciseValues(ex), { size: 'small' });
+        demo.innerHTML = mapHtml();
       }
     };
+    paintToggle();
     showView();
-    $$('[data-view]', body).forEach((b) => (b.onclick = () => { view = b.dataset.view; showView(); }));
+    if (!pics) {
+      loadPhotoIndex().then(() => {
+        if (!demo.isConnected || !hasPhotos(id)) return;
+        pics = true;
+        paintToggle();
+        if (view === 'map') {
+          view = 'photos';
+          showView();
+        } else markView(); // the figure keeps playing
+      });
+    }
 
     // Favourite
     const favBtn = $('[data-fav]', body);
@@ -140,7 +161,7 @@ export async function openHowTo(id, { extra } = {}) {
       const steps = all[id];
       $('[data-steps]', body).innerHTML = steps
         ? `<p class="label">Step by step</p><ol class="reasons">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-           <p class="small muted">Steps${pics ? ' and photos' : ''} from free-exercise-db (public domain).</p>`
+           <p class="small muted">Steps${hasPhotos(id) ? ' and photos' : ''} from free-exercise-db (public domain).</p>`
         : '';
     }).catch(() => { $('[data-steps]', body).innerHTML = ''; });
   });

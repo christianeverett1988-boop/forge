@@ -239,6 +239,7 @@ export const LIBRARY = {
 
   // ---------------- horizontal push ----------------
   bench_press: T({
+    both: true,
     cam: { yaw: 22, pitch: 12 },
     env: [FLAT_BENCH],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.55, z: 0.24, kneesOut: 0.5 }, arms: 'ik', hands: { x: -0.27, y: 1.0 }, grip: 0.28, pole: [0.25, -0.5, 0.9] },
@@ -250,6 +251,7 @@ export const LIBRARY = {
     bias: { plateN: 0.5 },
   }),
   incline_press: T({
+    both: true,
     cam: { yaw: 22, pitch: 10 },
     env: [INCLINE_BENCH],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.6, z: 0.24, kneesOut: 0.5 }, arms: 'ik', hands: { x: -0.2, y: 1.4 }, grip: 0.28, pole: [0.25, -0.5, 0.9] },
@@ -261,6 +263,7 @@ export const LIBRARY = {
     bias: { plateN: 0.5 },
   }),
   decline_press: T({
+    both: true,
     cam: { yaw: 22, pitch: 12 },
     env: [DECLINE_BENCH],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.5, y: 0.25, z: 0.2, kneesOut: 0.4 }, arms: 'ik', hands: { x: -0.3, y: 1.0 }, grip: 0.28, pole: [0.25, -0.5, 0.9] },
@@ -272,6 +275,7 @@ export const LIBRARY = {
     bias: { plateN: 0.5 },
   }),
   floor_press: T({
+    both: true,
     cam: { yaw: 22, pitch: 12 },
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.42, z: 0.16, kneesOut: 0.4 }, arms: 'ik', hands: { x: -0.3, y: 0.5 }, grip: 0.3, pole: [0.25, -0.5, 0.9] },
     a: { px: 0.0, py: 0.15, trunk: -90, head: 4, hx: -0.32, hy: 0.7 },
@@ -332,10 +336,10 @@ export const LIBRARY = {
   dip: T({
     cam: { yaw: 24 },
     gear: ['dip'],
-    dipY: 1.15,
-    rig: { root: 'chest', legs: 'fk', arms: 'ik', hands: { x: 0, y: 1.17 }, grip: 0.26, pole: [-0.8, 0.1, 0.25] },
-    a: { px: -0.03, py: 1.7, trunk: 6, head: 0, hipN: 10, kneeN: 70, hipF: 4, kneeF: 80, footN: 20, footF: 20 },
-    b: { px: -0.1, py: 1.4, trunk: 24, head: -6, hipN: 20, kneeN: 78, hipF: 14, kneeF: 86, footN: 20, footF: 20 },
+    dipY: 1.3, // high enough that the bent legs clear the floor
+    rig: { root: 'chest', legs: 'fk', arms: 'ik', hands: { x: 0, y: 1.32 }, grip: 0.26, pole: [-0.8, 0.1, 0.25] },
+    a: { px: -0.03, py: 1.85, trunk: 6, head: 0, hipN: 10, kneeN: 70, hipF: 4, kneeF: 80, footN: 20, footF: 20 },
+    b: { px: -0.1, py: 1.55, trunk: 24, head: -6, hipN: 20, kneeN: 78, hipF: 14, kneeF: 86, footN: 20, footF: 20 },
     first: 'down',
     grips: { handN: 'dipN', handF: 'dipF' },
   }),
@@ -358,20 +362,23 @@ export const LIBRARY = {
 
   // ---------------- vertical push ----------------
   ohp: T({
+    both: true,
     cam: { yaw: 22 },
     rig: STAND({ feet: { x: 0, z: 0.14, kneesOut: 0.2 } }),
     plate: 0.19,
-    a: { px: 0.02, py: 0.93, trunk: -2, head: 0, sh: 30, el: 125, abd: 34, wrist: 50 },
+    // Start with the bar on the collarbones (below the chin) so the face stays clear.
+    a: { px: 0.02, py: 0.93, trunk: -2, head: 0, sh: 15, el: 140, abd: 30, wrist: 50 },
     b: { px: 0.02, py: 0.93, trunk: 0, head: 0, sh: 176, el: 4, abd: 12, wrist: 0 },
     lag: { head: 0.1 },
     bias: { plateN: 0.5 },
   }),
   ohp_seated: T({
+    both: true,
     cam: { yaw: 22 },
     env: [SEAT_BACK],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.45, z: 0.2, kneesOut: 0.4 }, arms: 'fk' },
     plate: 0.19,
-    a: { px: -0.08, py: 0.55, trunk: -8, head: 0, sh: 30, el: 125, abd: 40, wrist: 50 },
+    a: { px: -0.08, py: 0.55, trunk: -8, head: 0, sh: 15, el: 140, abd: 34, wrist: 50 },
     b: { px: -0.08, py: 0.55, trunk: -8, head: 0, sh: 176, el: 4, abd: 14, wrist: 0 },
     bias: { plateN: 0.3 },
   }),
@@ -402,11 +409,25 @@ export const LIBRARY = {
   // ---------------- pulls ----------------
   row_bent: T({
     cam: { yaw: 18 },
-    rig: STAND({ balance: 'grip', feet: { x: 0, z: 0.14, kneesOut: 0.3 } }),
+    // Hips fixed (px) so the bar hangs over mid-foot at the start and travels up to the lower ribs.
+    rig: STAND({ feet: { x: 0, z: 0.14, kneesOut: 0.3 } }),
     plate: 0.2,
-    a: { py: 0.8, trunk: 58, head: -34, sh: 0, el: 0, abd: 8 },
-    b: { py: 0.8, trunk: 58, head: -34, sh: -46, el: 52, abd: 22 },
+    a: { px: -0.34, py: 0.8, trunk: 58, head: -34, sh: 0, el: 0, abd: 8 },
+    b: { px: -0.34, py: 0.8, trunk: 58, head: -34, sh: -78, el: 98, abd: 22 },
+    lag: { el: 0.08 },
     bias: { plateN: 0.3 },
+  }),
+  row_one_arm: T({
+    cam: { yaw: 22, pitch: 10 },
+    // Far knee and hand on a bench, near arm rows (the one you see).
+    env: [{ type: 'bench', z: 0.2, w: 0.32, pads: [[[-0.5, 0.45], [0.75, 0.45]]] }],
+    rig: {
+      root: 'pelvis', legs: 'ik', legsF: 'fk', feet: { x: -0.08, z: 0.2, kneesOut: 0.2 },
+      arms: 'fk', armsF: 'ik', handsF: { x: 0.5, y: 0.55, z: 0.2 }, pole: [-0.3, 0.2, 0.6],
+    },
+    a: { px: -0.02, py: 0.92, trunk: 76, head: -50, shN: 0, elN: 0, abd: 8, hipF: 32, kneeF: 122, footF: -88 },
+    b: { px: -0.02, py: 0.92, trunk: 76, head: -50, shN: -80, elN: 100, abd: 14, hipF: 32, kneeF: 122, footF: -88 },
+    lag: { elN: 0.08 },
   }),
   row_band: T({
     cam: { yaw: 18 },
@@ -450,6 +471,17 @@ export const LIBRARY = {
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.42, z: 0.15, kneesOut: 0.3 }, arms: 'ik', hands: { x: 0, y: 1.9 }, grip: 0.36, pole: [0.15, -0.8, 0.8] },
     a: { px: -0.05, py: 0.55, trunk: -6, head: 0, hx: -0.04, hy: 1.55 },
     b: { px: -0.05, py: 0.55, trunk: -16, head: 6, hx: 0.08, hy: 1.1 },
+    lag: { trunk: 0.15 },
+  }),
+  pulldown_kneeling: T({
+    cam: { yaw: 22 },
+    bar: 'handle',
+    anchor: [0.12, 2.35],
+    anchorZ: 0,
+    // Kneeling tall, shins along the floor behind.
+    rig: { root: 'pelvis', legs: 'fk', arms: 'ik', hands: { x: 0.08, y: 1.5 }, grip: 0.34, pole: [0.15, -0.8, 0.8] },
+    a: { px: -0.02, py: 0.53, trunk: -8, head: 0, hx: 0.08, hy: 1.5, hipN: 0, kneeN: 90, hipF: 2, kneeF: 92, footN: -84, footF: -84 },
+    b: { px: -0.02, py: 0.53, trunk: -16, head: 6, hx: 0.14, hy: 1.0, hipN: 0, kneeN: 90, hipF: 2, kneeF: 92, footN: -84, footF: -84 },
     lag: { trunk: 0.15 },
   }),
   straight_arm_pulldown: T({
@@ -595,6 +627,7 @@ export const LIBRARY = {
 
   // ---------------- shoulders ----------------
   lateral_raise: T({
+    both: true,
     cam: { yaw: 44 },
     rig: STAND({ feet: { x: 0, z: 0.13, kneesOut: 0.2 } }),
     a: { px: 0.01, py: 0.93, trunk: 3, head: 0, sh: 4, el: 14, abd: 6 },
@@ -625,7 +658,9 @@ export const LIBRARY = {
     bias: { plateN: 0.25 },
   }),
   fly: T({
-    cam: { yaw: 40, pitch: 16 },
+    both: true,
+    // Looking down from higher up so the far arm's arc reads as well as the near one.
+    cam: { yaw: 62, pitch: 24, ground: 190 },
     env: [FLAT_BENCH],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.55, z: 0.24, kneesOut: 0.5 }, arms: 'fk' },
     a: { px: 0.15, py: 0.56, trunk: -90, head: 0, sh: 182, el: 14, abd: 0 },
@@ -633,7 +668,8 @@ export const LIBRARY = {
     first: 'down',
   }),
   fly_incline: T({
-    cam: { yaw: 40, pitch: 14 },
+    both: true,
+    cam: { yaw: 62, pitch: 22, ground: 192 },
     env: [INCLINE_BENCH],
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0.6, z: 0.24, kneesOut: 0.5 }, arms: 'fk' },
     a: { px: 0.0, py: 0.58, trunk: -42, head: 8, sh: 140, el: 14, abd: 0 },
@@ -938,10 +974,10 @@ export const LIBRARY_MAP = {
   pike_pushup: 'pike_pushup', pike_pushup_elevated: 'pike_pushup', hspu_wall: 'hspu', hspu_negative: 'hspu',
   handstand_chest_to_wall: 'handstand', handstand_freestanding: 'handstand', wall_walk: 'handstand',
   // pulls
-  bb_bent_row: 'row_bent', bb_pendlay_row: 'row_bent', db_bent_row: 'row_bent', db_one_arm_row: 'row_bent', kb_row: 'row_bent',
+  bb_bent_row: 'row_bent', bb_pendlay_row: 'row_bent', db_bent_row: 'row_bent', db_one_arm_row: 'row_one_arm', kb_row: 'row_bent',
   band_bent_row: 'row_band', cable_seated_row: 'row_seated', cable_one_arm_row: 'row_seated', band_seated_row: 'row_seated', band_row: 'row_seated',
   machine_seated_row: 'row_seated', db_chest_supported_row: 'row_chest_supported', inverted_row: 'inverted_row',
-  cable_lat_pulldown: 'pulldown', machine_lat_pulldown: 'pulldown', machine_close_grip_pulldown: 'pulldown', machine_underhand_pulldown: 'pulldown', band_lat_pulldown: 'pulldown',
+  cable_lat_pulldown: 'pulldown_kneeling', machine_lat_pulldown: 'pulldown', machine_close_grip_pulldown: 'pulldown', machine_underhand_pulldown: 'pulldown', band_lat_pulldown: 'pulldown_kneeling',
   cable_straight_arm_pulldown: 'straight_arm_pulldown', band_straight_arm_pulldown: 'straight_arm_pulldown', db_pullover: 'pullover',
   chinup: 'pullup', pullup_negative: 'pullup', pullup_band_assisted: 'pullup', machine_assisted_pullup: 'pullup', pullup_archer: 'pullup', pullup_high: 'pullup',
   pullup_lsit: 'pullup', dead_hang: 'dead_hang', scapular_pullup: 'scapular_pullup',

@@ -121,8 +121,10 @@ export function renderSettings(el) {
   $('[data-photo-dl]', el).onclick = async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true;
-    await downloadAllPhotos((done, total) => (btn.textContent = `Saving… ${done} of ${total}`));
-    toast('Demo photos saved for offline use');
+    const st = await downloadAllPhotos((done, total) => (btn.textContent = `Saving… ${done} of ${total}`));
+    toast(st.saved >= st.total ? 'All demo photos saved for offline use'
+      : st.saved ? `Saved ${st.saved} of ${st.total}. Try again on a better connection for the rest.`
+        : 'Couldn’t save the photos. Check your connection and try again.');
     paintPhotos();
   };
 

@@ -381,10 +381,10 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
         const w = e.w ?? 0.3;
         for (const [a, b2] of e.pads) {
           if (e.legs === false) continue;
-          post(a[0] + 0.08, 0, a[1] - 0.07, 0, 0.05);
-          post(b2[0] - 0.08, 0, b2[1] - 0.07, 0, 0.05);
+          post(a[0] + 0.08, 0, a[1] - 0.07, e.z || 0, 0.05);
+          post(b2[0] - 0.08, 0, b2[1] - 0.07, e.z || 0, 0.05);
         }
-        for (const [a, b2] of e.pads) slab(a, b2, w, 0.07, ['#4a3a32', '#2c231e', '#3a2e27']);
+        for (const [a, b2] of e.pads) slab(a, b2, w, 0.07, ['#4a3a32', '#2c231e', '#3a2e27'], e.z || 0);
       } else if (e.type === 'box') {
         slab([e.x0, e.h], [e.x1, e.h], e.w ?? 0.5, e.h, ['#4b4035', '#2e271f', '#3b3229']);
       } else if (e.type === 'wall') {
