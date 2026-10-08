@@ -69,6 +69,7 @@ const routes = {
   history: () => import('./screens/history.js').then((m) => m.renderHistory(main)),
   library: () => import('./screens/library.js').then((m) => m.renderLibrary(main)),
   weight: () => import('./screens/weight.js').then((m) => m.renderWeight(main)),
+  awards: () => import('./screens/awards.js').then((m) => m.renderAwards(main)),
   settings: () => import('./screens/settings.js').then((m) => m.renderSettings(main)),
   locations: () => import('./screens/locations.js').then((m) => m.renderLocations(main)),
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
@@ -76,13 +77,13 @@ const routes = {
 // Which tab lights up for each screen.
 const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
-  history: 'weight', weight: 'weight', locations: 'settings', profile: 'settings',
+  history: 'weight', weight: 'weight', awards: 'weight', locations: 'settings', profile: 'settings',
 };
 // Screens that fill the whole screen (no tab bar).
 const FULLSCREEN = new Set(['play', 'summary', 'profile']);
 // For screen-change animations: tabs slide sideways, detail screens push in / pop out.
 const TAB_ORDER = ['today', 'train', 'body', 'weight', 'settings'];
-const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, settings: 0 };
+const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, awards: 0, settings: 0 };
 
 const routeParts = () => (location.hash.replace(/^#\/?/, '').split('?')[0] || 'today').split('/');
 const currentRoute = () => routeParts()[0];
@@ -173,7 +174,17 @@ main.addEventListener('focusout', () => {
 
 // Re-render when data changes, but not for sync-status-only updates. While a workout is open (player or
 // list view), its own saves come back through the listener: skip those so animations aren't cut off.
+// First run after the badges update: save the badges you already have, quietly (no celebrations), before
+// any summary can show. Loaded lazily; it's a no-op once settings/main.awards_seen exists.
+let awardsSeeded = false;
+function seedAwards() {
+  if (awardsSeeded || !allLoaded() || !state.settings || state.settings.awards_seen) return;
+  awardsSeeded = true;
+  import('./workouts/awards-store.js').then((m) => m.syncBadges());
+}
+
 subscribe((patch) => {
+  seedAwards();
   const keys = Object.keys(patch);
   if (keys.length === 1 && keys[0] === 'sync') return renderSync();
   const route = currentRoute();

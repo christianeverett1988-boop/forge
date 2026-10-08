@@ -198,7 +198,7 @@ function toggleDone(i, j, el, btn) {
   const total = L().exercises.reduce((n, x) => n + x.sets.filter((y) => !y.warmup).length, 0) || 1;
   const card = btn && btn.closest('.excard');
   powerUp({ button: btn, hero: card, shakeEl: card, level: Math.min(1, res.workingDone / total), last: res.lastOfExercise, xp: s.warmup ? 0 : 10 });
-  for (const pr of res.prs) prExplosion(pr, { origin: btn });
+  if (res.prs.length) prExplosion(res.prs, { origin: btn }); // one card per set
   if (!res.rest && !res.lastSetOfWorkout && it.superset) {
     const members = L().exercises.map((x, k) => [x, k]).filter(([x]) => x.superset === it.superset);
     const nxt = members.find(([, k]) => k > i);
@@ -284,6 +284,7 @@ function swapExercise(i, ex, el) {
   }
   const entry = buildEntry(ex, old.role);
   entry.superset = old.superset;
+  if (old.rest_sec) entry.rest_sec = old.rest_sec; // the rest you chose in the preview stays with the slot
   L().exercises[i] = entry;
   save();
   renderSession(el);

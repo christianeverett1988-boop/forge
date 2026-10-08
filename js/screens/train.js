@@ -32,6 +32,29 @@ const editsFor = (key) => {
   if (edits.key !== key) edits = { key, forced: {}, rest: {}, avoid: [] };
   return edits;
 };
+/**
+ * Today's plan with the preview edits applied (Replace, Rest timer, Switch, a different day), so Today's
+ * card and its Start button show and start exactly what Train shows.
+ */
+export function previewPlan() {
+  const loc = activeLocation();
+  if (!loc) return null;
+  const ed = editsFor(`${loc.id}|${dayOverride || ''}`);
+  const plan = planToday({ dayType: dayOverride, forced: ed.forced, avoidIds: ed.avoid });
+  if (plan) for (const it of plan.exercises) if (ed.rest[it.exercise_id]) it.rest_sec = ed.rest[it.exercise_id];
+  return plan;
+}
+
+/** Start a previewed plan (Train or Today): unlock audio on this tap, cache today's photos, go. */
+export function startPlan(plan) {
+  unlockAudio(); // this tap unlocks sound + voice for the 3-2-1 GO on iPhone
+  startWorkout(plan);
+  cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
+  dayOverride = null;
+  edits = { key: '', forced: {}, rest: {}, avoid: [] };
+  location.hash = playerRoute();
+}
+
 const REST_CHOICES = [60, 90, 120, 150, 180, 240];
 const fmtRest = (sec) => (sec % 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec / 60} min`);
 
@@ -59,9 +82,7 @@ export function renderTrain(el) {
   const loc = activeLocation();
   const program = activeProgram();
   const active = activeWorkout();
-  const ed = editsFor(`${loc ? loc.id : ''}|${dayOverride || ''}`);
-  const plan = !active && loc ? planToday({ dayType: dayOverride, forced: ed.forced, avoidIds: ed.avoid }) : null;
-  if (plan) for (const it of plan.exercises) if (ed.rest[it.exercise_id]) it.rest_sec = ed.rest[it.exercise_id];
+  const plan = !active && loc ? previewPlan() : null;
   const d = deloadInfo(program, state.profile.experience);
   const stalled = !active ? stalledMainLifts() : [];
   const rec = currentRecovery();
@@ -130,14 +151,7 @@ export function renderTrain(el) {
   if (plan) wirePreview(el, plan);
   const start = $('[data-start]', el);
   if (start)
-    start.onclick = () => {
-      unlockAudio(); // this tap unlocks sound + voice for the 3-2-1 GO on iPhone
-      startWorkout(plan);
-      cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
-      dayOverride = null;
-      edits = { key: '', forced: {}, rest: {}, avoid: [] };
-      location.hash = playerRoute();
-    };
+    start.onclick = () => startPlan(plan);
   const dl = $('[data-deload]', el);
   if (dl) dl.onclick = () => { startDeload(); toast('Deload week started'); };
   $('[data-program]', el).onclick = () => openProgramPicker();

@@ -18,7 +18,7 @@ body.playing .topbar { display: none; }
 
 .pl-segs { display: flex; gap: 4px; }
 .seg-bar { flex: 1; height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; position: relative; }
-.seg-bar i { display: block; height: 100%; background: var(--volt); border-radius: 4px; transition: width var(--t-slow) var(--ease-out); }
+.seg-bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--f, 0)); background: var(--volt); border-radius: 4px; transition: transform var(--t-slow) var(--ease-out); }
 .seg-bar.cur { outline: 1px solid #5a6a2a; }
 .seg-bar.shine::after {
   content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #ffffffcc, transparent);
@@ -154,10 +154,10 @@ body.playing .topbar { display: none; }
 .mus-row { display: grid; grid-template-columns: 96px 1fr 34px; gap: 8px; align-items: center; font-size: 14px; }
 .mus-row b { text-align: right; font-size: 13px; }
 .mus-bar { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
-.mus-bar i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--ember), var(--hot, #FFB547)); }
+.mus-bar i { display: block; height: 100%; width: var(--w); transform-origin: left; transform: scaleX(0); border-radius: 6px; background: linear-gradient(90deg, var(--ember), var(--hot, #FFB547)); }
 .mus-bar i.grow-in { animation: grow-w 700ms var(--ease-out) forwards; animation-delay: calc(600ms + var(--d)); }
-.mus-bar i.grown { width: var(--w); }
-@keyframes grow-w { to { width: var(--w); } }
+.mus-bar i.grown { transform: none; }
+@keyframes grow-w { to { transform: scaleX(1); } }
 
 /* Body */
 .body-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -175,7 +175,7 @@ body.playing .topbar { display: none; }
   .seg-bar.shine::after { animation: none; }
   .pl-demo.flash-muscles { animation: mflash-fade 700ms; }
   @keyframes mflash-fade { 30% { box-shadow: inset 0 0 60px #ff6a2b55; } }
-  .mus-bar i.grow-in { animation: none; width: var(--w); }
+  .mus-bar i.grow-in { animation: none; transform: none; }
   .pr-trophy { animation: none; }
 }
 .ov-complete .ov-big { font-size: clamp(34px, 9vw, 44px); line-height: 1.1; }
@@ -253,3 +253,54 @@ body.playing .topbar { display: none; }
 .pv-txt b { overflow: hidden; text-overflow: ellipsis; }
 .pv-tag { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: 0.04em; }
 .pv-more { font-size: 20px; line-height: 1; }
+
+/* ---------- Awards (Progress → Awards) and summary XP ---------- */
+.aw-name { font: 900 32px/1.1 var(--num, inherit); color: var(--volt); margin: 2px 0 10px; letter-spacing: -.01em; }
+.aw-bar { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: 6px; }
+.aw-bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--p, 0)); border-radius: 999px; background: linear-gradient(90deg, var(--ember), var(--volt)); transition: transform 1.1s var(--ease-out, ease-out); }
+.aw-levels { columns: 2; padding-left: 20px; margin: 6px 0 0; }
+.aw-levels li { break-inside: avoid; color: var(--muted); }
+.aw-levels li.on { color: var(--text); }
+.aw-levels small { margin-left: 6px; color: var(--muted); }
+.aw-big { font: 900 26px var(--num, inherit); margin: 2px 0; }
+.aw-best { text-align: right; display: grid; }
+.aw-best b { font-size: 22px; }
+.aw-week { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.aw-dots { display: flex; gap: 6px; }
+.aw-dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); }
+.aw-dots i.on { background: var(--ember); border-color: var(--ember); box-shadow: 0 0 10px #ff6a2b88; }
+.aw-badges { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; }
+.aw-badges li { display: grid; justify-items: center; text-align: center; gap: 4px; }
+.aw-badges li b { font-size: 13px; line-height: 1.2; }
+.aw-badges li small { font-size: 11px; line-height: 1.25; }
+.aw-badges li:not(.on) b { color: var(--muted); }
+.aw-tier { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.aw-filter { display: flex; gap: 6px; }
+.sum-badges { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 6px 0 4px; }
+.sum-badge { display: grid; justify-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: #ffc94a; text-align: center; max-width: 92px; }
+
+/* Badge art (js/ui/badges.js) */
+.bdg { display: block; overflow: visible; }
+.bdg-on { filter: drop-shadow(0 2px 6px var(--bdg-glow)); }
+.bdg-t4.bdg-on { filter: drop-shadow(0 0 10px var(--bdg-glow)); }
+.bdg-locked { filter: grayscale(1) brightness(.42) contrast(.9); opacity: .7; }
+.bdg-locked .bdg-n { display: none; }
+.bdg-shine { transform: translateX(0); opacity: 0; }
+.bdg-new .bdg-shine { animation: bdg-shine 1.1s .5s cubic-bezier(.4, 0, .2, 1) 2 both; }
+.bdg-pop { animation: bdg-pop .7s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes bdg-shine { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(118px); opacity: 1; } }
+@keyframes bdg-pop { 0% { transform: scale(.3) rotate(-12deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bdg-new .bdg-shine, .bdg-pop { animation: none; } }
+.lvl-up { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; }
+.lvl-up .lvl-card { text-align: center; padding: 24px 28px; border-radius: 24px; background: radial-gradient(circle at 50% 30%, #3a2a10, #15191f 70%); border: 1px solid #ffc94a66; box-shadow: 0 20px 80px #000a, 0 0 60px #ffb02055; }
+.lvl-up .lvl-card small { color: #ffc94a; font-weight: 800; letter-spacing: .12em; }
+.lvl-up .lvl-card b { display: block; font: 900 40px var(--num, inherit); color: var(--volt); }
+.pl-hero-w.unset b { font: 800 18px/1 var(--font, inherit); color: #0e1116; background: var(--volt); padding: 10px 14px; border-radius: 999px; cursor: pointer; }
+.pl-hero-w.unset span { display: none; }
+.sum-badge.bdg-pop { animation-delay: var(--d, 0s); }
+.sum-badge .bdg-new .bdg-shine { animation-delay: calc(var(--d, 0s) + .6s); }
+.sum-xp-parts { margin: -2px 0 6px; }
+/* A starting weight Forge picked (empty bar, lightest or today's dumbbell): dimmer until you change it. */
+.pl-sugg { display: none; }
+.pl-hero-w.suggested b { color: color-mix(in srgb, var(--volt) 55%, var(--muted)); }
+.pl-hero-w.suggested .pl-sugg { display: inline; align-self: center; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 3px 7px; }
