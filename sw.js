@@ -45,6 +45,7 @@ const SHELL = [
   './js/ui/haptic.js',
   './js/ui/figure.js',
   './js/ui/poses.js',
+  './js/ui/rig.js',
   './js/workouts/clock.js',
   './js/workouts/session-core.js',
   './js/workouts/live.js',
