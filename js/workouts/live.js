@@ -9,7 +9,7 @@ import { exerciseById } from './library.js';
 import { elapsedMs, isPaused, pauseFields, resumeFields, awayGapMs, removeAwayFields } from './clock.js';
 import { buildQueue, restAfter, validateSet, exerciseComplete, setLabel, exercisePRs, replacePRs } from './session-core.js';
 import { toUnit } from './progression.js';
-import { startRest, stopRest, pauseRest, resumeRest } from '../timer.js';
+import { startRest, stopRest, pauseRest, resumeRest, pauseAwake, resumeAwake } from '../timer.js';
 
 export const live = { w: null };
 const closedIds = new Set(); // finished or discarded here; ignore stale "active" copies until the listener catches up
@@ -71,6 +71,7 @@ export function pause() {
   if (!live.w || isPaused(live.w)) return;
   Object.assign(live.w, pauseFields(live.w));
   pauseRest();
+  pauseAwake();
   save(true);
 }
 
@@ -78,6 +79,7 @@ export function resume() {
   if (!live.w || !isPaused(live.w)) return;
   Object.assign(live.w, resumeFields(live.w));
   resumeRest();
+  resumeAwake();
   markSeen();
   save(true);
 }

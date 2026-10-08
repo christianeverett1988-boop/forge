@@ -30,15 +30,40 @@ export async function keepAwake(on) {
     wakeLock = null;
   }
 }
-// iOS drops the wake lock when the app goes to the background; take it back when we return.
+// iOS drops the wake lock when the app goes to the background; take it back when we return. If a request
+// fails (iOS sometimes refuses one that isn't tied to a tap), try again on the next tap.
 let wantAwake = false;
+let pausedSleep = false; // paused for a while: let the screen sleep until Resume
+let pauseTimer = null;
+const shouldBeAwake = () => wantAwake && !pausedSleep;
 export function setWantAwake(v) {
   wantAwake = v;
-  keepAwake(v);
+  if (!v) {
+    pausedSleep = false;
+    clearTimeout(pauseTimer);
+  }
+  keepAwake(shouldBeAwake());
+}
+/** Workout paused: keep the screen on for 5 minutes, then let it sleep. */
+export function pauseAwake(ms = 5 * 60000) {
+  clearTimeout(pauseTimer);
+  pauseTimer = setTimeout(() => {
+    pausedSleep = true;
+    keepAwake(false);
+  }, ms);
+}
+/** Workout resumed: screen on again. */
+export function resumeAwake() {
+  clearTimeout(pauseTimer);
+  pausedSleep = false;
+  keepAwake(shouldBeAwake());
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && wantAwake) keepAwake(true);
+  if (document.visibilityState === 'visible' && shouldBeAwake()) keepAwake(true);
 });
+document.addEventListener('pointerdown', () => {
+  if (shouldBeAwake() && !wakeLock) keepAwake(true);
+}, { capture: true, passive: true });
 
 export const fmtClock = (sec) => {
   const s = Math.max(0, Math.ceil(sec));
@@ -49,6 +74,21 @@ export const fmtClock = (sec) => {
 // rest = { end, total, label, next: { name, detail } | null, pausedLeft: ms | null, said10, ticked }
 let rest = null;
 let tick = null;
+// The rest timer survives the app being closed: its end time is saved on every change and restored on
+// launch (app.js drops it if no workout is running). A rest that ran out while closed just ends quietly.
+const REST_KEY = 'forge.rest';
+function persistRest() {
+  try {
+    if (rest) localStorage.setItem(REST_KEY, JSON.stringify({ ...rest, next: rest.next ? { name: rest.next.name, detail: rest.next.detail } : null }));
+    else localStorage.removeItem(REST_KEY);
+  } catch { /* private mode */ }
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(REST_KEY) || 'null');
+  if (saved && (saved.pausedLeft != null || saved.end > Date.now() + 1000)) rest = { ...saved, said10: true, ticked: -1 };
+  else if (saved) localStorage.removeItem(REST_KEY);
+} catch { /* ignore */ }
+if (rest) setTimeout(() => run(), 0);
 const listeners = new Set();
 export const onRestChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
@@ -86,6 +126,7 @@ export const restInfo = () => (rest ? { ...rest, left: restRemaining(), paused: 
 
 function run() {
   clearInterval(tick);
+  persistRest();
   render();
   if (!rest || rest.pausedLeft != null) return;
   tick = setInterval(() => {

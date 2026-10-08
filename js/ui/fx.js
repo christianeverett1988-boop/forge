@@ -211,7 +211,13 @@ export function enqueue(fn) {
 /**
  * NEW PR explosion. pr: { label, value, prev, unit, type }. Resolves when dismissed (tap or ~2.2 s).
  */
-export function prExplosion(pr, { origin } = {}) {
+/**
+ * PR explosion: one gold card per set, listing every record that set broke (old → new, counting up),
+ * with an aura, sparks and the PR sound. Accepts one record or a list. Tap to dismiss, or it closes itself.
+ */
+export function prExplosion(prs, { origin } = {}) {
+  const list = (Array.isArray(prs) ? prs : [prs]).filter(Boolean);
+  if (!list.length) return Promise.resolve();
   return enqueue(() => new Promise((resolve) => {
     const [x, y] = origin ? centerOf(origin) : [innerWidth / 2, innerHeight * 0.42];
     sfx.pr();
@@ -220,39 +226,41 @@ export function prExplosion(pr, { origin } = {}) {
     layer.className = 'fx-pr';
     layer.setAttribute('role', 'status');
     const fmt = (v) => (v == null ? '' : Number.isInteger(v) ? String(v) : (Math.round(v * 10) / 10).toString());
-    const unitTxt = pr.unit ? ` ${pr.unit}` : pr.type === 'time' ? 's' : pr.type === 'reps' ? ' reps' : '';
-    const title = (pr.label || '').split(': ')[0];
-    const what = { e1rm: 'Est. 1-rep max', weight: 'Heaviest weight', reps: pr.weight ? `Reps at ${fmt(pr.weight)}` : 'Most reps', time: 'Longest hold' }[pr.type] || 'Record';
+    const unitOf = (pr) => (pr.unit ? ` ${pr.unit}` : pr.type === 'time' ? 's' : pr.type === 'reps' ? ' reps' : '');
+    const whatOf = (pr) => ({ e1rm: 'Est. 1-rep max', weight: 'Heaviest weight', reps: pr.weight ? `Reps at ${fmt(pr.weight)}` : 'Most reps', time: 'Longest hold', volume: 'Best set volume' }[pr.type] || 'Record');
+    const title = (list[0].label || '').split(': ')[0];
     layer.innerHTML = `
       <div class="pr-card2">
         <span class="pr-trophy" aria-hidden="true">🏆</span>
-        <b class="pr-title">NEW PR</b>
+        <b class="pr-title">${list.length > 1 ? `${list.length} NEW PRs` : 'NEW PR'}</b>
         <span class="pr-ex">${esc(title)}</span>
-        <span class="pr-what">${esc(what)}</span>
-        <span class="pr-vals">${pr.prev != null ? `<s>${fmt(pr.prev)}${unitTxt}</s> → ` : ''}<em data-new>${fmt(pr.value)}</em>${unitTxt}</span>
+        ${list.map((pr, i) => `
+          <span class="pr-what">${esc(whatOf(pr))}</span>
+          <span class="pr-vals">${pr.prev != null ? `<s>${fmt(pr.prev)}${unitOf(pr)}</s> → ` : ''}<em data-new="${i}">${fmt(pr.value)}</em>${unitOf(pr)}</span>`).join('')}
       </div>`;
     document.body.appendChild(layer);
     const card = layer.querySelector('.pr-card2');
     if (!reducedMotion()) {
       card.animate([{ transform: 'scale(1.6) rotate(-4deg)', opacity: 0 }, { transform: 'scale(.96) rotate(1deg)', opacity: 1, offset: 0.6 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)' });
       aura(x, y, { gold: true, size: 380, scale: 2.4, dur: 700 });
-      burst(x, y, { count: 70, colors: [COLORS.gold, COLORS.white, COLORS.hot], speed: 10, life: 55 });
+      burst(x, y, { count: 60 + list.length * 15, colors: [COLORS.gold, COLORS.white, COLORS.hot], speed: 10, life: 55 });
       setTimeout(() => burst(innerWidth / 2, innerHeight * 0.38, { count: 50, colors: [COLORS.gold, COLORS.white], speed: 8, life: 50 }), 350);
     } else {
       card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
     }
-    // Count the new value up from the old one.
-    const el = layer.querySelector('[data-new]');
-    if (pr.prev != null && !reducedMotion() && typeof pr.value === 'number') {
+    // Count each new value up from the old one.
+    list.forEach((pr, i) => {
+      const el = layer.querySelector(`[data-new="${i}"]`);
+      if (pr.prev == null || reducedMotion() || typeof pr.value !== 'number') return;
       const from = pr.prev;
-      const start = performance.now() + 250;
+      const start = performance.now() + 250 + i * 120;
       onFrame((t) => {
         if (!el.isConnected) return false;
         const p = Math.min(1, Math.max(0, (t - start) / 600));
         el.textContent = fmt(from + (pr.value - from) * (1 - Math.pow(1 - p, 3)));
         return p < 1;
       });
-    }
+    });
     let done = false;
     const close = () => {
       if (done) return;
@@ -264,7 +272,7 @@ export function prExplosion(pr, { origin } = {}) {
       };
     };
     layer.addEventListener('click', close);
-    setTimeout(close, 2200);
+    setTimeout(close, 2200 + (list.length - 1) * 600);
   }));
 }
 

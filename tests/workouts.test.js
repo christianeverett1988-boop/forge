@@ -183,6 +183,10 @@ test('e1RM (Epley) and PR detection', () => {
   assert(prs.some((p) => p.type === 'weight'));
   const rep = detectPRs(byId('db_one_arm_row'), [{ weight: 30, reps: 14 }], [session(30, [12, 12])]);
   assert(rep.some((p) => p.type === 'reps'));
+  const vol = rep.find((p) => p.type === 'volume');
+  assert(vol && vol.value === 420 && vol.prev === 360, 'best set volume 30×14 beats 30×12');
+  const same = detectPRs(byId('db_one_arm_row'), [{ weight: 30, reps: 12 }], [session(30, [12, 12])]);
+  assert(!same.some((p) => p.type === 'volume'), 'matching your best is not a PR');
 });
 
 // ---------- generator ----------

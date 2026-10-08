@@ -8,6 +8,7 @@
 //   starts from a user gesture until something has been spoken.
 // Settings (state.settings): audio_coach 'off' | 'beeps' | 'voice' (default 'voice'), sfx true/false (default true).
 import { state } from '../state.js';
+import { restPhrase } from '../workouts/session-core.js';
 
 let ctx = null;
 let master = null;
@@ -29,7 +30,7 @@ export function unlockAudio() {
       master.gain.value = 0.9;
       master.connect(ctx.destination);
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
   } catch {
     ctx = null;
   }
@@ -132,7 +133,7 @@ export const coach = {
   },
   rest(sec, next) {
     const nxt = next ? ` Next up: ${next}.` : '';
-    say(`Rest ${sec} seconds.${nxt}`, { interrupt: true });
+    say(`${restPhrase(sec)}.${nxt}`, { interrupt: true });
   },
   tenSeconds() {
     beep(740, 120);
@@ -145,7 +146,7 @@ export const coach = {
     say('Last set!');
   },
   pr() {
-    say('New PR!', { interrupt: true });
+    say('New PR!'); // queued after the rest line, never cutting it off
   },
   workoutDone() {
     say('Workout complete. Great work.', { interrupt: true });
@@ -161,3 +162,16 @@ export const coach = {
     return lastSpoken;
   },
 };
+
+// iPhone suspends (or "interrupts") the audio context when the app goes to the background, a call comes in,
+// or the screen locks. Wake it on return, and on any tap (Resume, Count it, Skip, ±15…) since a tap is
+// what iOS needs to let audio start again.
+function wake() {
+  if (ctx && ctx.state !== 'running') {
+    try { ctx.resume().catch(() => {}); } catch { /* ignore */ }
+  }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wake(); });
+  document.addEventListener('pointerdown', wake, { capture: true, passive: true });
+}

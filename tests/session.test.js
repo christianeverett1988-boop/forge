@@ -1,6 +1,6 @@
 import { test, eq, assert } from './harness.js';
 import { elapsedMs, pauseFields, resumeFields, awayGapMs, removeAwayFields, isPaused, AWAY_THRESHOLD_MS } from '../js/workouts/clock.js';
-import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet, exerciseComplete, sessionStats, versusLast, REST, exercisePRs, replacePRs } from '../js/workouts/session-core.js';
+import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet, exerciseComplete, sessionStats, versusLast, REST, exercisePRs, replacePRs, restPhrase } from '../js/workouts/session-core.js';
 import { muscleGlow, hasFigure } from '../js/ui/figure.js';
 import { coverage } from '../js/ui/poses.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
@@ -209,4 +209,12 @@ test('rest: a rest timer set in the preview wins for working sets, not warm-ups'
   e[3].rest_sec = 60; // superset member: no rest mid-round still holds
   const q2 = buildQueue(e);
   eq(restAfter(q2, e, 4, {}), null);
+});
+
+test('coach: rests are spoken in minutes and seconds', () => {
+  eq(restPhrase(150), 'Rest 2 minutes 30');
+  eq(restPhrase(120), 'Rest 2 minutes');
+  eq(restPhrase(60), 'Rest 1 minute');
+  eq(restPhrase(90), 'Rest 1 minute 30');
+  eq(restPhrase(45), 'Rest 45 seconds');
 });
