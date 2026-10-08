@@ -14,7 +14,7 @@ import { coach } from '../ui/sound.js';
 import { powerUp, prExplosion, enqueue } from '../ui/fx.js';
 import { onFrame, reducedMotion, viewTransition } from '../ui/motion.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
-import { photoLoop, hasPhotos } from '../ui/photos.js';
+import { photoLoop, hasPhotos, photoFallback } from '../ui/photos.js';
 import { hapticInput, onHapticTap } from '../ui/haptic.js';
 import { openPaused, openAway, openComplete, saveAndSummarize, closeOverlays } from './overlays.js';
 import { openHowTo } from './session.js';
@@ -289,7 +289,9 @@ function drawSet(el) {
       </nav>
     </section>`;
 
-  // Demo figure
+  // Demo: figure, or photos (falling back to the muscle chips if a photo can't load offline).
+  const demoBox = $('[data-demo]', el);
+  if (demoBox) photoFallback(demoBox, `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`);
   const fig = $('[data-fig]', el);
   // Tempo days (the progression's slow-lowering step) slow the demo down to match.
   if (fig) mountFigure(fig, ex, { isPaused: () => paused() || !!restInfo(), slow: !!(it.target && it.target.mode === 'tempo') });

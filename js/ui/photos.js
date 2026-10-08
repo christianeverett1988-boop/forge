@@ -4,6 +4,8 @@
 // cached the first time it's shown, and Settings can download them all. Never precached in the app shell.
 export const MEDIA_CACHE = 'media-ex-v1'; // keep in sync with sw.js
 
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 let index = null;
 let loading = null;
 
@@ -24,9 +26,30 @@ export const photoUrls = (id) => [`media/ex/${id}/0.jpg`, `media/ex/${id}/1.jpg`
 
 /** Two frames crossfading (~1.6 s a cycle) with a slight scale. */
 export function photoLoop(id, alt = '') {
-  const [a, b] = photoUrls(id);
-  return `<div class="photo-loop" role="img" aria-label="${alt ? `${alt}: start and end position` : 'Start and end position'}">
+  const [a, b] = photoUrls(id).map(esc);
+  return `<div class="photo-loop" data-photo-loop role="img" aria-label="${esc(alt ? `${alt}: start and end position` : 'Start and end position')}">
     <img src="${a}" alt="" decoding="async"><img src="${b}" alt="" decoding="async" class="pl-b"></div>`;
+}
+
+/**
+ * If a photo can't load (offline and not cached yet), swap the loop for `fallback` (HTML) instead of
+ * leaving a blank box. Wired with listeners because the CSP blocks inline onerror handlers.
+ */
+export function photoFallback(root, fallback) {
+  const loop = root.querySelector('[data-photo-loop]');
+  if (!loop) return;
+  let swapped = false;
+  const swap = () => {
+    if (swapped || !loop.isConnected) return;
+    swapped = true;
+    const host = document.createElement('div');
+    host.innerHTML = fallback;
+    loop.replaceWith(...host.childNodes);
+  };
+  loop.querySelectorAll('img').forEach((img) => {
+    img.addEventListener('error', swap, { once: true });
+    if (img.complete && img.naturalWidth === 0 && img.src) swap(); // already failed
+  });
 }
 
 /** Cache some exercises' photos for offline use (best effort). */
@@ -39,8 +62,8 @@ export async function cachePhotos(ids) {
     const cache = await caches.open(MEDIA_CACHE);
     const have = new Set((await cache.keys()).map((r) => new URL(r.url).pathname));
     const missing = urls.filter((u) => !have.has(new URL(u, location.href).pathname));
-    await Promise.all(missing.map((u) => cache.add(u).catch(() => {})));
-    return missing.length;
+    const results = await Promise.all(missing.map((u) => cache.add(u).then(() => true, () => false)));
+    return results.filter(Boolean).length;
   } catch {
     return 0;
   }
@@ -55,22 +78,22 @@ export async function photoStatus() {
   if ('caches' in window && ids.length) {
     try {
       const cache = await caches.open(MEDIA_CACHE);
-      const have = new Set((await cache.keys()).map((r) => new URL(r.url).pathname.split('/').slice(-2, -1)[0]));
-      saved = ids.filter((id) => have.has(id)).length;
+      // Saved = both frames cached.
+      const have = new Set((await cache.keys()).map((r) => new URL(r.url).pathname));
+      const path = (u) => new URL(u, location.href).pathname;
+      saved = ids.filter((id) => photoUrls(id).every((u) => have.has(path(u)))).length;
     } catch { /* ignore */ }
   }
   return { total: ids.length, saved, mb: bytes / 1048576 };
 }
 
-/** Download every photo, reporting progress (done, total). */
+/** Download every photo, reporting progress (done, total). Resolves to the real saved/total counts. */
 export async function downloadAllPhotos(onProgress = () => {}) {
   await loadPhotoIndex();
   const ids = Object.keys(index.ids);
-  let done = 0;
   for (let i = 0; i < ids.length; i += 8) {
     await cachePhotos(ids.slice(i, i + 8));
-    done = Math.min(ids.length, i + 8);
-    onProgress(done, ids.length);
+    onProgress(Math.min(ids.length, i + 8), ids.length);
   }
-  return done;
+  return photoStatus();
 }

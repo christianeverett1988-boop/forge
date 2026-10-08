@@ -1,11 +1,32 @@
 # Changelog
 
+## 0.3.1.1 — Fixes from the v0.3.1 review (2026-10-08)
+
+No database rule changes; just copy the files and push. Includes the demo photos (`media/ex`, 175 exercises) now on main.
+
+**Offline and weak signal**
+- The How-To sheet opens straight away instead of waiting for the photo list; the **Figure | Photos** toggle appears when the list arrives (and photo-only exercises switch from the muscle map to their photos).
+- Offline with a photo that isn't saved yet: you get the muscle map, not a blank white box. The service worker answers a missing photo with an error instead of hanging, and keeps the photo list (`index.json`) in the photo cache so it works offline.
+- The player's demo also falls back to the muscle list if its photos can't load, and redraws once the photo list arrives after a cold start.
+- **Download all demo photos** reports real counts ("All 175 saved", "Saved 120 of 175, try again on Wi-Fi", or "Couldn't save the photos"), and an exercise only counts as saved when both of its photos are.
+
+**Silhouette fixes**
+- **Bent-over rows** (barbell, Pendlay, dumbbell, kettlebell) pull all the way to the lower ribs, starting with the bar over mid-foot.
+- **One-arm dumbbell row** has its own demo: far knee and hand on a bench, near arm rowing.
+- **Two dumbbells** where you use two: dumbbell bench, incline, decline and floor press, overhead and seated press, lateral raise, flyes. The fly is drawn from the head end so both arms open visibly. (The curl keeps one, by design.)
+- **Cable and band lat pulldowns** are drawn kneeling, as their names say.
+- **Dips:** higher bars, so the bent legs clear the floor. **Overhead press** starts with the bar on the collarbones, below the chin.
+- Rig: one arm can now work differently from the other (a hand braced on a bench), and benches can sit off to one side.
+- 116 templates now (two new); still 221 of 280 exercises animated. `docs/silhouettes.md` updated.
+
+**Housekeeping:** the 0.3.1 entry below now gives the right size (+52.8 KB gzipped, with why it's acceptable) and template count (114).
+
 ## 0.3.1 — Silhouettes, muscle maps, How-To (2026-10-08)
 
 No database rule changes; just copy the files and push. Optional one-time step: run the demo-photo script (DEPLOY.md → Demo photos) and commit `media/ex`.
 
 **Animated demos for most of the library**
-- **221 of 280 exercises** now have the code-drawn silhouette, from 75 motion templates built on the approved squat, pull-up and curl look: squats, hinges, lunges, presses, push-ups, dips, rows, pulldowns, curls, triceps, raises, flyes, calves, carries, core, machines, jumps. Full list: `docs/silhouettes.md`.
+- **221 of 280 exercises** now have the code-drawn silhouette, from 114 motion templates built on the approved squat, pull-up and curl look: squats, hinges, lunges, presses, push-ups, dips, rows, pulldowns, curls, triceps, raises, flyes, calves, carries, core, machines, jumps. Full list: `docs/silhouettes.md`.
 - What the figure holds follows the exercise: barbell (on the back, front rack or in the hands), dumbbell, kettlebell, goblet weight, cable or band (a line to its anchor), medicine ball, ab wheel, pull-up bar, dip bars, rings. Benches, boxes, walls and seats are drawn once behind the figure.
 - **Depth sorting:** limbs crossing in front of the body are drawn over it and behind it when they're behind; bars stay behind their plates; hands wrap the bar they hold.
 - The demo fills the player's demo box (the view fits the whole rep). Tempo days slow the demo to match.
@@ -32,7 +53,7 @@ No database rule changes; just copy the files and push. Optional one-time step: 
 
 **Tests:** 119 unit tests (up from 99): rig and IK (bone lengths, planted feet, hands on bars and floors, bar over mid-foot), draw order (near/far limbs, a far arm crossing the front, grips, plates), framing, every mapped exercise solving cleanly with its own load, the muscle-map mapping and per-muscle stats, exercise records.
 
-**Size:** about 40 KB gzipped of new JS (20 KB of it the muscle-map paths, 9 KB the template library). No new libraries, no new origins in the CSP.
+**Size:** v0.3.1 adds 52.8 KB gzipped of JS (20 KB of it the muscle-map paths, 9 KB the template library); since before v0.3 the total is +86.5 KB. That is over the 60 KB target, accepted because it is route-lazy: the map data and the silhouette code only load with the screens that use them (Body, Train, the player, How-To and the summary), so Today and the app shell open without them. No new libraries, no new origins in the CSP. (Corrected in 0.3.1.1; this entry first said "about 40 KB" and "75 templates".)
 
 ## 0.3.0 — Experience overhaul, drop 1 (2026-10-08)
 
