@@ -42,6 +42,15 @@ test('owner can create, read, update and delete their own record', async () => {
   await assertSucceeds(deleteDoc(ref));
 });
 
+test('settings/main: saving earned badges (awards_seen map) keeps working', async () => {
+  const db = as('alice');
+  const ref = doc(db, 'users/alice/settings/main');
+  await assertSucceeds(setDoc(ref, rec('alice', 'main')));
+  await assertSucceeds(updateDoc(ref, { awards_seen: { first: '2026-09-07T10:00:00Z' }, updated_at: '2026-10-08T00:00:00Z' }));
+  await assertSucceeds(updateDoc(ref, { awards_seen: { first: '2026-09-07T10:00:00Z', ten: '2026-10-08T10:00:00Z' }, updated_at: '2026-10-08T01:00:00Z' }));
+  await assertFails(updateDoc(ref, { awards_seen: { first: '2026-09-07' }, user_id: 'bob' }));
+});
+
 test('owner can list their own collection', async () => {
   const db = as('alice');
   await setDoc(doc(db, 'users/alice/weights/w1'), weight('alice', 'w1'));

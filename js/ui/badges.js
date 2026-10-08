@@ -5,6 +5,8 @@
 // sprite (like the muscle map), so a grid of 22 stays light.
 
 // ---------- icons (24 × 24, filled; drawn engraved into the face) ----------
+const escAttr = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 const HAMMER = 'M4 3h11a2 2 0 0 1 2 2v1h4v3h-4v1a2 2 0 0 1-2 2H4z M8.5 12h3v10h-3z';
 const ICONS = {
   spark: '<path d="M12 1l2.2 8.8L23 12l-8.8 2.2L12 23l-2.2-8.8L1 12l8.8-2.2z"/>',
@@ -105,7 +107,7 @@ export function badgeSVG(id, { earned = true, shine = false, size = 64, label = 
   const banner = a.n ? `
     <g class="bdg-n"><rect x="${32 - (6 + a.n.length * 3.2)}" y="43" width="${12 + a.n.length * 6.4}" height="11" rx="3" fill="${m.ink}" opacity=".82"/>
     <text x="32" y="51.4" text-anchor="middle" font-size="8.6" font-weight="800" fill="${m.face[0]}" font-family="system-ui,-apple-system,sans-serif">${a.n}</text></g>` : '';
-  return `<svg class="bdg ${earned ? 'bdg-on' : 'bdg-locked'} ${shine && earned ? 'bdg-new' : ''} bdg-t${a.tier}" viewBox="0 0 64 64" width="${size}" height="${size}" style="--bdg-glow:${m.glow}" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>
+  return `<svg class="bdg ${earned ? 'bdg-on' : 'bdg-locked'} ${shine && earned ? 'bdg-new' : ''} bdg-t${a.tier}" viewBox="0 0 64 64" width="${size}" height="${size}" style="--bdg-glow:${m.glow}" ${label ? `role="img" aria-label="${escAttr(label)}"` : 'aria-hidden="true"'}>
     <path d="${d}" fill="url(#bdg-rim-${a.tier})"/>
     <path d="${d}" fill="url(#bdg-face-${a.tier})" transform="translate(32 32) scale(.8) translate(-32 -32)"/>
     <path d="${d}" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.2" transform="translate(32 32) scale(.8) translate(-32 -32)"/>

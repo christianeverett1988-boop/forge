@@ -182,6 +182,33 @@ export const BADGES = [
 ];
 
 /**
+ * Which workouts get the weekly-goal +100: the one that brings its week to `goal` training days, or, when
+ * cardio logged after your last workout of the week completes the goal (lift Mon/Wed, run Fri), that last
+ * workout. Once a week; a week with no workout gets none. Returns a Set of workout ids.
+ */
+export function weeklyBonusIds(list, cardioList, goal) {
+  const all = new Map(); // week → Set(day) for the whole week
+  const add = (m, at) => { const k = weekOf(at); if (!m.has(k)) m.set(k, new Set()); m.get(k).add(dateKey(at)); };
+  for (const w of list) add(all, w.started_at);
+  for (const c of cardioList) add(all, c.started_at);
+  const so = new Map();
+  const out = new Set();
+  const crossed = new Set();
+  const lastOfWeek = new Map();
+  let ci = 0;
+  for (const w of list) {
+    while (ci < cardioList.length && cardioList[ci].started_at <= w.started_at) add(so, cardioList[ci++].started_at);
+    const wk = weekOf(w.started_at);
+    const before = so.has(wk) ? so.get(wk).size : 0;
+    add(so, w.started_at);
+    if (!crossed.has(wk) && before < goal && so.get(wk).size >= goal) { crossed.add(wk); out.add(w.id); }
+    lastOfWeek.set(wk, w.id);
+  }
+  for (const [wk, id] of lastOfWeek) if (!crossed.has(wk) && all.get(wk).size >= goal) out.add(id);
+  return out;
+}
+
+/**
  * One pass over your history: XP per workout (with the weekly-goal bonus and badge XP), badges with the
  * workout that unlocked them, total XP and level.
  *   opts.seen          settings/main.awards_seen ({ id: ISO date }): badges stay earned once seen
@@ -194,26 +221,17 @@ export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exercise
   const t = { workouts: 0, prs: 0, maxPrsInWorkout: 0, volumeKg: 0, maxVolumeKg: 0, bestStreak: 0, early: 0, late: 0, level: 1, xp: 0, fullHouse: false, deloads: 0, comebacks: 0 };
   const earned = {};
   const perWorkout = new Map();
-  const weekDays = new Map(); // week → Set(day keys) trained so far
   const weekGroups = new Map(); // week → { group: working sets }
   const upTo = [];
   let ci = 0;
-  let lastAt = null;
+  let lastAt = null; // last training activity (workout or logged cardio), for Comeback
+  const bonus = weeklyBonusIds(list, cardioList, goal);
   for (const w of list) {
     upTo.push(w);
     const wk = weekOf(w.started_at);
-    // Weekly goal: did this workout bring its week to `goal` days? (cardio logged before it counts too)
-    while (ci < cardioList.length && cardioList[ci].started_at <= w.started_at) {
-      const c = cardioList[ci++];
-      const k = weekOf(c.started_at);
-      if (!weekDays.has(k)) weekDays.set(k, new Set());
-      weekDays.get(k).add(dateKey(c.started_at));
-    }
-    if (!weekDays.has(wk)) weekDays.set(wk, new Set());
-    const days = weekDays.get(wk);
-    const before = days.size;
-    days.add(dateKey(w.started_at));
-    const week = before < goal && days.size >= goal;
+    // Cardio logged before this workout counts as activity for Comeback.
+    while (ci < cardioList.length && cardioList[ci].started_at <= w.started_at) lastAt = Math.max(lastAt ?? 0, Date.parse(cardioList[ci++].started_at));
+    const week = bonus.has(w.id); // weekly-goal +100 (see weeklyBonusIds)
 
     t.workouts++;
     const prs = (w.prs || []).length;
@@ -235,7 +253,7 @@ export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exercise
     t.maxVolumeKg = Math.max(t.maxVolumeKg, vol);
     if (w.deload) t.deloads++;
     if (lastAt != null && Date.parse(w.started_at) - lastAt >= 21 * 86400000) t.comebacks++;
-    lastAt = Date.parse(w.started_at);
+    lastAt = Math.max(lastAt ?? 0, Date.parse(w.started_at));
     const h = new Date(w.started_at).getHours();
     if (h < 7) t.early++;
     if (h >= 20) t.late++;

@@ -1,7 +1,8 @@
 // XP, levels, streaks and badges (js/workouts/awards.js).
 import { test, eq, assert } from './harness.js';
 import { workoutXP, totalXP, levelFor, xpForLevel, LEVELS, streak, weekOf, badges, workoutAwards, awardsFor, unseenBadges, daysPerWeek, BADGES } from '../js/workouts/awards.js';
-import { BADGE_ART } from '../js/ui/badges.js';
+import { BADGE_ART, badgeSVG } from '../js/ui/badges.js';
+import { glue } from '../js/ui/sharecard.js';
 
 const day = 86400000;
 // Monday 2026-09-07 10:00 local
@@ -168,4 +169,36 @@ test('badge art: every badge has its own icon, a tier and a shape; 22 badges', (
   for (const b of BADGES) assert(BADGE_ART[b.id], `art for ${b.id}`);
   const keys = BADGES.map((b) => BADGE_ART[b.id].icon);
   eq(new Set(keys).size, keys.length, 'icons are unique');
+});
+
+test('weekly goal: when cardio completes the week after your last workout (lift Mon/Wed, run Fri), that workout gets the +100', () => {
+  const ws = [W(MON), W(MON + 2 * day)];
+  const a = awardsFor(ws, [{ started_at: iso(MON + 4 * day) }], 3);
+  eq(ws.map((w) => a.perWorkout.get(w.id).xp.week).join(), '0,100');
+  eq(a.total, ws.reduce((t, w) => t + a.perWorkout.get(w.id).xp.total, 0), 'the bonus is in the total');
+  const none = awardsFor(ws, [], 3);
+  eq(ws.map((w) => none.perWorkout.get(w.id).xp.week).join(), '0,0', 'two days of three: no bonus');
+  const crossing = awardsFor([...ws, W(MON + 3 * day)], [{ started_at: iso(MON + 4 * day) }], 3);
+  eq([...crossing.perWorkout.values()].map((p) => p.xp.week).join(), '0,0,100', 'a workout that reaches the goal gets it, once');
+  const cardioOnly = awardsFor([W(MON + 7 * day)], [{ started_at: iso(MON) }, { started_at: iso(MON + day) }, { started_at: iso(MON + 2 * day) }], 3);
+  eq([...cardioOnly.perWorkout.values()][0].xp.week, 0, 'a week with only cardio gives no workout the bonus');
+});
+
+test('comeback: logged cardio counts as activity, so running for three weeks then lifting is not a comeback', () => {
+  const ws = [W(MON), W(MON + 28 * day)];
+  const runs = [7, 14, 21].map((d) => ({ started_at: iso(MON + d * day) }));
+  assert(awardsFor(ws, [], 3).badges.find((b) => b.id === 'comeback').earned, 'four weeks away: comeback');
+  assert(!awardsFor(ws, runs, 3).badges.find((b) => b.id === 'comeback').earned, 'running in between: no comeback');
+});
+
+test('share card: "→ 212 lb" and "→ 9 reps" keep the number and unit together', () => {
+  eq(glue('Squat 200 lb → 212 lb'), 'Squat 200\u00a0lb →\u00a0212\u00a0lb');
+  eq(glue('Bench 8 reps → 9 reps'), 'Bench 8\u00a0reps →\u00a09\u00a0reps');
+  eq(glue('Plank 60 s'), 'Plank 60\u00a0s');
+  eq(glue('Lbs and things'), 'Lbs and things');
+});
+
+test('badge art: the aria-label is escaped', () => {
+  const svg = badgeSVG(BADGES[0].id, { label: 'A "quoted" <b>&</b>' });
+  assert(svg.includes('aria-label="A &quot;quoted&quot; &lt;b&gt;&amp;&lt;/b&gt;"'), svg.slice(0, 300));
 });

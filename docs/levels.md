@@ -12,7 +12,7 @@
 | The workout that hits your planned days for the week | +100 (once a week; logged cardio days count toward the goal) |
 | A badge | +100 |
 
-Warm-ups earn nothing, and a finished workout with no working sets earns nothing and isn't a training day. A typical session (18 sets, 6 exercises, 1 PR) is about 380 XP; three a week with the weekly bonus is about 1,240 XP a week.
+Warm-ups earn nothing, and a finished workout with no working sets earns nothing and isn't a training day. A typical early session (18 sets, 6 exercises, 1 PR) is about 380 XP; three a week with the weekly bonus is about 1,240 XP a week. Records come less often after the first months (about one every three sessions), so later sessions are closer to 345 XP and the levels below take a little longer than stated (top level in roughly 2¼ years rather than 2). If cardio completes your week after your last workout (lift Mon/Wed, run Fri), that last workout gets the +100.
 
 ## Levels
 

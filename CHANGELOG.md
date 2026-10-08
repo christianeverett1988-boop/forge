@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.2 — v0.3.2 follow-ups (2026-10-08)
+
+Merge after 0.4.1. No functions, rules or `config.js` changes; nothing to deploy beyond GitHub Pages.
+
+- **Weekly goal XP with cardio:** when logged cardio completes your week after your last workout (lift Mon/Wed, run Fri), that workout now gets the +100. It's still once a week, and a week with only cardio gives none.
+- **Comeback** counts logged cardio as activity, so three weeks of running followed by a lift isn't a "comeback".
+- **Share card:**
+  - the final number and its unit stay together ("→ 212 lb" no longer leaves "lb" alone on a line);
+  - with 4 or more records, a slightly smaller font and one line each fit three before "+N more".
+- **Badge art:** the aria-label is escaped.
+- **Rules test:** saving `awards_seen` on settings/main is now covered.
+- **docs/levels.md:** says honestly that records slow down after the first months.
+
 ## 0.4.0 — Withings, body composition, data check (W1) (2026-10-08)
 
 **⚠️ New: Cloud Functions, and rules changed.** This version needs the one-time setup in **[docs/withings.md](docs/withings.md) → Your steps**:

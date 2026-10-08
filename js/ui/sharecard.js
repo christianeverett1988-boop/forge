@@ -1,7 +1,11 @@
 // Share image for the workout summary: drawn on-device into a canvas (1080×1350), shared as a PNG with
 // the system share sheet where it's supported, otherwise downloaded. Nothing leaves the phone unless you
 // share it.
+
 import { bodyMapStandalone } from './bodymap.js';
+
+/** No-break spaces after "→" and before a trailing unit, so "→ 212 lb" never splits. Pure; exported for tests. */
+export const glue = (text) => String(text).replace(/ → /g, ' →\u00a0').replace(/ (lb|kg|reps|s)(?=$|[\s,.)])/g, '\u00a0$1');
 
 const W = 1080;
 const H = 1350;
@@ -98,8 +102,9 @@ export async function renderShareCard(card) {
   const wrap = (text, max, lines = 2) => {
     const out = [];
     let line = '';
-    // Split on plain spaces only; "→ 12" is glued with a no-break space so a number never sits alone.
-    for (const word of String(text).replace(/ → /g, ' →\u00a0').split(/ +/)) {
+    // Split on plain spaces only; "→ 12" and the final "212 lb" are glued with no-break spaces, so neither a
+    // number nor its unit ever sits alone on a line.
+    for (const word of glue(text).split(/ +/)) {
       const next = line ? `${line} ${word}` : word;
       if (ctx.measureText(next).width <= max || !line) line = next;
       else { out.push(line); line = word; }
@@ -113,6 +118,8 @@ export async function renderShareCard(card) {
     }
     return out;
   };
+  // 4+ records: a slightly smaller font and one line each, so three fit before "+N more".
+  const tight = card.prs.length >= 4;
   const prs = card.prs.map((p) => (typeof p === 'string' ? { name: '', what: p } : p));
   let shown = 0;
   for (const p of prs) {
@@ -122,10 +129,10 @@ export async function renderShareCard(card) {
       ctx.fillStyle = '#f2f5f8';
       for (const l of wrap(p.name, 460, 1)) { ctx.fillText(l, 580, y); y += 36; }
     }
-    ctx.font = `800 32px ${FONT}`;
+    ctx.font = `800 ${tight ? 28 : 32}px ${FONT}`;
     ctx.fillStyle = '#ffc94a';
-    for (const l of wrap(`🏆 ${p.what}`, 460, 2)) { ctx.fillText(l, 580, y); y += 40; }
-    y += 18;
+    for (const l of wrap(`🏆 ${p.what}`, 460, tight ? 1 : 2)) { ctx.fillText(l, 580, y); y += tight ? 34 : 40; }
+    y += tight ? 12 : 18;
     shown++;
   }
   if (shown < prs.length) {
