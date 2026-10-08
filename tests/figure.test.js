@@ -1,6 +1,6 @@
 // Silhouette rig: skeleton, IK constraints and tempo timing (js/ui/rig.js + js/ui/poses.js).
 import { test, eq, assert } from './harness.js';
-import { BODY, solve, dist, ik2, repPhases, repLength, progressAt, paramsAt, camera, boneMatrix } from '../js/ui/rig.js';
+import { BODY, solve, dist, ik2, repPhases, repLength, progressAt, paramsAt, camera, boneMatrix, drawOrder, frameBox } from '../js/ui/rig.js';
 import { TEMPLATES } from '../js/ui/poses.js';
 
 const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a.toFixed(4)} vs ${b.toFixed(4)}`);
@@ -106,4 +106,64 @@ test('camera: 3/4 view puts the far side forward and behind; bone matrix flips t
   const m = boneMatrix(project, 100, [0, 1, 0], [0, 0.5, 0], 0.5, [1, 0, 0]);
   assert(m[2] > 0, 'front side faces forward on screen');
   near(Math.hypot(m[0], m[1]), 1, 1e-9, 'no foreshortening for a vertical bone');
+});
+
+// ---------- depth sorting ----------
+const before = (order, a, b) => order.indexOf(a) < order.indexOf(b);
+
+test('depth: near limbs draw over the body, far limbs under it', () => {
+  const tpl = TEMPLATES.curl_dumbbell;
+  const order = drawOrder(tpl, solve(tpl, tpl.a), camera(tpl.cam));
+  eq(order[0], 'shadow');
+  assert(before(order, 'upperF', 'torso') && before(order, 'torso', 'upperN'), 'arms either side of the torso');
+  assert(before(order, 'thighF', 'pelvis') && before(order, 'pelvis', 'thighN'), 'legs either side of the pelvis');
+  assert(before(order, 'torso', 'pelvis'), 'pelvis over the bottom of the torso (glutes show)');
+  assert(before(order, 'dbNin', 'handN') && before(order, 'handN', 'dbNout'), 'hand between the dumbbell heads');
+});
+
+test('depth: a far arm reaching across the front of the body is drawn over it (presses, flyes)', () => {
+  // A front raise / fly-style pose: far arm straight out in front at shoulder height.
+  const tpl = { ...TEMPLATES.curl_dumbbell, bias: {} };
+  const P = { ...tpl.a, shF: 90, elF: 0, abd: -25 };
+  const j = solve(tpl, P);
+  const order = drawOrder(tpl, j, camera({ ...tpl.cam, yaw: 30 }));
+  assert(before(order, 'torso', 'foreF'), 'far forearm in front of the torso once it crosses');
+  const hang = drawOrder(tpl, solve(tpl, tpl.a), camera({ ...tpl.cam, yaw: 30 }));
+  assert(before(hang, 'foreF', 'torso'), 'and behind it while hanging at the side');
+});
+
+test('depth: pull-up hands wrap the bar; squat grip reads over the near plate', () => {
+  const pu = TEMPLATES.pullup;
+  for (const P of [pu.a, pu.b]) {
+    const o = drawOrder(pu, solve(pu, P), camera(pu.cam));
+    assert(before(o, 'barN', 'handN') && before(o, 'barF', 'handF'), 'hands over their bar section');
+    assert(before(o, 'posts', 'torso'), 'uprights behind the body');
+  }
+  const sq = TEMPLATES.squat_barbell;
+  const o = drawOrder(sq, solve(sq, sq.b), camera(sq.cam));
+  assert(before(o, 'plateN', 'handN') && before(o, 'plateN', 'foreN'), 'near arm over the near plate');
+  assert(before(o, 'torso', 'plateN'), 'near plate over the back');
+  assert(before(o, 'plateF', 'torso'), 'far plate behind the body');
+});
+
+// ---------- framing ----------
+test('framing: the box holds the whole squat rep; the pull-up frames arms, bar and back', () => {
+  const sq = TEMPLATES.squat_barbell;
+  const ph = repPhases(sq.tempo, sq.first);
+  const project = camera(sq.cam);
+  const [x, y, w, h] = frameBox(sq, project, ph);
+  for (const P of [sq.a, sq.b]) {
+    const j = solve(sq, P);
+    for (const n of ['toeN', 'heelN', 'head', 'kneeN', 'pelvis']) {
+      const [px, py] = project(j[n]);
+      assert(px > x && px < x + w && py > y && py < y + h, `squat ${n} in frame`);
+    }
+  }
+  const pu = TEMPLATES.pullup;
+  const pp = camera(pu.cam);
+  const box = frameBox(pu, pp, repPhases(pu.tempo, pu.first));
+  const toe = pp(solve(pu, pu.a).toeN);
+  assert(toe[1] > box[1] + box[3], 'pull-up feet run off the bottom');
+  const grip = pp(solve(pu, pu.a).gripN);
+  assert(grip[1] > box[1], 'bar in frame');
 });

@@ -8,28 +8,32 @@
 //   lag    per parameter: > 0 trails the movement, < 0 leads it (fraction of each phase).
 //   first  'down' if the rep starts by lowering (squat), 'up' if it starts by lifting (curl, pull-up).
 //   tempo  seconds { ecc: lowering, pause: bottom, con: lifting, top: top }; `slow` is used on tempo days.
-//   layers back-to-front draw order (segments and props).
+//   bias   optional depth nudges for the draw order (metres, + = further back); grips: hand → prop it holds.
+//   focus  optional joints to frame (the rest may run off the edge of the demo box).
+// Parts are depth-sorted every frame (rig.js drawOrder), so limbs crossing the body layer correctly.
 //
 // v0.3.0 ships three samples so the look can be approved; v0.3.1 adds the full library.
-
-const LIMBS_F = ['thighF', 'shinF', 'footF', 'upperF', 'foreF', 'handF'];
 
 export const TEMPLATES = {
   squat_barbell: {
     cam: { yaw: 12, pitch: 7, scale: 100, x: 108, ground: 200 },
     prop: 'barbell',
-    rig: { root: 'pelvis', balance: 'bar', legs: 'ik', feet: { x: 0, z: 0.16, kneesOut: 0.45 }, arms: 'ik-bar', grip: 0.3 },
+    // Bar low on the upper back (below the neck) so the plate clears the head.
+    rig: { root: 'pelvis', balance: 'bar', legs: 'ik', feet: { x: 0, z: 0.16, kneesOut: 0.45 }, arms: 'ik-bar', grip: 0.3, barDrop: 0.115, barBack: 0.09 },
     a: { py: 0.935, trunk: 7, head: 0 },
     b: { py: 0.5, trunk: 43, head: -22 },
     lag: { py: 0, trunk: -0.12, head: 0.2 },
     first: 'down',
     tempo: { ecc: 2, pause: 0.4, con: 1.2, top: 0.9 },
     slow: { ecc: 3.5, pause: 1, con: 1.2, top: 0.9 },
-    // The near plate sits over the traps; the near arm is drawn over it so the grip reads.
-    layers: ['shadow', 'plateF', 'bar', ...LIMBS_F, 'pelvis', 'torso', 'plateN', 'neck', 'head', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN'],
+    plate: 0.19,
+    // The near plate is really in front of the near arm; nudge it back so the grip reads.
+    bias: { plateN: 0.42 },
   },
   pullup: {
     cam: { yaw: 26, pitch: 6, scale: 80, x: 108, ground: 206 },
+    // Frame the arms, bar and back; the legs run off the bottom of the box.
+    focus: ['gripN', 'gripF', 'elbowN', 'elbowF', 'shoulderN', 'shoulderF', 'chest', 'pelvis', 'head'],
     prop: 'pullbar',
     rig: { root: 'chest', legs: 'fk', arms: 'ik-fixed', hands: { x: 0, y: 2.15 }, grip: 0.33 },
     a: { px: -0.045, py: 1.595, trunk: -3, head: 0, hipN: 8, kneeN: 10, hipF: 3, kneeF: 24, footN: 28, footF: 34 },
@@ -38,19 +42,19 @@ export const TEMPLATES = {
     first: 'up',
     tempo: { con: 1.1, top: 0.5, ecc: 2, pause: 0.6 },
     slow: { con: 1.1, top: 0.8, ecc: 3.5, pause: 1 },
-    layers: ['shadow', 'posts', ...LIMBS_F.filter((n) => n !== 'handF'), 'pelvis', 'torso', 'neck', 'head', 'bar', 'handF', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN', 'barCap'],
+    grips: { handN: 'barN', handF: 'barF' },
   },
   curl_dumbbell: {
     cam: { yaw: 18, pitch: 7, scale: 102, x: 92, ground: 200 },
     prop: 'dumbbells',
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.12, kneesOut: 0.2 }, arms: 'fk' },
-    a: { px: 0.0, py: 0.93, trunk: 2, head: 0, shN: 3, elN: 6, shF: 3, elF: 6, wrist: 4, abd: 7 },
-    b: { px: 0.0, py: 0.93, trunk: 0, head: -2, shN: 12, elN: 136, shF: 10, elF: 130, wrist: -14, abd: 7 },
-    lag: { shN: 0.15, shF: 0.2, elF: 0.08, wrist: 0.2, trunk: 0.3 },
+    // One dumbbell, near hand; the far arm hangs relaxed (fewer shapes, clearer read).
+    a: { px: 0.0, py: 0.93, trunk: 2, head: 0, shN: 3, elN: 6, shF: 2, elF: 10, wrist: 4, abd: 7 },
+    b: { px: 0.0, py: 0.93, trunk: 0, head: -2, shN: 12, elN: 136, shF: 2, elF: 10, wrist: -14, abd: 7 },
+    lag: { shN: 0.15, wrist: 0.2, trunk: 0.3 },
     first: 'up',
     tempo: { con: 1.1, top: 0.4, ecc: 2.2, pause: 0.5 },
     slow: { con: 1.1, top: 0.6, ecc: 3.5, pause: 1 },
-    layers: ['shadow', 'thighF', 'shinF', 'footF', 'upperF', 'foreF', 'dbF', 'handF', 'pelvis', 'torso', 'neck', 'head', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'dbNback', 'handN', 'dbNfront'],
   },
 };
 

@@ -122,7 +122,7 @@ export function solve(tpl, P) {
   const up = trunkDir(P.trunk);
   const fwd = trunkFwd(P.trunk);
   const j = {};
-  const barLocal = (k) => add(mul(up, BODY.spine - 0.05), mul(fwd, -0.075 * k)); // bar on the traps, behind the neck
+  const barLocal = (k) => add(mul(up, BODY.spine - (r.barDrop ?? 0.05)), mul(fwd, -(r.barBack ?? 0.075) * k)); // bar on the upper back
 
   if (r.root === 'chest') {
     j.chest = [P.px, P.py, 0];
@@ -183,6 +183,7 @@ export function solve(tpl, P) {
       j['elbow' + S] = add(sh, mul(sag(shA, P.abd ?? 4, side), BODY.upper));
       j['wrist' + S] = add(j['elbow' + S], mul(sag(elA, 0, side), BODY.fore));
       j['handDir' + S] = sag(elA + (P.wrist || 0), 0, side);
+      j['grip' + S] = add(j['wrist' + S], mul(j['handDir' + S], BODY.hand * 0.5));
     } else {
       let target;
       let pole;
@@ -250,4 +251,101 @@ export function boneMatrix(project, scale, a, b, L, front) {
   }
   const k = Math.max(pl, 0.5) / Lp;
   return [ux * k, uy * k, nx, ny, A[0], A[1]];
+}
+
+// ---------- draw order (depth sorting) ----------
+const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+export const BODY_PARTS = ['thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN', 'thighF', 'shinF', 'footF', 'upperF', 'foreF', 'handF', 'pelvis', 'torso', 'neck', 'head'];
+
+/** The props a template draws, by name. */
+export function propParts(tpl) {
+  if (tpl.prop === 'barbell') return ['barF', 'plateF', 'plateN'];
+  if (tpl.prop === 'pullbar') return ['posts', 'barF', 'barM', 'barN'];
+  if (tpl.prop === 'dumbbells') return ['dbNin', 'dbNout'];
+  return [];
+}
+
+/** World point whose depth decides where each part sits in the draw order, plus a small tie-break. */
+function anchors(tpl, j) {
+  const a = {};
+  for (const S of ['N', 'F']) {
+    a[`thigh${S}`] = [mid(j[`hip${S}`], j[`knee${S}`]), 0];
+    a[`shin${S}`] = [mid(j[`knee${S}`], j[`ankle${S}`]), 0];
+    a[`foot${S}`] = [mid(j[`heel${S}`], j[`toe${S}`]), -0.005];
+    a[`upper${S}`] = [mid(j[`shoulder${S}`], j[`elbow${S}`]), 0];
+    a[`fore${S}`] = [mid(j[`elbow${S}`], j[`wrist${S}`]), 0];
+    a[`hand${S}`] = [mid(j[`wrist${S}`], j[`handTip${S}`]), -0.01];
+  }
+  a.torso = [mid(j.pelvis, j.chest), 0];
+  a.pelvis = [j.pelvis, -0.004]; // over the bottom of the torso, so the glutes show
+  a.neck = [mid(j.chest, j.neck), -0.002];
+  a.head = [j.head, -0.003];
+  if (tpl.prop === 'barbell') {
+    const b = j.bar;
+    a.barF = [[b[0], b[1], 0.39], 0];
+    a.plateF = [[b[0], b[1], 0.55], 0];
+    a.plateN = [[b[0], b[1], -0.55], 0];
+  } else if (tpl.prop === 'pullbar') {
+    const { x, y } = tpl.rig.hands;
+    a.posts = [[x, y, 0], 98];
+    a.barF = [[x, y, 0.37], 0];
+    a.barM = [[x, y, 0], 0];
+    a.barN = [[x, y, -0.37], 0];
+  } else if (tpl.prop === 'dumbbells') {
+    const g = j.gripN;
+    a.dbNin = [[g[0], g[1], g[2] + 0.11], 0];
+    a.dbNout = [[g[0], g[1], g[2] - 0.11], 0];
+  }
+  return a;
+}
+
+/**
+ * Back-to-front draw order for this frame. Each part sorts by the depth of its anchor (bone midpoint,
+ * spine, prop centre), so a limb crossing in front of the body is drawn over it and one behind it is
+ * drawn under it. Templates can nudge a part (`bias`, metres; + = further back) and make a hand stay in
+ * front of the prop it grips (`grips`). The shadow is always first.
+ */
+export function drawOrder(tpl, j, project) {
+  const a = anchors(tpl, j);
+  const d = {};
+  for (const [name, [p, tie]] of Object.entries(a)) d[name] = project(p)[2] + tie + ((tpl.bias && tpl.bias[name]) || 0);
+  for (const [hand, prop] of Object.entries(tpl.grips || {})) if (d[prop] != null) d[hand] = Math.min(d[hand], d[prop] - 0.01);
+  const names = Object.keys(d);
+  const order = names.map((n, i) => [n, i]).sort((x, y) => d[y[0]] - d[x[0]] || x[1] - y[1]).map(([n]) => n);
+  return ['shadow', ...order];
+}
+
+// ---------- framing ----------
+const POINTS = [...JOINTS, 'toeN', 'toeF', 'heelN', 'heelF', 'handTipN', 'handTipF', 'gripN', 'gripF'];
+
+/**
+ * The screen box (px) that holds the whole rep, so the figure fills the demo box. `tpl.focus` limits it
+ * to some joints (the pull-up frames arms, bar and back, and lets the legs run off the bottom).
+ */
+export function frameBox(tpl, project, phases, n = 16) {
+  const T = repLength(phases);
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  const take = (p) => {
+    const [x, y] = project(p);
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  };
+  for (let k = 0; k < n; k++) {
+    const j = solve(tpl, paramsAt(tpl, phases, (T * k) / n));
+    const names = tpl.focus || POINTS;
+    for (const name of names) if (j[name]) take(j[name]);
+    take(add(j.head, mul(j.headUp, BODY.headR + 0.03))); // top of the head
+    if (!tpl.focus && tpl.prop === 'barbell') {
+      const R = tpl.plate ?? 0.2;
+      for (const z of [-0.6, 0.6]) for (const [dx, dy] of [[0, R], [0, -R], [R, 0], [-R, 0]]) take([j.bar[0] + dx, j.bar[1] + dy, z]);
+    }
+    if (tpl.prop === 'pullbar') take([tpl.rig.hands.x, tpl.rig.hands.y + 0.05, 0]);
+  }
+  const m = 0.07 * tpl.cam.scale;
+  return [x0 - m, y0 - m, x1 - x0 + 2 * m, y1 - y0 + 2 * m];
 }

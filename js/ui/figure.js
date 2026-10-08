@@ -3,10 +3,11 @@
 // muscles glowing (muscle-shaped, opacity only) at the hardest point of each rep.
 //
 // Every node is built once. Each frame only updates `transform` matrices (one <g> per body segment and
-// prop), at most 30 times a second, and the loop sleeps while the workout is paused or resting.
+// prop) and, when it changes, the depth order of those groups; at most 30 times a second, and the loop
+// sleeps while the workout is paused or resting. The view box is fitted to the whole rep at mount.
 // Pure code and data: offline, no downloads. Templates: js/ui/poses.js. Skeleton and camera: js/ui/rig.js.
 import { TEMPLATES, EXERCISE_TEMPLATES } from './poses.js';
-import { BODY, solve, camera, boneMatrix, repPhases, repLength, progressAt, paramsAt } from './rig.js';
+import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, drawOrder, frameBox } from './rig.js';
 import { onFrame, reducedMotion } from './motion.js';
 
 export const hasFigure = (exerciseId) => !!EXERCISE_TEMPLATES[exerciseId];
@@ -121,12 +122,14 @@ const HEAD = [
 const FOOT = [[0.0, 0.015], [0.015, 0.06], [0.06, 0.095], [0.12, 0.06], [0.205, 0.028], [0.225, 0.005], [0.15, -0.006], [0.03, -0.006]];
 
 // ---------- colours ----------
+// Lighter greys than the app background (#0e1116 / #15191f) so the body reads clearly; far limbs darker.
 const C = {
-  nearBack: '#262c34', nearFront: '#5a6572',
-  farBack: '#171b21', farFront: '#323944',
-  torsoBack: '#2a3139', torsoFront: '#626d7a',
+  nearBack: '#3b444f', nearFront: '#8a96a4',
+  farBack: '#232930', farFront: '#4d5662',
+  torsoBack: '#3d4652', torsoFront: '#929eac',
+  outline: '#0b0e12',
   rim: '#c6ff3d',
-  steel: '#a7b0bb', steelDark: '#5c6570', plate: '#252a31', plateEdge: '#4a525d',
+  steel: '#b9c1cb', steelDark: '#6b7480', plate: '#2b3139', plateEdge: '#5a636e',
 };
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -153,8 +156,9 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   const phases = repPhases(slow && tpl.slow ? tpl.slow : tpl.tempo, tpl.first);
   const glow = muscleGlow(ex);
   const id = `fig${++uid}`;
+  const box = frameBox(tpl, project, phases);
 
-  const svg = el('svg', { viewBox: '0 0 200 210', class: 'figure', role: 'img', 'aria-label': `${ex.name} demo` });
+  const svg = el('svg', { viewBox: box.map(f1).join(' '), class: 'figure', role: 'img', 'aria-label': `${ex.name} demo` });
   const defs = el('defs', {}, svg);
   const lin = (name, a, b) => {
     const g = el('linearGradient', { id: `${id}${name}`, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
@@ -169,18 +173,18 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   el('stop', { offset: 0.45, 'stop-color': '#ff6a2b', 'stop-opacity': 0.85 }, rg);
   el('stop', { offset: 1, 'stop-color': '#ff4d1a', 'stop-opacity': 0 }, rg);
   const sg = el('radialGradient', { id: `${id}s` }, defs);
-  el('stop', { offset: 0, 'stop-color': '#000', 'stop-opacity': 0.55 }, sg);
+  el('stop', { offset: 0, 'stop-color': '#000', 'stop-opacity': 0.6 }, sg);
   el('stop', { offset: 1, 'stop-color': '#000', 'stop-opacity': 0 }, sg);
 
-  // Floor line (not for hanging moves).
-  if (tpl.rig.legs === 'ik') el('line', { x1: 14, y1: tpl.cam.ground + 2, x2: 186, y2: tpl.cam.ground + 2, stroke: '#232a32', 'stroke-width': 1.5 }, svg);
+  // Floor line across the box (not for hanging moves).
+  if (tpl.rig.legs === 'ik') el('line', { x1: f1(box[0]), y1: tpl.cam.ground + 2, x2: f1(box[0] + box[2]), y2: tpl.cam.ground + 2, stroke: '#2a313a', 'stroke-width': 1.5 }, svg);
 
   const groups = {};
   const glows = []; // { node, weight }
   const fill = (far) => `url(#${id}${far ? 'f' : 'n'})`;
   // A thin dark outline keeps overlapping parts (arm over torso, leg over leg) readable.
-  const OUT = { stroke: '#101318', 'stroke-width': 0.9, 'stroke-linejoin': 'round' };
-  const rimLine = (g, d, w = 1.1, o = 0.4) => el('path', { d, fill: 'none', stroke: C.rim, 'stroke-width': w, 'stroke-linecap': 'round', opacity: o }, g);
+  const OUT = { stroke: C.outline, 'stroke-width': 0.9, 'stroke-linejoin': 'round' };
+  const rimLine = (g, d, w = 1.1, o = 0.45) => el('path', { d, fill: 'none', stroke: C.rim, 'stroke-width': w, 'stroke-linecap': 'round', opacity: o }, g);
 
   function addGlow(g, d, weight, far) {
     const n = el('path', { d, fill: `url(#${id}g)`, opacity: 0 }, g);
@@ -203,7 +207,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     el('path', { d: body, fill: fill(far), ...OUT }, g);
     if (kind === 'hand') {
       const x = spec.L * s * 0.55;
-      el('path', { d: `M${f1(x)},${f1(-spec.r0 * s * 0.6)}L${f1(x)},${f1(spec.r0 * s * 0.6)}`, stroke: far ? '#11151a' : '#2a3038', 'stroke-width': 0.8, fill: 'none' }, g);
+      el('path', { d: `M${f1(x)},${f1(-spec.r0 * s * 0.6)}L${f1(x)},${f1(spec.r0 * s * 0.6)}`, stroke: C.outline, 'stroke-width': 0.8, fill: 'none', opacity: 0.6 }, g);
     }
     if (!far) rimLine(g, rim);
     for (const [m, w] of Object.entries(glow)) {
@@ -223,7 +227,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     const pts = TORSO.map(([u, v]) => [u * s, v * s * k]);
     el('path', { d: smooth(pts), fill: `url(#${id}t)`, ...OUT }, g);
     rimLine(g, smooth(pts.slice(6, 12), false), 1.2);
-    el('path', { d: `M${f1(0.31 * s)},${f1(0.135 * s * k)}Q${f1(0.36 * s)},${f1(0.07 * s)} ${f1(0.47 * s)},${f1(0.09 * s)}`, fill: 'none', stroke: '#2b323b', 'stroke-width': 0.9, opacity: 0.8 }, g);
+    el('path', { d: `M${f1(0.31 * s)},${f1(0.135 * s * k)}Q${f1(0.36 * s)},${f1(0.07 * s)} ${f1(0.47 * s)},${f1(0.09 * s)}`, fill: 'none', stroke: C.outline, 'stroke-width': 0.9, opacity: 0.35 }, g);
     for (const [m, w] of Object.entries(glow)) {
       for (const shape of M[m]) {
         if (shape[0] !== 'torso') continue;
@@ -238,8 +242,8 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     const g = el('g', {});
     const pts = PELVIS.map(([u, v]) => [u * s, v * s]);
     el('path', { d: smooth(pts), fill: `url(#${id}t)`, ...OUT }, g);
-    rimLine(g, smooth(pts.slice(3, 7), false), 1.1, 0.35);
-    if (glow.glutes) addGlow(g, belly(-0.035 * s, -0.075 * s, 0.17 * s, 0.065 * s), glow.glutes, false);
+    rimLine(g, smooth(pts.slice(3, 7), false), 1.1, 0.4);
+    if (glow.glutes) addGlow(g, belly(-0.03 * s, -0.08 * s, 0.21 * s, 0.075 * s), glow.glutes, false);
     return g;
   }
 
@@ -247,8 +251,8 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     const g = el('g', {});
     const pts = HEAD.map(([u, v]) => [u * s, v * s]);
     el('path', { d: smooth(pts), fill: `url(#${id}t)`, ...OUT }, g);
-    rimLine(g, smooth(pts.slice(6, 11), false), 1.2, 0.45);
-    el('ellipse', { cx: 0.12 * s, cy: -0.02 * s, rx: 0.025 * s, ry: 0.018 * s, fill: '#2f363f' }, g); // ear
+    rimLine(g, smooth(pts.slice(6, 11), false), 1.2, 0.5);
+    el('ellipse', { cx: 0.12 * s, cy: -0.02 * s, rx: 0.025 * s, ry: 0.018 * s, fill: '#4a535e' }, g); // ear
     return g;
   }
 
@@ -269,55 +273,46 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   function dbHead(parent, light) {
     // Round head seen end-on: face, bevel ring, handle end.
     const R = 0.058 * s;
-    el('circle', { r: R, fill: light ? '#363d46' : '#1b2026', stroke: light ? '#6a737e' : '#3b424b', 'stroke-width': 1 }, parent);
-    el('circle', { r: R * 0.7, fill: 'none', stroke: light ? '#4b535d' : '#2a3038', 'stroke-width': 0.8 }, parent);
+    el('circle', { r: R, fill: light ? '#3d454f' : '#272d35', stroke: light ? '#7a8490' : '#4a525d', 'stroke-width': 1 }, parent);
+    el('circle', { r: R * 0.7, fill: 'none', stroke: light ? '#56606b' : '#353c45', 'stroke-width': 0.8 }, parent);
     el('circle', { r: R * 0.22, fill: light ? C.steel : C.steelDark }, parent);
   }
   function buildProp(name) {
     const g = el('g', {});
     if (name === 'plateF' || name === 'plateN') {
       // A bumper plate: two faces so it reads as a thick disc.
+      const R = (tpl.plate ?? 0.2) * s;
       const back = el('g', {}, g);
-      disc(back, 0.2 * s, C.plate, C.plateEdge, C.steelDark);
+      disc(back, R, C.plate, C.plateEdge, C.steelDark);
       const front = el('g', {}, g);
-      disc(front, 0.2 * s, name === 'plateN' ? '#2c323a' : '#1e2329', C.plateEdge, C.steel);
+      disc(front, R, name === 'plateN' ? '#333a43' : '#252a31', C.plateEdge, C.steel);
       g._faces = [back, front];
-    } else if (name === 'bar') {
+    } else if (/^bar[FMN]$/.test(name)) {
       const pull = tpl.prop === 'pullbar';
-      g._line = el('line', { stroke: C.steel, 'stroke-width': (pull ? 0.034 : 0.03) * s, 'stroke-linecap': pull ? 'butt' : 'round' }, g);
+      g._line = el('line', { stroke: C.steel, 'stroke-width': (pull ? 0.034 : 0.03) * s, 'stroke-linecap': 'butt' }, g);
+      // The pull-up bar's cross-section shows at its near end.
+      if (pull && name === 'barN') g._cap = el('circle', { r: 0.017 * s, fill: '#d6dce3', stroke: C.steelDark, 'stroke-width': 0.6 }, g);
     } else if (name === 'posts') {
-      // Uprights holding the pull-up bar, drawn behind the body.
-      g._postA = el('line', { stroke: '#3a414b', 'stroke-width': 0.035 * s }, g);
-      g._postB = el('line', { stroke: '#3a414b', 'stroke-width': 0.035 * s }, g);
-    } else if (name === 'barCap') {
-      // The pull-up bar's cross-section at the near end.
-      el('circle', { r: 0.017 * s, fill: '#d2d8df', stroke: C.steelDark, 'stroke-width': 0.6 }, g);
-    } else if (name === 'dbF' || name === 'dbNback') {
-      // Dumbbell seen end-on: handle, inner head (and for the far one, the outer head too).
-      g._handle = el('line', { stroke: name === 'dbF' ? C.steelDark : C.steel, 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
-      g._inner = el('g', {}, g);
-      dbHead(g._inner, false);
-      if (name === 'dbF') {
-        g._outer = el('g', {}, g);
-        dbHead(g._outer, false);
-      }
-    } else if (name === 'dbNfront') {
-      g._outer = el('g', {}, g);
-      dbHead(g._outer, true);
+      g._a = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
+      g._b = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
+    } else if (name === 'dbNin') {
+      // Dumbbell seen end-on: handle and inner head behind the hand, outer head in front.
+      g._handle = el('line', { stroke: C.steel, 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
+      g._head = el('g', {}, g);
+      dbHead(g._head, false);
+    } else if (name === 'dbNout') {
+      g._head = el('g', {}, g);
+      dbHead(g._head, true);
     } else if (name === 'shadow') {
       el('ellipse', { rx: 0.42 * s, ry: 0.06 * s, fill: `url(#${id}s)` }, g);
     }
     return g;
   }
 
-  for (const name of tpl.layers) {
-    let g;
-    if (/^(thigh|shin|foot|upper|fore|hand)[NF]$/.test(name)) g = buildLimb(name);
-    else if (name === 'torso') g = buildTorso();
-    else if (name === 'pelvis') g = buildPelvis();
-    else if (name === 'head') g = buildHead();
-    else if (name === 'neck') g = buildNeck();
-    else g = buildProp(name);
+  const builders = { torso: buildTorso, pelvis: buildPelvis, head: buildHead, neck: buildNeck };
+  for (const name of ['shadow', ...BODY_PARTS, ...propParts(tpl)]) {
+    const g = /^(thigh|shin|foot|upper|fore|hand)[NF]$/.test(name) ? buildLimb(name) : builders[name] ? builders[name]() : buildProp(name);
+    g.dataset.part = name;
     svg.appendChild(g);
     groups[name] = g;
   }
@@ -343,6 +338,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   };
   const ux = [1, 0, 0];
   const uy = [0, -1, 0]; // screen y runs down
+  let lastOrder = '';
 
   function draw(t, staticPose) {
     const P = staticPose || paramsAt(tpl, phases, t);
@@ -365,40 +361,45 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     bone('head', j.neck, [j.neck[0] + j.headUp[0] * 0.24, j.neck[1] + j.headUp[1] * 0.24, 0], 0.24, j.headFwd);
 
     // Shadow under the feet (smaller and fainter when hanging).
-    if (groups.shadow) {
-      const O = project([(j.ankleN[0] + j.ankleF[0]) / 2, 0, 0]);
-      const air = Math.max(0, Math.min(j.ankleN[1], j.ankleF[1]) - BODY.ankleY);
-      groups.shadow.setAttribute('transform', `translate(${f1(O[0])},${f1(O[1])}) scale(${(1 - Math.min(0.6, air * 0.8)).toFixed(2)})`);
-      groups.shadow.setAttribute('opacity', Math.max(0.3, 1 - air * 1.5).toFixed(2));
-    }
+    const O = project([(j.ankleN[0] + j.ankleF[0]) / 2, 0, 0]);
+    const air = Math.max(0, Math.min(j.ankleN[1], j.ankleF[1]) - BODY.ankleY);
+    groups.shadow.setAttribute('transform', `translate(${f1(O[0])},${f1(O[1])}) scale(${(1 - Math.min(0.6, air * 0.8)).toFixed(2)})`);
+    groups.shadow.setAttribute('opacity', Math.max(0.3, 1 - air * 1.5).toFixed(2));
 
     if (tpl.prop === 'barbell') {
       const b = j.bar;
-      line(groups.bar._line, at(b, 0.78), at(b, -0.78));
+      line(groups.barF._line, at(b, 0), at(b, 0.78)); // the near half sits inside the body and the near plate
       for (const [name, side] of [['plateF', 1], ['plateN', -1]]) {
         const [inner, outer] = groups[name]._faces;
         set(inner, plane(at(b, side * 0.5), ux, uy));
         set(outer, plane(at(b, side * 0.6), ux, uy));
-        // The face nearer the camera goes on top: outer on the near plate, inner on the far one.
-        groups[name].appendChild(side < 0 ? outer : inner);
+        groups[name].appendChild(side < 0 ? outer : inner); // nearer face on top
       }
     } else if (tpl.prop === 'pullbar') {
       const { x, y } = tpl.rig.hands;
-      line(groups.bar._line, [x, y, 0.62], [x, y, -0.62]);
-      line(groups.posts._postA, [x, y - 0.02, 0.62], [x, y + 0.7, 0.62]);
-      line(groups.posts._postB, [x, y - 0.02, -0.62], [x, y + 0.7, -0.62]);
-      set(groups.barCap, plane([x, y, -0.62], ux, uy));
+      line(groups.barF._line, [x, y, 0.62], [x, y, 0.12]);
+      line(groups.barM._line, [x, y, 0.12], [x, y, -0.12]);
+      line(groups.barN._line, [x, y, -0.12], [x, y, -0.62]);
+      const cap = project([x, y, -0.62]);
+      groups.barN._cap.setAttribute('cx', f1(cap[0]));
+      groups.barN._cap.setAttribute('cy', f1(cap[1]));
+      line(groups.posts._a, [x, y - 0.02, 0.62], [x, y + 0.7, 0.62]);
+      line(groups.posts._b, [x, y - 0.02, -0.62], [x, y + 0.7, -0.62]);
     } else if (tpl.prop === 'dumbbells') {
-      for (const S of ['N', 'F']) {
-        const grip = j[`wrist${S}`].map((v, k) => v + j[`handDir${S}`][k] * BODY.hand * 0.5);
-        const side = S === 'N' ? -1 : 1;
-        const inner = [grip[0], grip[1], grip[2] - side * 0.11];
-        const outer = [grip[0], grip[1], grip[2] + side * 0.11];
-        const g = S === 'F' ? groups.dbF : groups.dbNback;
-        line(g._handle, inner, outer);
-        set(g._inner, plane(inner, ux, uy));
-        set(S === 'F' ? groups.dbF._outer : groups.dbNfront._outer, plane(outer, ux, uy));
-      }
+      const g = j.gripN;
+      const inner = [g[0], g[1], g[2] + 0.11];
+      const outer = [g[0], g[1], g[2] - 0.11];
+      line(groups.dbNin._handle, inner, outer);
+      set(groups.dbNin._head, plane(inner, ux, uy));
+      set(groups.dbNout._head, plane(outer, ux, uy));
+    }
+
+    // Depth sort: re-append groups only when the back-to-front order changes.
+    const order = drawOrder(tpl, j, project);
+    const key = order.join();
+    if (key !== lastOrder) {
+      lastOrder = key;
+      for (const name of order) svg.appendChild(groups[name]);
     }
 
     // Glow: opacity only, strongest at the hardest point of the rep.
@@ -408,7 +409,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   }
 
   if (still != null) {
-    draw(still); // a still frame at `at` seconds into the rep (frame sheets)
+    draw(still); // a still frame `at` seconds into the rep (frame sheets)
     return { stop() {} };
   }
   if (reducedMotion()) {
