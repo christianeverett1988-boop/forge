@@ -149,8 +149,10 @@ const mtx = (m) => `matrix(${m.map((x) => (Math.round(x * 1000) / 1000).toString
  * Stops by itself when the container leaves the page.
  */
 export function mountFigure(container, ex, { isPaused = () => false, slow = false, at: still = null } = {}) {
-  const tpl = TEMPLATES[EXERCISE_TEMPLATES[ex.id]];
-  if (!tpl) return null;
+  const base = TEMPLATES[EXERCISE_TEMPLATES[ex.id]];
+  if (!base) return null;
+  // The exercise decides what is held (barbell, dumbbell, kettlebell, cable, band…) unless the template says.
+  const tpl = { ...base, load: base.load || ex.load };
   const s = tpl.cam.scale;
   const project = camera(tpl.cam);
   const phases = repPhases(slow && tpl.slow ? tpl.slow : tpl.tempo, tpl.first);
@@ -264,7 +266,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     return g;
   }
 
-  // Props: built once in their own local frames.
+  // Props: built once in their own local frames; each frame only moves them.
   function disc(g, R, face, edge, hub) {
     el('circle', { r: R, fill: face, stroke: edge, 'stroke-width': 1.2 }, g);
     el('circle', { r: R * 0.62, fill: 'none', stroke: edge, 'stroke-width': 0.7, opacity: 0.7 }, g);
@@ -277,6 +279,12 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     el('circle', { r: R * 0.7, fill: 'none', stroke: light ? '#56606b' : '#353c45', 'stroke-width': 0.8 }, parent);
     el('circle', { r: R * 0.22, fill: light ? C.steel : C.steelDark }, parent);
   }
+  function kettlebell(parent, light) {
+    // Bell hanging below the handle (local px, handle at 0,0).
+    el('path', { d: `M${f1(-0.045 * s)},${f1(0.05 * s)}C${f1(-0.06 * s)},${f1(-0.05 * s)} ${f1(0.06 * s)},${f1(-0.05 * s)} ${f1(0.045 * s)},${f1(0.05 * s)}`, fill: 'none', stroke: light ? '#59626d' : '#3a414a', 'stroke-width': 0.022 * s }, parent);
+    el('circle', { cy: 0.11 * s, r: 0.085 * s, fill: light ? '#343b44' : '#22272e', stroke: light ? '#6a737e' : '#3e454e', 'stroke-width': 1 }, parent);
+    el('ellipse', { cx: -0.03 * s, cy: 0.08 * s, rx: 0.025 * s, ry: 0.015 * s, fill: '#ffffff', opacity: light ? 0.12 : 0.06 }, parent);
+  }
   function buildProp(name) {
     const g = el('g', {});
     if (name === 'plateF' || name === 'plateN') {
@@ -287,29 +295,113 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
       const front = el('g', {}, g);
       disc(front, R, name === 'plateN' ? '#333a43' : '#252a31', C.plateEdge, C.steel);
       g._faces = [back, front];
-    } else if (/^bar[FMN]$/.test(name)) {
-      const pull = tpl.prop === 'pullbar';
-      g._line = el('line', { stroke: C.steel, 'stroke-width': (pull ? 0.034 : 0.03) * s, 'stroke-linecap': 'butt' }, g);
+    } else if (name === 'barF' || name === 'barN') {
+      g._line = el('line', { stroke: name === 'barF' ? '#8d96a1' : C.steel, 'stroke-width': 0.03 * s, 'stroke-linecap': 'butt' }, g);
+    } else if (/^pb[FMN]$/.test(name)) {
+      g._line = el('line', { stroke: C.steel, 'stroke-width': 0.034 * s, 'stroke-linecap': 'butt' }, g);
       // The pull-up bar's cross-section shows at its near end.
-      if (pull && name === 'barN') g._cap = el('circle', { r: 0.017 * s, fill: '#d6dce3', stroke: C.steelDark, 'stroke-width': 0.6 }, g);
+      if (name === 'pbN') g._cap = el('circle', { r: 0.017 * s, fill: '#d6dce3', stroke: C.steelDark, 'stroke-width': 0.6 }, g);
     } else if (name === 'posts') {
       g._a = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
       g._b = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
-    } else if (name === 'dbNin') {
+    } else if (/^db[NF]in$/.test(name)) {
       // Dumbbell seen end-on: handle and inner head behind the hand, outer head in front.
-      g._handle = el('line', { stroke: C.steel, 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
+      g._handle = el('line', { stroke: name[2] === 'N' ? C.steel : C.steelDark, 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
       g._head = el('g', {}, g);
       dbHead(g._head, false);
-    } else if (name === 'dbNout') {
+    } else if (/^db[NF]out$/.test(name)) {
       g._head = el('g', {}, g);
-      dbHead(g._head, true);
+      dbHead(g._head, name[2] === 'N');
+    } else if (/^kb[NF]$/.test(name)) {
+      g._bell = el('g', {}, g);
+      kettlebell(g._bell, name === 'kbN');
+    } else if (name === 'goblet') {
+      g._w = el('g', {}, g);
+      if (tpl.load === 'kettlebell') kettlebell(g._w, true);
+      else {
+        // A dumbbell held upright at the chest by the top head.
+        el('line', { x1: 0, y1: -0.02 * s, x2: 0, y2: 0.2 * s, stroke: C.steel, 'stroke-width': 0.028 * s }, g._w);
+        el('rect', { x: -0.07 * s, y: -0.07 * s, width: 0.14 * s, height: 0.06 * s, rx: 0.015 * s, fill: '#3d454f', stroke: '#7a8490', 'stroke-width': 1 }, g._w);
+        el('rect', { x: -0.07 * s, y: 0.19 * s, width: 0.14 * s, height: 0.06 * s, rx: 0.015 * s, fill: '#2c333b', stroke: '#5a636e', 'stroke-width': 1 }, g._w);
+      }
+    } else if (/^(cable|band)[NF]$/.test(name)) {
+      const band = name.startsWith('band');
+      g._line = el('line', { stroke: band ? '#e0663f' : '#c3cad3', 'stroke-width': (band ? 0.022 : 0.008) * s, 'stroke-linecap': 'round', opacity: name.endsWith('F') ? 0.6 : 1 }, g);
+    } else if (name === 'ball') {
+      g._b = el('circle', { r: 0.11 * s, fill: '#3b3128', stroke: '#6b5a48', 'stroke-width': 1.2 }, g);
+    } else if (name === 'wheel') {
+      g._b = el('g', {}, g);
+      el('circle', { r: 0.09 * s, fill: '#2a3038', stroke: '#6a737e', 'stroke-width': 1.5 }, g._b);
+      el('circle', { r: 0.025 * s, fill: C.steel }, g._b);
+    } else if (/^dip[NF]$/.test(name)) {
+      g._rail = el('line', { stroke: name === 'dipN' ? C.steel : '#7d8691', 'stroke-width': 0.04 * s, 'stroke-linecap': 'round' }, g);
+      g._legA = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
+      g._legB = el('line', { stroke: '#3f4752', 'stroke-width': 0.035 * s }, g);
+    } else if (/^ring[NF]$/.test(name)) {
+      g._strap = el('line', { stroke: '#c9b48a', 'stroke-width': 0.012 * s }, g);
+      g._ring = el('circle', { r: 0.09 * s, fill: 'none', stroke: '#2b2f35', 'stroke-width': 0.03 * s }, g);
     } else if (name === 'shadow') {
       el('ellipse', { rx: 0.42 * s, ry: 0.06 * s, fill: `url(#${id}s)` }, g);
     }
     return g;
   }
 
+  // ----- environment: benches, boxes, walls, cable stacks. Static, so drawn once, always behind the body. -----
+  function buildEnv() {
+    const g = el('g', { class: 'env' });
+    const yaw = (tpl.cam.yaw * Math.PI) / 180;
+    const pitch = (tpl.cam.pitch * Math.PI) / 180;
+    const toViewer = [Math.sin(yaw), Math.sin(pitch), -Math.cos(yaw)];
+    const dot = (a, b2) => a[0] * b2[0] + a[1] * b2[1] + a[2] * b2[2];
+    const poly = (pts, fillc) => el('path', { d: `M${pts.map((p) => project(p).slice(0, 2).map(f1).join(',')).join('L')}Z`, fill: fillc, stroke: C.outline, 'stroke-width': 0.8, 'stroke-linejoin': 'round' }, g);
+    // A box from a top edge a→b (in the x-y plane), width w across z, thickness t below the top.
+    const slab = (a, b2, w, t, col = ['#3d4550', '#262c34', '#2e353e'], zc = 0) => {
+      const dx = b2[0] - a[0];
+      const dy = b2[1] - a[1];
+      const L = Math.hypot(dx, dy) || 1;
+      const u = [dx / L, dy / L, 0];
+      const n = [-u[1], u[0], 0]; // up-ish normal of the top face
+      const down = [-n[0] * t, -n[1] * t, 0];
+      const P = (p, z, d = false) => [p[0] + (d ? down[0] : 0), p[1] + (d ? down[1] : 0), z + zc];
+      const hw = w / 2;
+      const faces = [
+        [[P(a, -hw), P(b2, -hw), P(b2, hw), P(a, hw)], n, col[0]],
+        [[P(a, -hw), P(b2, -hw), P(b2, -hw, true), P(a, -hw, true)], [0, 0, -1], col[1]],
+        [[P(a, hw), P(b2, hw), P(b2, hw, true), P(a, hw, true)], [0, 0, 1], col[1]],
+        [[P(b2, -hw), P(b2, hw), P(b2, hw, true), P(b2, -hw, true)], u, col[2]],
+        [[P(a, -hw), P(a, hw), P(a, hw, true), P(a, -hw, true)], [-u[0], -u[1], 0], col[2]],
+      ];
+      faces.filter(([, nn]) => dot(nn, toViewer) > 0)
+        .sort((f, h) => project(h[0][0])[2] - project(f[0][0])[2])
+        .forEach(([pts, , c]) => poly(pts, c));
+    };
+    const post = (x, y0, y1, z, w = 0.04) => slab([x - w / 2, y1], [x + w / 2, y1], w, y1 - y0, ['#323942', '#20252b', '#292f37'], z);
+    for (const e of tpl.env || []) {
+      if (e.type === 'bench') {
+        const w = e.w ?? 0.3;
+        for (const [a, b2] of e.pads) {
+          if (e.legs === false) continue;
+          post(a[0] + 0.08, 0, a[1] - 0.07, 0, 0.05);
+          post(b2[0] - 0.08, 0, b2[1] - 0.07, 0, 0.05);
+        }
+        for (const [a, b2] of e.pads) slab(a, b2, w, 0.07, ['#4a3a32', '#2c231e', '#3a2e27']);
+      } else if (e.type === 'box') {
+        slab([e.x0, e.h], [e.x1, e.h], e.w ?? 0.5, e.h, ['#4b4035', '#2e271f', '#3b3229']);
+      } else if (e.type === 'wall') {
+        slab([e.x, 2.4], [e.x + 0.12, 2.4], 1.6, 2.4, ['#2a3038', '#1d2228', '#262c33']);
+      } else if (e.type === 'stack') {
+        slab([e.x - 0.12, e.h], [e.x + 0.12, e.h], 0.3, e.h, ['#2f363f', '#1f242a', '#282e35']);
+      } else if (e.type === 'rails') {
+        for (const z of [0.55, -0.55]) post(e.x, 0, 2.2, z, 0.045);
+      } else if (e.type === 'floorpad') {
+        slab([e.x0, 0.02], [e.x1, 0.02], 0.6, 0.02, ['#262c33', '#1b1f24', '#20252b']);
+      }
+    }
+    return g;
+  }
+
   const builders = { torso: buildTorso, pelvis: buildPelvis, head: buildHead, neck: buildNeck };
+  const env = buildEnv();
   for (const name of ['shadow', ...BODY_PARTS, ...propParts(tpl)]) {
     const g = /^(thigh|shin|foot|upper|fore|hand)[NF]$/.test(name) ? buildLimb(name) : builders[name] ? builders[name]() : buildProp(name);
     g.dataset.part = name;
@@ -338,6 +430,80 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   };
   const ux = [1, 0, 0];
   const uy = [0, -1, 0]; // screen y runs down
+
+  // ----- props, moved each frame -----
+  function updateProps(j) {
+    const b = j.bar;
+    const g = groups;
+    if (g.barF) line(g.barF._line, at(b, 0), at(b, 0.78));
+    if (g.barN) line(g.barN._line, at(b, 0), at(b, -0.78));
+    for (const [name, side] of [['plateF', 1], ['plateN', -1]]) {
+      if (!g[name]) continue;
+      const [inner, outer] = g[name]._faces;
+      set(inner, plane(at(b, side * 0.5), ux, uy));
+      set(outer, plane(at(b, side * 0.6), ux, uy));
+      g[name].appendChild(side < 0 ? outer : inner); // nearer face on top
+    }
+    if (g.pbM) {
+      const { x, y } = tpl.rig.hands;
+      line(g.pbF._line, [x, y, 0.62], [x, y, 0.12]);
+      line(g.pbM._line, [x, y, 0.12], [x, y, -0.12]);
+      line(g.pbN._line, [x, y, -0.12], [x, y, -0.62]);
+      const cap = project([x, y, -0.62]);
+      g.pbN._cap.setAttribute('cx', f1(cap[0]));
+      g.pbN._cap.setAttribute('cy', f1(cap[1]));
+      line(g.posts._a, [x, y - 0.02, 0.62], [x, y + 0.7, 0.62]);
+      line(g.posts._b, [x, y - 0.02, -0.62], [x, y + 0.7, -0.62]);
+    }
+    for (const S of ['N', 'F']) {
+      const side = S === 'N' ? -1 : 1;
+      const grip = j['grip' + S];
+      if (g[`db${S}in`]) {
+        const inner = [grip[0], grip[1], grip[2] - side * 0.11];
+        const outer = [grip[0], grip[1], grip[2] + side * 0.11];
+        line(g[`db${S}in`]._handle, inner, outer);
+        set(g[`db${S}in`]._head, plane(inner, ux, uy));
+        set(g[`db${S}out`]._head, plane(outer, ux, uy));
+      }
+      if (g['kb' + S]) {
+        const P0 = project(grip);
+        // Hangs under the hand, or swings out along the forearm (tpl.kbOrient = 'arm').
+        let ang = 0;
+        if (tpl.kbOrient === 'arm') {
+          const W = project(j['wrist' + S]);
+          ang = (Math.atan2(P0[0] - W[0], P0[1] - W[1]) * -180) / Math.PI;
+        }
+        g['kb' + S]._bell.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])}) rotate(${f1(ang)})`);
+      }
+      for (const kind of ['cable', 'band']) {
+        if (g[kind + S]) line(g[kind + S]._line, grip, [tpl.anchor[0], tpl.anchor[1], grip[2] * (tpl.anchorZ ?? 1)]);
+      }
+      if (g['dip' + S]) {
+        const y = tpl.dipY ?? 1.15;
+        const z = side * 0.26;
+        line(g['dip' + S]._rail, [-0.45, y, z], [0.45, y, z]);
+        line(g['dip' + S]._legA, [-0.4, y, z], [-0.4, 0, z]);
+        line(g['dip' + S]._legB, [0.4, y, z], [0.4, 0, z]);
+      }
+      if (g['ring' + S]) {
+        const P0 = project(grip);
+        line(g['ring' + S]._strap, [grip[0], grip[1] + 1.2, grip[2]], grip);
+        g['ring' + S]._ring.setAttribute('cx', f1(P0[0]));
+        g['ring' + S]._ring.setAttribute('cy', f1(P0[1]));
+      }
+    }
+    const mg = [(j.gripN[0] + j.gripF[0]) / 2, (j.gripN[1] + j.gripF[1]) / 2, (j.gripN[2] + j.gripF[2]) / 2];
+    if (g.goblet) {
+      const P0 = project([mg[0], mg[1] + 0.03, mg[2]]);
+      g.goblet._w.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])})`);
+    }
+    for (const name of ['ball', 'wheel']) {
+      if (!g[name]) continue;
+      const P0 = project(name === 'wheel' ? [mg[0] + 0.03, 0.09, 0] : [mg[0] + 0.05, mg[1], 0]);
+      if (name === 'ball') { g.ball._b.setAttribute('cx', f1(P0[0])); g.ball._b.setAttribute('cy', f1(P0[1])); }
+      else g.wheel._b.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])})`);
+    }
+  }
   let lastOrder = '';
 
   function draw(t, staticPose) {
@@ -366,40 +532,17 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     groups.shadow.setAttribute('transform', `translate(${f1(O[0])},${f1(O[1])}) scale(${(1 - Math.min(0.6, air * 0.8)).toFixed(2)})`);
     groups.shadow.setAttribute('opacity', Math.max(0.3, 1 - air * 1.5).toFixed(2));
 
-    if (tpl.prop === 'barbell') {
-      const b = j.bar;
-      line(groups.barF._line, at(b, 0), at(b, 0.78)); // the near half sits inside the body and the near plate
-      for (const [name, side] of [['plateF', 1], ['plateN', -1]]) {
-        const [inner, outer] = groups[name]._faces;
-        set(inner, plane(at(b, side * 0.5), ux, uy));
-        set(outer, plane(at(b, side * 0.6), ux, uy));
-        groups[name].appendChild(side < 0 ? outer : inner); // nearer face on top
-      }
-    } else if (tpl.prop === 'pullbar') {
-      const { x, y } = tpl.rig.hands;
-      line(groups.barF._line, [x, y, 0.62], [x, y, 0.12]);
-      line(groups.barM._line, [x, y, 0.12], [x, y, -0.12]);
-      line(groups.barN._line, [x, y, -0.12], [x, y, -0.62]);
-      const cap = project([x, y, -0.62]);
-      groups.barN._cap.setAttribute('cx', f1(cap[0]));
-      groups.barN._cap.setAttribute('cy', f1(cap[1]));
-      line(groups.posts._a, [x, y - 0.02, 0.62], [x, y + 0.7, 0.62]);
-      line(groups.posts._b, [x, y - 0.02, -0.62], [x, y + 0.7, -0.62]);
-    } else if (tpl.prop === 'dumbbells') {
-      const g = j.gripN;
-      const inner = [g[0], g[1], g[2] + 0.11];
-      const outer = [g[0], g[1], g[2] - 0.11];
-      line(groups.dbNin._handle, inner, outer);
-      set(groups.dbNin._head, plane(inner, ux, uy));
-      set(groups.dbNout._head, plane(outer, ux, uy));
-    }
+    updateProps(j);
 
     // Depth sort: re-append groups only when the back-to-front order changes.
     const order = drawOrder(tpl, j, project);
     const key = order.join();
     if (key !== lastOrder) {
       lastOrder = key;
-      for (const name of order) svg.appendChild(groups[name]);
+      for (const name of order) {
+        svg.appendChild(groups[name]);
+        if (name === 'shadow') svg.appendChild(env); // benches, boxes, walls: always behind the body
+      }
     }
 
     // Glow: opacity only, strongest at the hardest point of the rep.

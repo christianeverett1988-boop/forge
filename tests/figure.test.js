@@ -1,7 +1,8 @@
 // Silhouette rig: skeleton, IK constraints and tempo timing (js/ui/rig.js + js/ui/poses.js).
 import { test, eq, assert } from './harness.js';
 import { BODY, solve, dist, ik2, repPhases, repLength, progressAt, paramsAt, camera, boneMatrix, drawOrder, frameBox } from '../js/ui/rig.js';
-import { TEMPLATES } from '../js/ui/poses.js';
+import { TEMPLATES, EXERCISE_TEMPLATES } from '../js/ui/poses.js';
+import { EXERCISES } from '../js/workouts/exercises.js';
 
 const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a.toFixed(4)} vs ${b.toFixed(4)}`);
 const frames = (tpl, n = 40) => {
@@ -112,7 +113,7 @@ test('camera: 3/4 view puts the far side forward and behind; bone matrix flips t
 const before = (order, a, b) => order.indexOf(a) < order.indexOf(b);
 
 test('depth: near limbs draw over the body, far limbs under it', () => {
-  const tpl = TEMPLATES.curl_dumbbell;
+  const tpl = { ...TEMPLATES.curl_dumbbell, load: 'dumbbell' };
   const order = drawOrder(tpl, solve(tpl, tpl.a), camera(tpl.cam));
   eq(order[0], 'shadow');
   assert(before(order, 'upperF', 'torso') && before(order, 'torso', 'upperN'), 'arms either side of the torso');
@@ -136,10 +137,10 @@ test('depth: pull-up hands wrap the bar; squat grip reads over the near plate', 
   const pu = TEMPLATES.pullup;
   for (const P of [pu.a, pu.b]) {
     const o = drawOrder(pu, solve(pu, P), camera(pu.cam));
-    assert(before(o, 'barN', 'handN') && before(o, 'barF', 'handF'), 'hands over their bar section');
+    assert(before(o, 'pbN', 'handN') && before(o, 'pbF', 'handF'), 'hands over their bar section');
     assert(before(o, 'posts', 'torso'), 'uprights behind the body');
   }
-  const sq = TEMPLATES.squat_barbell;
+  const sq = { ...TEMPLATES.squat_barbell, load: 'barbell' };
   const o = drawOrder(sq, solve(sq, sq.b), camera(sq.cam));
   assert(before(o, 'plateN', 'handN') && before(o, 'plateN', 'foreN'), 'near arm over the near plate');
   assert(before(o, 'torso', 'plateN'), 'near plate over the back');
@@ -148,7 +149,7 @@ test('depth: pull-up hands wrap the bar; squat grip reads over the near plate', 
 
 // ---------- framing ----------
 test('framing: the box holds the whole squat rep; the pull-up frames arms, bar and back', () => {
-  const sq = TEMPLATES.squat_barbell;
+  const sq = { ...TEMPLATES.squat_barbell, load: 'barbell' };
   const ph = repPhases(sq.tempo, sq.first);
   const project = camera(sq.cam);
   const [x, y, w, h] = frameBox(sq, project, ph);
@@ -166,4 +167,47 @@ test('framing: the box holds the whole squat rep; the pull-up frames arms, bar a
   assert(toe[1] > box[1] + box[3], 'pull-up feet run off the bottom');
   const grip = pp(solve(pu, pu.a).gripN);
   assert(grip[1] > box[1], 'bar in frame');
+});
+
+test('library: every mapped exercise solves to finite joints and a finite frame, with its own load', () => {
+  for (const ex of EXERCISES) {
+    const name = EXERCISE_TEMPLATES[ex.id];
+    if (!name) continue;
+    const tpl = { ...TEMPLATES[name], load: ex.load };
+    const ph = repPhases(tpl.tempo, tpl.first);
+    const T = repLength(ph);
+    for (let k = 0; k < 8; k++) {
+      const j = solve(tpl, paramsAt(tpl, ph, (T * k) / 8));
+      for (const [key, v] of Object.entries(j)) if (Array.isArray(v)) assert(v.every(Number.isFinite), `${ex.id} ${key}`);
+      const order = drawOrder(tpl, j, camera(tpl.cam));
+      assert(order.length >= 17, `${ex.id} parts`);
+    }
+    assert(frameBox(tpl, camera(tpl.cam), ph).every(Number.isFinite), `${ex.id} frame`);
+  }
+});
+
+test('library: closed chains hold — push-up hands stay on the floor, bench bar stays over the chest, feet stay planted', () => {
+  const pu = TEMPLATES.pushup;
+  const ph = repPhases(pu.tempo, pu.first);
+  for (let k = 0; k < 8; k++) {
+    const j = solve(pu, paramsAt(pu, ph, (repLength(ph) * k) / 8));
+    near(j.gripN[1], pu.rig.hands.y, 1e-9, 'hand on floor');
+    near(dist(j.wristN, j.gripN), BODY.hand * 0.55, 0.02, 'wrist reaches the floor');
+  }
+  const bp = { ...TEMPLATES.bench_press, load: 'barbell' };
+  for (const P of [bp.a, bp.b]) {
+    const j = solve(bp, P);
+    assert(j.bar[0] > j.shoulderN[0] - 0.05 && j.bar[0] < j.chest[0] + 0.35, 'bar over the chest, not the face');
+    near(dist(j.wristN, j.gripN), BODY.hand * 0.55, 0.02, 'hands reach the bar');
+  }
+  const lu = TEMPLATES.lunge_db;
+  const a0 = solve(lu, lu.a).ankleN;
+  const b0 = solve(lu, lu.b).ankleN;
+  near(dist(a0, b0), 0, 1e-6, 'front foot planted');
+});
+
+test('depth: a bar\'s near half stays behind its plate', () => {
+  const dl = { ...TEMPLATES.deadlift, load: 'barbell' };
+  const o = drawOrder(dl, solve(dl, dl.a), camera(dl.cam));
+  assert(o.indexOf('barN') < o.indexOf('plateN'));
 });

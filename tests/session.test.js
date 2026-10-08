@@ -146,11 +146,11 @@ test('figure: muscles light the right segments (primary strong, secondary faint)
   eq(Object.keys(pull).sort().join(), 'biceps,lats');
 });
 
-test('figure: the three v0.3.0 samples are mapped and reported', () => {
-  for (const id of ['bb_back_squat', 'pullup', 'db_curl']) assert(hasFigure(id), id);
-  assert(!hasFigure('db_floor_press'));
+test('figure: the library maps most exercises; every mapping points at a real template', () => {
+  for (const id of ['bb_back_squat', 'pullup', 'db_curl', 'bb_bench_press', 'bb_deadlift', 'pushup', 'db_reverse_lunge']) assert(hasFigure(id), id);
+  assert(!hasFigure('bike_steady'), 'cardio machines fall back to photos or the muscle list');
   const c = coverage(EXERCISES);
-  eq(c.mapped.length, 3);
+  assert(c.mapped.length >= 200, `coverage ${c.mapped.length}`);
   eq(c.total, EXERCISES.length);
 });
 

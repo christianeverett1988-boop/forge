@@ -12,12 +12,13 @@
 //   focus  optional joints to frame (the rest may run off the edge of the demo box).
 // Parts are depth-sorted every frame (rig.js drawOrder), so limbs crossing the body layer correctly.
 //
-// v0.3.0 ships three samples so the look can be approved; v0.3.1 adds the full library.
+// The squat, pull-up and curl below are the approved samples; js/ui/poses-lib.js holds the rest of the library.
+import { LIBRARY, LIBRARY_MAP } from './poses-lib.js';
 
 export const TEMPLATES = {
   squat_barbell: {
     cam: { yaw: 12, pitch: 7, scale: 100, x: 108, ground: 200 },
-    prop: 'barbell',
+    hold: 'back',
     // Bar low on the upper back (below the neck) so the plate clears the head.
     rig: { root: 'pelvis', balance: 'bar', legs: 'ik', feet: { x: 0, z: 0.16, kneesOut: 0.45 }, arms: 'ik-bar', grip: 0.3, barDrop: 0.115, barBack: 0.09 },
     a: { py: 0.935, trunk: 7, head: 0 },
@@ -34,7 +35,7 @@ export const TEMPLATES = {
     cam: { yaw: 26, pitch: 6, scale: 80, x: 108, ground: 206 },
     // Frame the arms, bar and back; the legs run off the bottom of the box.
     focus: ['gripN', 'gripF', 'elbowN', 'elbowF', 'shoulderN', 'shoulderF', 'chest', 'pelvis', 'head'],
-    prop: 'pullbar',
+    gear: ['pullbar'],
     rig: { root: 'chest', legs: 'fk', arms: 'ik-fixed', hands: { x: 0, y: 2.15 }, grip: 0.33 },
     a: { px: -0.045, py: 1.595, trunk: -3, head: 0, hipN: 8, kneeN: 10, hipF: 3, kneeF: 24, footN: 28, footF: 34 },
     b: { px: -0.12, py: 2.065, trunk: -17, head: -8, hipN: 24, kneeN: 22, hipF: 16, kneeF: 38, footN: 22, footF: 30 },
@@ -42,11 +43,10 @@ export const TEMPLATES = {
     first: 'up',
     tempo: { con: 1.1, top: 0.5, ecc: 2, pause: 0.6 },
     slow: { con: 1.1, top: 0.8, ecc: 3.5, pause: 1 },
-    grips: { handN: 'barN', handF: 'barF' },
+    grips: { handN: 'pbN', handF: 'pbF' },
   },
   curl_dumbbell: {
     cam: { yaw: 18, pitch: 7, scale: 102, x: 92, ground: 200 },
-    prop: 'dumbbells',
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.12, kneesOut: 0.2 }, arms: 'fk' },
     // One dumbbell, near hand; the far arm hangs relaxed (fewer shapes, clearer read).
     a: { px: 0.0, py: 0.93, trunk: 2, head: 0, shN: 3, elN: 6, shF: 2, elF: 10, wrist: 4, abd: 7 },
@@ -58,11 +58,14 @@ export const TEMPLATES = {
   },
 };
 
-/** Exercise id → template. Anything not listed falls back to photos (v0.3.1) or the muscle list. */
+Object.assign(TEMPLATES, LIBRARY);
+
+/** Exercise id → template. Anything not listed falls back to photos or the muscle list. */
 export const EXERCISE_TEMPLATES = {
   bb_back_squat: 'squat_barbell',
   pullup: 'pullup',
   db_curl: 'curl_dumbbell',
+  ...LIBRARY_MAP,
 };
 
 export const templateFor = (exerciseId) => TEMPLATES[EXERCISE_TEMPLATES[exerciseId]] || null;
