@@ -13,7 +13,7 @@ const bodyCompReport = (over = {}) => ({
     8: T(880, '2026-10-10T11:00:00Z', 17.6), 11: T(700, '2026-10-10T11:00:00Z', 64), 76: T(880, '2026-10-10T11:00:00Z', 61.5),
     77: T(880, '2026-10-10T11:00:00Z', 45.1), 88: T(880, '2026-10-10T11:00:00Z', 3.19),
   },
-  rejected: [140],
+  rejected: [155],
   groups: 960, stored_groups: 962, withings_weight_groups: 900, stored_weight_groups: 900,
   backfill: { done: true, from: '2024-01-05T12:00:00Z' },
   subscription: { present: true, key_ok: true },
@@ -37,7 +37,7 @@ test('data check: Body Comp → visceral fat/BMR/vascular age/PWV/nerve scores m
   eq(by.visceral_fat.state, 'not_on_api');
   eq(by.bmr.state, 'not_on_api');
   eq(by.vascular_age.state, 'not_on_api');
-  assert(/rejected type 140/.test(by.vascular_age.note), 'mentions the rejected code');
+  assert(/rejected type 155/.test(by.vascular_age.note), 'mentions the rejected code');
   eq(by.segmental.state, 'not_on_model');
   eq(by.ecg.state, 'not_on_model');
   eq(by.spo2.state, 'not_on_model');
@@ -303,4 +303,48 @@ test('verdict: when webhook proof is the only blocker it says "Waiting for N mor
   assert(/^Not yet/.test(v2.text), 'several blockers → Not yet');
   eq(verdict(bodyCompReport(), { csvRows: 1084 }).safe, false);
   eq(verdict(bodyCompReport(), { csvRows: 1084, csvImported: 184 }).safe, true);
+});
+
+// ---------- v0.4.4: M1, M2 ----------
+import { planCsvDedupe, csvAccounted, importMessage } from '../js/withings/review.js';
+
+test('M1: Not me on weight.csv readings keeps them accounted for in the data check (no false "not safe")', () => {
+  const csv = Array.from({ length: 184 }, (_, i) => ({ id: `c_${i}`, source: 'withings_csv', kg: 80, measured_at: new Date(Date.UTC(2020, 0, 1) + i * 86400000).toISOString() }));
+  // 95 of them are the family's: marked Not me (deleted), as bulkNotMe does.
+  const all = csv.map((w, i) => (i < 95 ? { ...w, deleted: true, review: false, reviewed_at: '2026-10-08T00:00:00Z' } : w));
+  const live = all.filter((w) => !w.deleted); // what state.weights holds
+  eq(csvAccounted(live), 89, 'live-only count undercounts');
+  eq(verdict(bodyCompReport(), { csvRows: 1084, csvImported: csvAccounted(live) }).safe, false, 'the old count gives the false blocker');
+  eq(csvAccounted(all), 184);
+  eq(verdict(bodyCompReport(), { csvRows: 1084, csvImported: csvAccounted(all) }).safe, true);
+  // Duplicates removed because Withings has them are counted as Withings weigh-ins, not twice.
+  eq(csvAccounted([...all, { id: 'c_x', source: 'withings_csv', deleted: true, superseded: true }]), 184);
+});
+
+test('M2: a weight.csv import followed by a backfill → the csv twins are found (and only those)', () => {
+  const t = Date.parse('2024-03-05T12:00:00Z');
+  const csv = (id, off, kg, extra = {}) => ({ id, source: 'withings_csv', kg, measured_at: new Date(t + off).toISOString(), deleted: false, ...extra });
+  const api = (id, off, kg, extra = {}) => ({ id, source: 'withings', kg, measured_at: new Date(t + off).toISOString(), deleted: false, ...extra });
+  const weights = [
+    csv('c_same', 0, 93.3), // the API brought the same reading
+    csv('c_hours', 86400000, 93.5), // same reading, API clock 4 h off
+    csv('c_other', 2 * 86400000, 93.9), // only in the export
+    csv('c_notme', 3 * 86400000, 40, { deleted: true }), // already removed
+    csv('c_twin_of_notme', 4 * 86400000, 41), // its Withings twin was marked Not me
+    api('w_1', 30000, 93.3),
+    api('w_2', 86400000 + 4 * 3600000 + 20000, 93.5),
+    api('w_3', 4 * 86400000, 41, { deleted: true }),
+    { id: 'm_1', source: 'manual', kg: 93.9, measured_at: new Date(t + 2 * 86400000).toISOString() },
+  ];
+  eq(planCsvDedupe(weights).map((w) => w.id).sort().join(), 'c_hours,c_same,c_twin_of_notme');
+  // Once they're tombstoned (superseded) a second pass finds nothing, and the importer still skips them.
+  const after = weights.map((w) => (['c_same', 'c_hours', 'c_twin_of_notme'].includes(w.id) ? { ...w, deleted: true, superseded: true } : w));
+  eq(planCsvDedupe(after).length, 0);
+  eq(csvAccounted(after), 2, 'c_other and c_notme remain accounted for; the superseded three are counted as Withings');
+});
+
+test('import toast: shows how many rows could not be read', () => {
+  eq(importMessage({ added: 721, skipped: 363, unreadable: 0 }), 'Imported 721 weigh-ins (363 already in Forge)');
+  eq(importMessage({ added: 0, skipped: 10, unreadable: 1 }), 'Nothing new: all 10 rows are already in Forge. 1 row couldn’t be read and was skipped.');
+  assert(/3 rows couldn’t be read and were skipped/.test(importMessage({ added: 5, skipped: 0, unreadable: 3 })));
 });

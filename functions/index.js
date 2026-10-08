@@ -20,7 +20,7 @@ import { startAuth, handleCallback } from './src/oauth.js';
 import { handleWebhook } from './src/webhook.js';
 import { runTask, reimport } from './src/tasks.js';
 import { randomBytes } from 'node:crypto';
-import { getAccessToken, NotConnected } from './src/tokens.js';
+import { withToken, NotConnected, NeedsReconnect } from './src/tokens.js';
 import { incrementalSync } from './src/sync.js';
 import { runDataCheck, saveReport } from './src/datacheck.js';
 import { maintainAll, disconnect } from './src/maintenance.js';
@@ -53,6 +53,7 @@ async function friendly(fn) {
   } catch (e) {
     if (e instanceof HttpsError) throw e;
     if (e instanceof NotConnected) throw new HttpsError('failed-precondition', 'Withings isn’t connected.');
+    if (e instanceof NeedsReconnect) throw new HttpsError('failed-precondition', 'Withings needs you to connect again (Settings → Withings).');
     if (e && e.code === 'failed-precondition') throw new HttpsError('failed-precondition', 'Run the check first, then save it.');
     if (e instanceof WithingsError && e.invalidToken) throw new HttpsError('failed-precondition', 'Withings needs you to connect again (Settings → Withings).');
     if (e instanceof WithingsError && e.transient) throw new HttpsError('unavailable', 'Withings is busy. Try again in a few minutes.');
@@ -111,8 +112,8 @@ export const withingsSyncNow = onCall({ secrets: [CLIENT_SECRET], timeoutSeconds
   if (wait) throw new HttpsError('resource-exhausted', `Withings asks apps not to sync more often. Try again in ${wait} min.`);
   return friendly(async () => {
     try {
-      const token = await getAccessToken({ db: db(), api: api(), uid });
-      const r = await incrementalSync({ db: db(), api: api(), uid, token, reason: 'manual' });
+      // withToken: a refused token gets one forced refresh, then needs_reconnect (so the banner shows).
+      const r = await withToken({ db: db(), api: api(), uid }, (token) => incrementalSync({ db: db(), api: api(), uid, token, reason: 'manual' }));
       return { created: r.created, updated: r.updated };
     } catch (e) {
       await ref.set({ last_manual_sync_at: null }, { merge: true }).catch(() => {}); // a failed sync doesn't use up the 10 minutes
@@ -135,10 +136,7 @@ export const withingsDataCheck = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY],
   const uid = needUid(req);
   const data = req.data || {};
   if (data.action === 'save') return friendly(() => saveReport({ db: db(), uid, label: data.label }));
-  return friendly(async () => {
-    const token = await getAccessToken({ db: db(), api: api(), uid });
-    return runDataCheck({ db: db(), api: api(), uid, token, webhookUrl: webhookUrl() });
-  });
+  return friendly(() => withToken({ db: db(), api: api(), uid }, (token) => runDataCheck({ db: db(), api: api(), uid, token, webhookUrl: webhookUrl() })));
 });
 
 export const withingsDisconnect = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY], timeoutSeconds: 300 }, async (req) => {

@@ -7,7 +7,7 @@ import { esc, $, $$, sheet, toast, formatDay } from '../ui.js';
 import { reviewBodyMeasure, bulkNotMe, putMany, readAll, newRecord } from '../db.js';
 import { formatWeight, weightToDisplay, weightFromInput, weightUnit } from '../units.js';
 import { classify, verdict, compare, STATE_LABEL, median, yearRows, backfillYears } from '../withings/check.js';
-import { reviewQueue, byDay, suggestCutoff, underCutoff, parseWeightCSV, planCsvImport } from '../withings/review.js';
+import { reviewQueue, byDay, suggestCutoff, underCutoff, parseWeightCSV, planCsvImport, csvAccounted, importMessage } from '../withings/review.js';
 import { fmtMetric, KEY_OF_TYPE } from '../withings/body.js';
 
 const W = () => (state.integrations && state.integrations.withings) || null;
@@ -47,6 +47,7 @@ export function renderWithings(el, sub) {
 
       ${!connected ? `
       <div class="card stack">
+        <p class="notice info small" data-one-account><b>One scale, one Forge account (for now).</b> A Withings scale can only link to a single Forge account at the moment, and this one isn’t linked to yours. You can still log your weight by hand: tap <b>Log weight</b> on Today, or <b>Progress → + Log weight</b>.</p>
         <p>Your scale’s weigh-ins and body composition land in Forge on their own, a few minutes after you step off. Your full Withings history comes in too.</p>
         <p class="notice info small">${EXISTING_ACCOUNT}</p>
         ${connectUrl ? `
@@ -191,7 +192,7 @@ export function renderWithings(el, sub) {
     renderWithings(el);
     try {
       const r = await importWeightCsv(await f.text());
-      toast(r.added ? `Imported ${r.added.toLocaleString()} weigh-ins (${r.skipped.toLocaleString()} already in Forge)` : `Nothing new: all ${r.skipped.toLocaleString()} rows are already in Forge`);
+      toast(importMessage(r), 5000);
     } catch (e) {
       toast(e.message);
     }
@@ -221,15 +222,15 @@ export function niceCutoff(kg, u) {
   return Math.round(v / step) * step;
 }
 
-/** Import Withings' weight.csv as scale weigh-ins (source withings_csv). Returns { added, skipped }. */
+/** Import Withings' weight.csv as scale weigh-ins (source withings_csv). Returns { added, skipped, unreadable }. */
 async function importWeightCsv(text) {
-  const { rows } = parseWeightCSV(text);
+  const { rows, skipped: unreadable } = parseWeightCSV(text);
   if (!rows.length) throw new Error('No weigh-ins found in that file.');
   const existing = await readAll('weights'); // includes deleted ones, so a "Not me" isn't brought back
   const plan = planCsvImport(rows, existing);
   await putMany('weights', plan.add.map((r) => newRecord(r, { id: r.id, source: 'withings_csv' })));
   try { localStorage.setItem(CSV_KEY, String(rows.length)); } catch { /* private mode */ }
-  return { added: plan.add.length, skipped: plan.already + plan.matched };
+  return { added: plan.add.length, skipped: plan.already + plan.matched, unreadable };
 }
 
 function openDisconnect(el) {
@@ -270,12 +271,29 @@ let picked = []; // report indexes ticked for Compare (the last two count)
 const CSV_KEY = 'forge.withings.csvRows';
 const csvRows = () => { try { const v = localStorage.getItem(CSV_KEY); return v ? Number(v) : null; } catch { return null; } };
 
+let csvAcc = null; // csvAccounted() over every weights doc, deleted ones included
+let csvAccFor = ''; // what it was computed from, so the check isn't re-read on every render
+function refreshCsvAccounted(el) {
+  const sig = state.weights.length + ':' + state.weights.filter((x) => x.source === 'withings_csv').length;
+  if (sig === csvAccFor) return;
+  csvAccFor = sig;
+  readAll('weights').then((all) => {
+    const n = csvAccounted(all);
+    if (n !== csvAcc) {
+      csvAcc = n;
+      if (el.isConnected && el.querySelector('[data-wf]')) renderCheck(el);
+    }
+  }, () => {});
+}
+
 function renderCheck(el) {
   const w = W();
   const u = getUnits();
   const report = w && w.data_check;
   const rows = report ? classify(report) : [];
-  const csvImported = state.weights.filter((x) => x.source === 'withings_csv').length;
+  // weight.csv imports still count after "Not me" (state.weights hides deleted docs), so read them all.
+  const csvImported = csvAcc != null ? csvAcc : state.weights.filter((x) => x.source === 'withings_csv').length;
+  refreshCsvAccounted(el);
   const v = verdict(report, { csvRows: csvRows(), csvImported });
   const yrs = yearRows(report);
   const history = (w && w.data_check_history) || [];

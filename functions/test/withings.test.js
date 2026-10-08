@@ -229,7 +229,7 @@ test('backfill: a stale run (you reconnected) stops its chain', async () => {
   connected(db);
   db.put(P.status(UID), { ...db.dump(P.status(UID)), backfill: { run_id: 'new' } });
   const q = fakeQueue();
-  const r = await runTask({ kind: 'backfill', uid: UID, runId: 'old', page: 3, offset: 3 }, { db, api: fakeApi(), enqueue: q.enqueue, now: () => T0 });
+  const r = await runTask({ kind: 'backfill', uid: UID, runId: 'old', end: sec(T0), year: 2020, page: 3, offset: 3 }, { db, api: fakeApi(), enqueue: q.enqueue, now: () => T0 });
   assert.equal(r.skipped, 'stale_run');
   assert.equal(q.tasks.length, 0);
 });
@@ -813,4 +813,27 @@ test('readings are labelled with the scale that took them', async () => {
   const db = fakeDb();
   await applyGroups(db, UID, [{ ...group(77, T0), model: 'Body+' }], { device: { model: 'Body Comp' }, now: T0 });
   assert.equal(db.dump(P.body(UID, 'w_77')).model, 'Body+');
+});
+
+// ---------- v0.4.4: task payloads ----------
+test('runTask: a backfill task without a numeric year/end (queued by v0.4.0) is dropped, no API call, no chain', async () => {
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  let calls = 0;
+  const api = fakeApi({ getmeas: () => { calls++; return { more: 0, measuregrps: [] }; } });
+  const bad = [
+    { kind: 'backfill', uid: UID, runId: 'r', page: 0, offset: 0 },
+    { kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), page: 0 },
+    { kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), year: 'abc', page: 0 },
+    { kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), year: NaN, page: 0 },
+    { kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), year: 2020, page: -1 },
+    { kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), year: 2020, page: 0, offset: -5 },
+  ];
+  for (const data of bad) {
+    const r = await runTask(data, { db, api, enqueue: q.enqueue, now: () => T0 });
+    assert.equal(r.skipped, 'bad_task', JSON.stringify(data));
+  }
+  assert.equal(calls, 0);
+  assert.equal(q.tasks.length, 0);
 });

@@ -474,3 +474,34 @@ ul.dc-years li { padding: 4px 0; }
 .review-day .list li > .row { flex-wrap: nowrap; flex: none; }
 .review-day .list li .btn.small { padding: 6px 10px; min-height: 0; }
 details > summary { cursor: pointer; color: var(--muted); }
+
+/* ---------- first-run how-to tour (js/tour/) ---------- */
+.tour-block { position: fixed; inset: 0; z-index: 1000; } /* swallows taps so nothing underneath is pressed */
+.tour-spot {
+  position: fixed; z-index: 1001; pointer-events: none; border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(5, 7, 10, .8); outline: 3px solid var(--accent); outline-offset: -1px;
+}
+.tour-card {
+  position: fixed; z-index: 1002; left: 12px; right: 12px; max-width: 520px; margin: 0 auto;
+  bottom: calc(var(--safe-bottom) + 12px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+}
+.tour-card h2 { margin: 0; font-size: 22px; }
+.tour-card p { font-size: 17px; line-height: 1.45; }
+.tour-card p.small { font-size: 14px; }
+.tour-dots { display: inline-flex; gap: 5px; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--accent); }
+.tour-actions { display: flex; gap: 10px; }
+.tour-actions .btn { min-height: 56px; font-size: 18px; flex: 1; }
+.tour-actions [data-next] { flex: 2; }
+.tour-actions [hidden] { display: none; }
+.tour-skip { min-height: 48px; background: none; border: 0; color: var(--muted); font: 600 16px var(--font); cursor: pointer; }
+body.tour-on main { padding-bottom: 360px; } /* room to scroll the last cards above the tour card */
+@media (prefers-reduced-motion: no-preference) {
+  .tour-spot { transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease; }
+  .tour-card { animation: tour-in .2s ease-out; }
+  @keyframes tour-in { from { opacity: 0; transform: translateY(10px); } }
+}

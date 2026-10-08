@@ -42,6 +42,25 @@ test('owner can create, read, update and delete their own record', async () => {
   await assertSucceeds(deleteDoc(ref));
 });
 
+test('profile/main: the how-to tour fields (tour, tour_seen_at) can be created and updated by the owner only', async () => {
+  const db = as('alice');
+  const ref = doc(db, 'users/alice/profile/main');
+  const profile = rec('alice', 'main', { goal: 'lose', weightKg: 70, heightCm: 165, tour: 'pending' });
+  await assertSucceeds(setDoc(ref, profile));
+  await assertSucceeds(updateDoc(ref, { tour: 'seen', tour_seen_at: '2026-10-08T12:00:00Z', updated_at: '2026-10-08T12:00:00Z' }));
+  await assertFails(setDoc(doc(as('bob'), 'users/alice/profile/main'), profile));
+  await assertFails(updateDoc(doc(as('bob'), 'users/alice/profile/main'), { tour: 'pending', updated_at: '2026-10-08T13:00:00Z' }));
+  await assertFails(updateDoc(ref, { tour: 'pending', user_id: 'bob' }));
+});
+
+test('weights: tombstoning a weight.csv import that Withings now covers (superseded: true) is allowed; an un-delete is not', async () => {
+  const db = as('alice');
+  const ref = doc(db, 'users/alice/weights/c_1');
+  await assertSucceeds(setDoc(ref, rec('alice', 'c_1', { kg: 93.3, day: '2024-03-05', measured_at: '2024-03-05T12:00:00Z', source: 'withings_csv' })));
+  await assertSucceeds(updateDoc(ref, { deleted: true, deleted_at: '2026-10-08T00:00:00Z', updated_at: '2026-10-08T00:00:00Z', superseded: true }));
+  await assertFails(updateDoc(doc(as('bob'), 'users/alice/weights/c_1'), { superseded: false }));
+});
+
 test('settings/main: saving earned badges (awards_seen map) keeps working', async () => {
   const db = as('alice');
   const ref = doc(db, 'users/alice/settings/main');

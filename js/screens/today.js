@@ -21,21 +21,21 @@ function workoutCard() {
   if (active) {
     // Every set done but not saved yet (the app was closed on the Workout complete card): go straight back to it.
     const allDone = (active.exercises || []).some((x) => x.sets.length) && active.exercises.every((x) => x.sets.every((s) => s.done));
-    return `<a class="card resume" href="${allDone ? '#/play' : playerRoute()}"><p class="label">${allDone ? 'All sets done' : 'Workout in progress'}</p>
+    return `<a class="card resume" data-tour="workout" href="${allDone ? '#/play' : playerRoute()}"><p class="label">${allDone ? 'All sets done' : 'Workout in progress'}</p>
       <p class="big-title">${esc(active.label)}</p><span class="btn">${allDone ? 'Finish' : 'Resume'}</span></a>`;
   }
   const doneToday = historyIndex().done.filter((w) => dayKey(w.started_at) === todayKey());
   if (doneToday.length) {
     const w = doneToday[0];
     const sets = (w.exercises || []).reduce((n, it) => n + it.sets.filter((x) => x.done && !x.warmup).length, 0);
-    return `<div class="card"><p class="label">Today’s workout</p>
+    return `<div class="card" data-tour="workout"><p class="label">Today’s workout</p>
       <p class="big-title">✓ ${esc(w.label)}</p>
       <p class="small muted">${sets} sets${(w.prs || []).length ? ` · ${w.prs.length} PR${w.prs.length === 1 ? '' : 's'} 🏆` : ''}. Recovery starts now.</p>
       <a class="btn ghost" href="#/history">See history</a></div>`;
   }
   const plan = previewPlan(); // with any edits you made on Train
   if (!plan || !plan.exercises.length) return '';
-  return `<div class="card"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p>
+  return `<div class="card" data-tour="workout"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p>
     <p class="big-title">${esc(plan.label)}</p>
     <p class="small muted">${plan.exercises.length} exercises · about ${plan.est_minutes} min · ${esc(plan.location.name)}</p>
     <div class="row gap"><button class="btn grow" data-start>Start</button><a class="btn ghost grow" href="#/train">See plan</a></div></div>`;

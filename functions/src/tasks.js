@@ -39,6 +39,16 @@ export async function requestBackfill({ db, enqueue, uid, runId, now = () => Dat
   return enqueueOnce(enqueue, { kind: 'backfill', uid, runId, end, year, offset: 0, page: 0 }, backfillTaskId(uid, runId, 0));
 }
 
+/** A backfill task payload we can walk: integer year and page, numeric pinned end, non-negative offset. */
+export function validBackfill(d) {
+  const page = d.page ?? 0;
+  const offset = d.offset ?? 0;
+  return Number.isInteger(d.year) && d.year >= 1990 && d.year <= 2200
+    && Number.isFinite(d.end) && d.end > 0
+    && Number.isInteger(page) && page >= 0
+    && Number.isFinite(offset) && offset >= 0;
+}
+
 /**
  * Handle one task. Throwing makes Cloud Tasks retry it (transient trouble); returning ends it.
  * deps: { db, api, enqueue, now }
@@ -46,6 +56,9 @@ export async function requestBackfill({ db, enqueue, uid, runId, now = () => Dat
 export async function runTask(data, { db, api, enqueue, now = () => Date.now() }) {
   const { kind, uid } = data || {};
   if (!uid || !kind) return { skipped: 'bad_task' };
+  // A backfill page needs a calendar year and a pinned end time (tasks queued by v0.4.0 have neither): drop it
+  // rather than walk yearWindow(NaN) and chain empty pages up to MAX_PAGES.
+  if (kind === 'backfill' && !validBackfill(data)) return { skipped: 'bad_task' };
   try {
     return await withToken({ db, api, uid, now }, (token) => work(token));
   } catch (e) {

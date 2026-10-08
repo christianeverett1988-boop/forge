@@ -166,23 +166,56 @@ export function parseWeightCSV(text) {
 export const csvId = (at) => `c_${Math.round(at.getTime() / 1000)}`;
 
 /**
- * Which parsed rows to add. existing: every weights doc INCLUDING deleted ones (so a reading you deleted or
- * marked "Not me" isn't brought back). A row is skipped when Forge already has its id, or a Withings
- * weigh-in of the same weight (±0.1 kg) at the same minute — also allowing whole-hour offsets up to 14 h,
- * in case the export's clock and the API's disagree on the time zone.
- * Returns { add: [records without the standard fields], already, matched }.
+ * A matcher for "Forge already has this reading from Withings": same weight (±0.1 kg) at the same minute,
+ * also allowing whole-hour offsets up to 14 h, in case the export's clock and the API's disagree on the
+ * time zone. existing: weights docs, deleted ones included. Only API weigh-ins (source withings) count.
  */
-export function planCsvImport(rows, existing) {
-  const ids = new Set(existing.map((w) => w.id));
+export function nearWithings(existing) {
   const scale = existing.filter((w) => w.source === 'withings' && w.measured_at && Number.isFinite(w.kg))
     .map((w) => ({ t: Date.parse(w.measured_at) / 1000, kg: w.kg }));
-  const near = (t, kg) => scale.some((s) => {
+  return (t, kg) => scale.some((s) => {
     if (Math.abs(s.kg - kg) > 0.1) return false;
     const d = Math.abs(s.t - t);
     if (d > 14 * 3600 + 120) return false;
     const r = d % 3600;
     return r <= 120 || r >= 3600 - 120;
   });
+}
+
+/**
+ * Imported (withings_csv) weigh-ins that a Withings reading now covers, e.g. after Re-import or a reconnect
+ * brought the same history in as w_<grpid>. These are the duplicates to tombstone. existing: every weights
+ * doc, deleted ones included (a Withings reading you marked "Not me" still covers its CSV twin).
+ */
+export function planCsvDedupe(existing) {
+  const near = nearWithings(existing);
+  return existing.filter((w) => w.source === 'withings_csv' && !w.deleted && w.measured_at && Number.isFinite(w.kg)
+    && near(Date.parse(w.measured_at) / 1000, w.kg));
+}
+
+/**
+ * How many weigh-ins the weight.csv import accounts for in the data check: every withings_csv doc INCLUDING
+ * ones you deleted or marked "Not me" (accounted for, like API weigh-ins), but not the duplicates removed
+ * because Withings has the same reading (those are counted as Withings weigh-ins).
+ */
+export const csvAccounted = (existing) => existing.filter((w) => w.source === 'withings_csv' && !w.superseded).length;
+
+/** The toast after Import weight.csv: what was added, what was already here, and rows that couldn't be read. */
+export function importMessage({ added, skipped, unreadable = 0 }) {
+  const n = (x) => x.toLocaleString('en-US');
+  const msg = added ? `Imported ${n(added)} weigh-ins (${n(skipped)} already in Forge)` : `Nothing new: all ${n(skipped)} rows are already in Forge`;
+  return unreadable ? `${msg}. ${n(unreadable)} row${unreadable === 1 ? '' : 's'} couldn’t be read and ${unreadable === 1 ? 'was' : 'were'} skipped.` : msg;
+}
+
+/**
+ * Which parsed rows to add. existing: every weights doc INCLUDING deleted ones (so a reading you deleted or
+ * marked "Not me" isn't brought back). A row is skipped when Forge already has its id, or a Withings
+ * weigh-in covers it (see nearWithings).
+ * Returns { add: [records without the standard fields], already, matched }.
+ */
+export function planCsvImport(rows, existing) {
+  const ids = new Set(existing.map((w) => w.id));
+  const near = nearWithings(existing);
   const add = [];
   const seen = new Set();
   let already = 0;
