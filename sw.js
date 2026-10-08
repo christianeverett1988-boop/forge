@@ -46,6 +46,8 @@ const SHELL = [
   './js/ui/figure.js',
   './js/ui/poses.js',
   './js/ui/rig.js',
+  './js/ui/bodymap.js',
+  './js/ui/bodymap-data.js',
   './js/workouts/clock.js',
   './js/workouts/session-core.js',
   './js/workouts/live.js',

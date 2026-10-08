@@ -179,3 +179,27 @@ body.playing .topbar { display: none; }
   .pr-trophy { animation: none; }
 }
 .ov-complete .ov-big { font-size: clamp(34px, 9vw, 44px); line-height: 1.1; }
+
+/* ---------- muscle map (js/ui/bodymap.js) ---------- */
+.bm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: end; }
+.bm-side { margin: 0; text-align: center; }
+.bm-side figcaption { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.bodymap { width: 100%; height: auto; display: block; max-height: 340px; }
+.bodymap .bm-b { fill: #262c34; }
+.bodymap .bm-m { fill: #333b45; stroke: #0e1116; stroke-width: 2; transition: fill .3s; }
+.bodymap .bm-on { fill: var(--bm-c); fill-opacity: var(--bm-o); animation: bm-in 700ms var(--ease-out, ease-out) both; }
+@keyframes bm-in { from { fill-opacity: 0; } }
+.bodymap [role="button"] { cursor: pointer; outline: none; }
+.bodymap [role="button"]:focus-visible, .bodymap [role="button"]:active { stroke: var(--volt); stroke-width: 6; }
+.bm-mini { gap: 2px; }
+.bm-mini .bodymap { max-height: 64px; }
+.bm-small .bodymap { max-height: 140px; }
+.bm-legend { display: flex; gap: 14px; justify-content: center; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+.bm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.bm-detail { display: grid; gap: 6px; }
+.bm-pill { font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; color: #0e1116; background: var(--c); }
+@media (prefers-reduced-motion: reduce) { .bodymap .bm-on { animation: none; } }
+.bm-mini { grid-template-columns: 1fr; }
+.plan-list li.with-map { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: center; }
+.plan-list li.with-map .bm-mini .bodymap { max-height: 58px; width: auto; margin: 0 auto; }
+.plan-list li div.bm { display: grid; }
