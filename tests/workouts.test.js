@@ -411,3 +411,25 @@ test('tempo escape never fires for 5 → 30 lb', () => {
   const ts = simulate(lat, session(5, [hi, hi, hi]), 60, { inventory: HOME.weight_inventory, unit: 'lb' });
   assert(ts.every((t) => t.weight === 5), ts.map((t) => t.weight).join());
 });
+
+test('preview edits: Replace forces a pick, Switch steers away from the current picks', () => {
+  const base = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: YMCA, profile, exercises: EXERCISES, unit: 'lb' });
+  const ids = base.exercises.map((it) => it.exercise_id);
+  const first = byId(ids[0]);
+  const alt = EXERCISES.find((e) => e.pattern === first.pattern && e.id !== first.id && !ids.includes(e.id) && canDo(e, expandEquipment(YMCA.equipment)));
+  const rep = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: YMCA, profile, exercises: EXERCISES, unit: 'lb', forced: { [first.id]: alt.id } });
+  eq(rep.exercises[0].exercise_id, alt.id, 'replaced in place');
+  eq(rep.exercises.slice(1).map((it) => it.exercise_id).join(), ids.slice(1).join(), 'the rest unchanged');
+  assert(rep.exercises[0].target.sets >= 1, 'replacement gets its own target');
+  const sw = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: YMCA, profile, exercises: EXERCISES, unit: 'lb', avoidIds: ids });
+  const changed = sw.exercises.filter((it) => !ids.includes(it.exercise_id)).length;
+  assert(changed >= Math.ceil(ids.length / 2), `switch changed only ${changed} of ${ids.length}`);
+  eq(sw.exercises.length, base.exercises.length, 'same shape of workout');
+});
+
+test('preview edits: Switch at a bare location still fills every slot it can', () => {
+  const none = { equipment: [], weight_inventory: {} };
+  const base = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: none, profile, exercises: EXERCISES, unit: 'lb' });
+  const sw = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: none, profile, exercises: EXERCISES, unit: 'lb', avoidIds: base.exercises.map((it) => it.exercise_id) });
+  eq(sw.exercises.length, base.exercises.length);
+});

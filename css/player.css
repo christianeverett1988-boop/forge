@@ -228,3 +228,28 @@ body.playing .topbar { display: none; }
 @keyframes ph-b { 0%, 40% { opacity: 0; transform: scale(1.03); } 50%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
 @media (prefers-reduced-motion: reduce) { .photo-loop img { animation: none; } .photo-loop img.pl-b { display: none; } }
 .howto [data-panel][hidden] { display: none; }
+
+/* ---------- Workout preview (Train, before Start) ---------- */
+.preview .big-title { margin: 0; }
+.pv-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.pv-chips .pill { font-size: 13px; padding: 4px 10px; background: var(--surface-2); color: var(--text); }
+.pv-sum { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; margin: 10px 0; }
+.pv-sum .bm-mini .bodymap { max-height: 72px; width: auto; margin: 0 auto; }
+.pv-sum p { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.pv-sum div.bm { display: grid; }
+.pv-warm { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.pv-wlist { margin: 4px 0 0; padding-left: 18px; font-size: 14px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+.pv-group-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0; font-weight: 700; }
+.pv-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pv-group { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 14px; padding: 10px 10px 2px; }
+.pv-group .pv-list { margin: 8px 0; }
+.pv-ex { display: grid; grid-template-columns: 56px 1fr 44px; gap: 10px; align-items: center; }
+.pv-thumb { width: 56px; height: 56px; border-radius: 12px; background: var(--surface-2); overflow: hidden; display: grid; place-items: center; }
+.pv-thumb svg.figure { width: 100%; height: 100%; }
+.pv-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pv-thumb .bm { display: grid; }
+.pv-thumb .bm-mini .bodymap { max-height: 48px; width: auto; }
+.pv-txt { display: flex; flex-direction: column; min-width: 0; }
+.pv-txt b { overflow: hidden; text-overflow: ellipsis; }
+.pv-tag { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: 0.04em; }
+.pv-more { font-size: 20px; line-height: 1; }

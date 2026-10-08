@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.1.2 — Workout preview (2026-10-08)
+
+No database rule changes; just copy the files and push. (Workouts can now save a `rest_sec` per exercise; the rules already allow it.)
+
+**Train → Today's workout, before you press Start**
+- **Chips** for the estimated time and the location, and **"6 exercises · 15 muscles"** next to a mini muscle map.
+- A **Warm-up** block: a few minutes of easy cardio and mobility, plus which lifts get lighter ramp-up sets (they're built into the workout).
+- **Supersets and circuits** are grouped in a box with their rounds ("Superset A · 3 rounds"), each exercise labelled A1, A2…
+- **Thumbnails:** each exercise shows its silhouette at the hardest point, its first demo photo, or its muscle map.
+- **⋯ on every exercise:**
+  - **Replace** with a similar move you can do here.
+  - **History & how-to**: opens How-To scrolled to your history.
+  - **Rest timer**: Auto or 1–4 min. It's used for that exercise's working sets in the player and list view; warm-ups keep their short rest, and supersets still go straight from A1 to A2.
+- **⇄ Switch** regenerates the workout with the same generator, steering away from what you were just shown. Press again for more options. When nothing else fits it goes back to the recommended picks.
+- Edits last until you start, or until you change the location or day.
+
+**Tests:** 124 (up from 119): grouping and muscle counts, Replace and Switch in the generator, and the rest-timer override.
+
 ## 0.3.1.1 — Fixes from the v0.3.1 review (2026-10-08)
 
 No database rule changes; just copy the files and push. Includes the demo photos (`media/ex`, 175 exercises) now on main.

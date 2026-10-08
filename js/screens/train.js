@@ -1,6 +1,11 @@
 // Train hub: pick a location, see today's plan, start or resume, recovery, program, tools.
 import { state } from '../state.js';
-import { cachePhotos } from '../ui/photos.js';
+import { cachePhotos, hasPhotos, photoUrls, loadPhotoIndex } from '../ui/photos.js';
+import { hasFigure, mountFigure } from '../ui/figure.js';
+import { expandEquipment, canDo } from '../workouts/equipment.js';
+import { REST } from '../workouts/session-core.js';
+import { planBlocks, planMuscles } from '../workouts/preview.js';
+import { openHowTo } from './howto.js';
 import { bodyMap, exerciseValues } from '../ui/bodymap.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import {
@@ -19,6 +24,17 @@ import { unlockAudio } from '../ui/sound.js';
 export const playerRoute = () => (state.settings && state.settings.player === 'list' ? '#/session' : '#/play');
 
 let dayOverride = null;
+
+// Edits made in the preview before Start: ⋯ → Replace, ⋯ → Rest timer, and Switch. They belong to one
+// location + day; changing either starts fresh.
+let edits = { key: '', forced: {}, rest: {}, avoid: [] };
+const editsFor = (key) => {
+  if (edits.key !== key) edits = { key, forced: {}, rest: {}, avoid: [] };
+  return edits;
+};
+const REST_CHOICES = [60, 90, 120, 150, 180, 240];
+const fmtRest = (sec) => (sec % 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec / 60} min`);
+
 
 export function targetText(t, u, ex) {
   const reps = ex && ex.timed ? `${t.reps}s` : t.repLo === t.repHi ? `${t.repHi}` : t.mode === 'start' ? `${t.repLo}–${t.repHi}` : `${t.reps}`;
@@ -43,7 +59,9 @@ export function renderTrain(el) {
   const loc = activeLocation();
   const program = activeProgram();
   const active = activeWorkout();
-  const plan = !active && loc ? planToday({ dayType: dayOverride }) : null;
+  const ed = editsFor(`${loc ? loc.id : ''}|${dayOverride || ''}`);
+  const plan = !active && loc ? planToday({ dayType: dayOverride, forced: ed.forced, avoidIds: ed.avoid }) : null;
+  if (plan) for (const it of plan.exercises) if (ed.rest[it.exercise_id]) it.rest_sec = ed.rest[it.exercise_id];
   const d = deloadInfo(program, state.profile.experience);
   const stalled = !active ? stalledMainLifts() : [];
   const rec = currentRecovery();
@@ -71,35 +89,7 @@ export function renderTrain(el) {
           <div class="row gap" style="margin-top:8px"><button class="btn small" data-deload>Start a deload week</button></div>
         </div>` : ''}
 
-      ${plan ? `
-      <div class="card">
-        <div class="row between center">
-          <div>
-            <p class="label">Today${d.deload ? ' · deload' : ''}</p>
-            <p class="big-title">${esc(plan.label)}</p>
-            <p class="muted small">About ${plan.est_minutes} min at ${esc(loc.name)}</p>
-          </div>
-        </div>
-        <label class="field"><span class="small muted">Or train a different day</span>
-          <select data-day>
-            <option value="">Recommended</option>
-            ${dayChoices(program).map(([k, l]) => `<option value="${k}" ${dayOverride === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}
-          </select>
-        </label>
-        ${plan.notes.map((n) => `<p class="notice info small">${esc(n)}</p>`).join('')}
-        ${bodyMap(planValues(plan), { size: 'small' })}
-        <ol class="plan-list">
-          ${plan.exercises.map((it) => {
-            const ex = exerciseById(it.exercise_id);
-            return `<li class="with-map">
-              ${bodyMap(exerciseValues(ex), { size: 'mini', caption: false })}
-              <div><b>${esc(ex.name)}</b>${it.superset ? ` <span class="pill">Superset ${it.superset}</span>` : ''}
-              <small class="muted">${esc(targetText(it.target, u, ex))}${it.warmups.length ? ` · ${it.warmups.length} warm-up` : ''}</small></div>
-            </li>`;
-          }).join('')}
-        </ol>
-        ${plan.exercises.length ? '<button class="btn" data-start>Start workout</button>' : '<p class="muted">Nothing fits this location. Add equipment in Settings → Locations.</p>'}
-      </div>` : ''}
+      ${plan ? previewCard(plan, { d, loc, program, u }) : ''}
       ${!loc ? '<div class="notice warn">Add a location in Settings → Locations first.</div>' : ''}
 
       <div class="card">
@@ -137,6 +127,7 @@ export function renderTrain(el) {
       dayOverride = day.value || null;
       renderTrain(el);
     });
+  if (plan) wirePreview(el, plan);
   const start = $('[data-start]', el);
   if (start)
     start.onclick = () => {
@@ -144,6 +135,7 @@ export function renderTrain(el) {
       startWorkout(plan);
       cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
       dayOverride = null;
+      edits = { key: '', forced: {}, rest: {}, avoid: [] };
       location.hash = playerRoute();
     };
   const dl = $('[data-deload]', el);
@@ -151,6 +143,147 @@ export function renderTrain(el) {
   $('[data-program]', el).onclick = () => openProgramPicker();
   $('[data-cardio]', el).onclick = () => openCardioLog();
   $('[data-plates]', el).onclick = () => openPlateCalculator();
+}
+
+function previewCard(plan, { d, loc, program, u }) {
+  const n = plan.exercises.length;
+  const muscles = planMuscles(plan.exercises, exerciseById);
+  const warm = plan.exercises.filter((it) => it.warmups.length);
+  const row = ({ it, i }, label) => {
+    const ex = exerciseById(it.exercise_id);
+    const rest = it.rest_sec ? ` · rest ${fmtRest(it.rest_sec)}` : '';
+    return `<li class="pv-ex">
+      <div class="pv-thumb" data-thumb="${esc(ex.id)}" aria-hidden="true"></div>
+      <div class="pv-txt">${label ? `<span class="pv-tag">${label}</span>` : ''}<b>${esc(ex.name)}</b>
+        <small class="muted">${esc(targetText(it.target, u, ex))}${it.warmups.length ? ` · ${it.warmups.length} warm-up` : ''}${rest}</small></div>
+      <button class="icon-btn pv-more" data-more="${i}" aria-label="More for ${esc(ex.name)}">⋯</button>
+    </li>`;
+  };
+  const blocks = planBlocks(plan.exercises).map((b) => (b.group
+    ? `<li class="pv-group"><p class="pv-group-h"><span>${b.kind} ${esc(b.group)}</span><small class="muted">${b.rounds} rounds · rest after each round</small></p>
+        <ol class="pv-list">${b.items.map((x, k) => row(x, `${esc(b.group)}${k + 1}`)).join('')}</ol></li>`
+    : row(b.items[0], '')));
+  return `
+      <div class="card preview">
+        <p class="label">Today${d.deload ? ' · deload' : ''}</p>
+        <div class="row between center">
+          <p class="big-title">${esc(plan.label)}</p>
+          ${n ? '<button class="btn ghost small" data-switch aria-label="Switch exercises">⇄ Switch</button>' : ''}
+        </div>
+        <div class="pv-chips">
+          <span class="pill">⏱ ~${plan.est_minutes} min</span>
+          <span class="pill">📍 ${esc(loc.name)}</span>
+        </div>
+        <label class="field"><span class="small muted">Or train a different day</span>
+          <select data-day>
+            <option value="">Recommended</option>
+            ${dayChoices(program).map(([k, l]) => `<option value="${k}" ${dayOverride === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+          </select>
+        </label>
+        ${plan.notes.map((x) => `<p class="notice info small">${esc(x)}</p>`).join('')}
+        ${n ? `
+        <div class="pv-sum">
+          ${bodyMap(planValues(plan), { size: 'mini', caption: false })}
+          <p><b>${n} exercise${n === 1 ? '' : 's'} · ${muscles} muscle${muscles === 1 ? '' : 's'}</b><small class="muted">Tap ⋯ to replace an exercise, see its history or set its rest.</small></p>
+        </div>
+        <div class="pv-warm">
+          <p class="pv-group-h"><span>Warm-up</span><small class="muted">~5 min</small></p>
+          <ul class="pv-wlist">
+            <li>3–5 min easy cardio or brisk walk</li>
+            <li>Arm circles, hip hinges and bodyweight squats, 10 each</li>
+            ${warm.map((it) => `<li>${esc(exerciseById(it.exercise_id).name)}: ${it.warmups.length} lighter set${it.warmups.length === 1 ? '' : 's'} first (built in)</li>`).join('')}
+          </ul>
+        </div>
+        <ol class="pv-list">${blocks.join('')}</ol>
+        <button class="btn" data-start>Start workout</button>` : '<p class="muted">Nothing fits this location. Add equipment in Settings → Locations.</p>'}
+      </div>`;
+}
+
+/** Thumbnails, ⋯ menus and Switch for the preview card. */
+function wirePreview(el, plan) {
+  const thumbs = $$('[data-thumb]', el);
+  const paintThumbs = () => thumbs.forEach((t) => {
+    if (t.childElementCount) return;
+    const ex = exerciseById(t.dataset.thumb);
+    if (!ex) return;
+    if (hasFigure(ex.id)) mountFigure(t, ex, { at: 'hard' });
+    else if (hasPhotos(ex.id)) {
+      t.innerHTML = `<img src="${esc(photoUrls(ex.id)[0])}" alt="" decoding="async" loading="lazy">`;
+      t.firstChild.addEventListener('error', () => { t.innerHTML = bodyMap(exerciseValues(ex), { size: 'mini', caption: false }); }, { once: true });
+    } else t.innerHTML = bodyMap(exerciseValues(ex), { size: 'mini', caption: false });
+  });
+  paintThumbs();
+  // Photos join in when the photo list arrives (weak signal): repaint the ones still on the map.
+  loadPhotoIndex().then(() => thumbs.forEach((t) => {
+    if (!t.isConnected || hasFigure(t.dataset.thumb) || !hasPhotos(t.dataset.thumb) || t.querySelector('img')) return;
+    t.innerHTML = '';
+    paintThumbs();
+  }));
+
+  const sw = $('[data-switch]', el);
+  if (sw) sw.onclick = () => {
+    const ed = edits;
+    const now = plan.exercises.map((it) => it.exercise_id);
+    ed.avoid = [...new Set([...ed.avoid, ...now])];
+    ed.forced = {};
+    const fresh = planToday({ dayType: dayOverride, forced: {}, avoidIds: ed.avoid });
+    const changed = fresh ? fresh.exercises.filter((it) => !now.includes(it.exercise_id)).length : 0;
+    if (!changed) {
+      ed.avoid = []; // nothing else fits: start the rotation over
+      toast('No other options here for this day. Back to the recommended picks.');
+    } else toast(`Switched ${changed} exercise${changed === 1 ? '' : 's'}`);
+    renderTrain(el);
+  };
+
+  $$('[data-more]', el).forEach((b) => (b.onclick = () => exerciseMore(el, plan, Number(b.dataset.more))));
+}
+
+function exerciseMore(el, plan, i) {
+  const it = plan.exercises[i];
+  const ex = exerciseById(it.exercise_id);
+  const ed = edits;
+  const auto = it.superset ? REST.accessory : REST[it.role] || 90;
+  sheet(ex.name, (body, close) => {
+    body.innerHTML = `
+      <div class="stack">
+        <button class="btn ghost" data-a="replace">Replace</button>
+        <button class="btn ghost" data-a="history">History &amp; how-to</button>
+        <div>
+          <p class="label">Rest timer</p>
+          <div class="chips" role="radiogroup" aria-label="Rest after each set">
+            <label class="chip"><input type="radio" name="rest" value="" ${it.rest_sec ? '' : 'checked'}><span>Auto (${fmtRest(auto)})</span></label>
+            ${REST_CHOICES.map((sec) => `<label class="chip"><input type="radio" name="rest" value="${sec}" ${it.rest_sec === sec ? 'checked' : ''}><span>${fmtRest(sec)}</span></label>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    $('[data-a="replace"]', body).onclick = () => {
+      close();
+      const loc = activeLocation();
+      const avail = expandEquipment(loc ? loc.equipment : []);
+      const inPlan = new Set(plan.exercises.map((x) => x.exercise_id));
+      openExercisePicker({
+        title: `Replace ${ex.name}`,
+        onlyPattern: ex.pattern,
+        filter: (c) => !inPlan.has(c.id) && canDo(c, avail),
+        availableNote: 'Same movement, doable at this location.',
+        onPick: (c) => {
+          // Key by what the generator picks for this slot, so the swap survives re-renders.
+          const orig = Object.keys(ed.forced).find((k) => ed.forced[k] === ex.id) || ex.id;
+          ed.forced[orig] = c.id;
+          if (ed.rest[ex.id]) { ed.rest[c.id] = ed.rest[ex.id]; delete ed.rest[ex.id]; }
+          toast(`Replaced with ${c.name}`);
+          renderTrain(el);
+        },
+      });
+    };
+    $('[data-a="history"]', body).onclick = () => { close(); openHowTo(ex.id, { focus: 'history' }); };
+    $$('input[name=rest]', body).forEach((r) => r.addEventListener('change', () => {
+      if (r.value) ed.rest[ex.id] = Number(r.value);
+      else delete ed.rest[ex.id];
+      close();
+      renderTrain(el);
+    }));
+  });
 }
 
 function openProgramPicker() {
