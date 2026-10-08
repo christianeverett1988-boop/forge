@@ -1,0 +1,42 @@
+# Runs on every push to main and every pull request: unit tests (math, generator, progression, CSV)
+# and the Firestore security-rule tests against the local emulator (demo project, never your real one).
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/run.js
+
+  rules:
+    name: Security rule tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install and run
+        working-directory: tests/rules
+        run: |
+          npm install --no-audit --no-fund
+          npm test

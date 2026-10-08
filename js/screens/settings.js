@@ -6,10 +6,18 @@ import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import { formatHeight, formatWeight } from '../units.js';
 import { GOALS } from '../nutrition/targets.js';
 import { VERSION } from '../version.js';
+import { unlockAudio, coach, sfx, beep } from '../ui/sound.js';
+import { hapticSupport } from '../ui/haptic.js';
 
 export function renderSettings(el) {
   const u = getUnits();
   const p = state.profile;
+  const st = state.settings || {};
+  const pl = st.player === 'list' ? 'list' : 'guided';
+  const coachMode = st.audio_coach || 'voice';
+  const sfxOn = st.sfx !== false;
+  const hapOn = st.haptics !== false;
+  const hapSupport = hapticSupport();
   el.innerHTML = `
     <section class="stack">
       <h1>Settings</h1>
@@ -26,6 +34,26 @@ export function renderSettings(el) {
           <label><input type="radio" name="units" value="imperial" ${u === 'imperial' ? 'checked' : ''}><span>lb, ft, in</span></label>
           <label><input type="radio" name="units" value="metric" ${u === 'metric' ? 'checked' : ''}><span>kg, cm</span></label>
         </div>
+      </div>
+
+      <div class="card stack">
+        <p class="label">Workouts</p>
+        <fieldset class="field"><legend class="small">Workout screen</legend>
+          <div class="seg" role="radiogroup" aria-label="Workout screen">
+            <label><input type="radio" name="player" value="guided" ${pl === 'guided' ? 'checked' : ''}><span>Guided</span></label>
+            <label><input type="radio" name="player" value="list" ${pl === 'list' ? 'checked' : ''}><span>List</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="field"><legend class="small">Coach audio</legend>
+          <div class="seg" role="radiogroup" aria-label="Coach audio">
+            <label><input type="radio" name="coach" value="off" ${coachMode === 'off' ? 'checked' : ''}><span>Off</span></label>
+            <label><input type="radio" name="coach" value="beeps" ${coachMode === 'beeps' ? 'checked' : ''}><span>Beeps</span></label>
+            <label><input type="radio" name="coach" value="voice" ${coachMode === 'voice' ? 'checked' : ''}><span>Voice</span></label>
+          </div>
+          <small class="muted">Mixes with your music. Silent when your ringer switch is off.</small>
+        </fieldset>
+        <label class="choice check small"><input type="checkbox" name="sfx" ${sfxOn ? 'checked' : ''}><span>Sound effects<small>Power-up, PR and finish sounds.</small></span></label>
+        <label class="choice check small"><input type="checkbox" name="haptics" ${hapOn ? 'checked' : ''}><span>Haptic tick (experimental)<small>${hapSupport === 'switch' ? 'A light tap on Done set (iOS 18+ trick).' : 'Not supported on this device.'}</small></span></label>
       </div>
 
       <a class="card row between center nav-card" href="#/locations">
@@ -59,6 +87,18 @@ export function renderSettings(el) {
   $$('input[name=units]', el).forEach((r) =>
     r.addEventListener('change', () => patch('settings', 'main', { units: r.value }))
   );
+  $$('input[name=player]', el).forEach((r) => r.addEventListener('change', () => patch('settings', 'main', { player: r.value })));
+  $$('input[name=coach]', el).forEach((r) => r.addEventListener('change', () => {
+    unlockAudio();
+    patch('settings', 'main', { audio_coach: r.value });
+    if (r.value !== 'off') setTimeout(() => (r.value === 'voice' ? coach.go() : beep(880, 160)), 50);
+  }));
+  $('input[name=sfx]', el).addEventListener('change', (e) => {
+    unlockAudio();
+    patch('settings', 'main', { sfx: e.target.checked });
+    if (e.target.checked) setTimeout(() => sfx.charge(0.5), 50);
+  });
+  $('input[name=haptics]', el).addEventListener('change', (e) => patch('settings', 'main', { haptics: e.target.checked }));
 
   const run = (fn) => async () => {
     try {

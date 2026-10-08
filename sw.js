@@ -1,6 +1,6 @@
 // Service worker: caches the app so it opens with no signal, and hands off new versions.
 // Bump VERSION here AND in js/version.js on every release.
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 const CACHE = `forge-${VERSION}`;
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
 
@@ -10,6 +10,8 @@ const SHELL = [
   './manifest.json',
   './config.js',
   './css/app.css',
+  './css/motion.css',
+  './css/player.css',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
@@ -37,6 +39,15 @@ const SHELL = [
   './js/workouts/progression.js',
   './js/workouts/recovery.js',
   './js/timer.js',
+  './js/ui/motion.js',
+  './js/ui/fx.js',
+  './js/ui/sound.js',
+  './js/ui/haptic.js',
+  './js/ui/figure.js',
+  './js/ui/poses.js',
+  './js/workouts/clock.js',
+  './js/workouts/session-core.js',
+  './js/workouts/live.js',
   './js/screens/auth.js',
   './js/screens/onboarding.js',
   './js/screens/today.js',
@@ -50,6 +61,11 @@ const SHELL = [
   './js/screens/library.js',
   './js/screens/picker.js',
   './js/screens/tools.js',
+  './js/screens/player.js',
+  './js/screens/summary.js',
+  './js/screens/overlays.js',
+  './js/screens/body.js',
+  './js/screens/progress.js',
   './data/exercise-instructions.json',
   `${FB}/firebase-app.js`,
   `${FB}/firebase-auth.js`,

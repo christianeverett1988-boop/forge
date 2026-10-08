@@ -120,3 +120,17 @@ test('the users/{uid} document itself is closed', async () => {
   await assertFails(setDoc(doc(as('alice'), 'users/alice'), { x: 1 }));
   await assertFails(getDoc(doc(as('alice'), 'users/alice')));
 });
+
+test('workouts: pause fields are typed (v0.3.0)', async () => {
+  const db = as('alice');
+  const base = rec('alice', 'k1', { location_id: 'l1', exercises: [], started_at: '2026-10-08T10:00:00Z', status: 'active' });
+  const ref = doc(db, 'users/alice/workouts/k1');
+  await assertSucceeds(setDoc(ref, { ...base, paused_at: null, paused_ms: 0 }));
+  await assertSucceeds(updateDoc(ref, { paused_at: '2026-10-08T10:20:00Z', updated_at: '2026-10-08T10:20:00Z' }));
+  await assertSucceeds(updateDoc(ref, { paused_at: null, paused_ms: 300000, updated_at: '2026-10-08T10:25:00Z' }));
+  await assertSucceeds(updateDoc(ref, { status: 'done', duration_ms: 3600000, updated_at: '2026-10-08T11:30:00Z' }));
+  await assertFails(updateDoc(ref, { paused_ms: -5 }));
+  await assertFails(updateDoc(ref, { paused_ms: '300000' }));
+  await assertFails(updateDoc(ref, { paused_at: 12345 }));
+  await assertFails(updateDoc(ref, { duration_ms: -1 }));
+});

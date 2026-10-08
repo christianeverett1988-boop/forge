@@ -72,7 +72,14 @@ export function defaultSets(role, experience) {
   return experience === 'beginner' ? 2 : 3;
 }
 
-/** Reps you could probably do at `target`, from a set of `reps` at `weight` (Epley, reps capped at 30). */
+/**
+ * Reps you could probably do at `target`, from a set of `reps` at `weight` (Epley, reps capped at 30).
+ * Epley is unreliable for *estimating a 1RM* above ~12 reps (see e1rm). Using it up to 30 here is OK because
+ * it's only a gate for moving to the next owned weight: it's fed your *weakest* set, it has to clear the
+ * bottom of the rep range (or 5 reps for the tempo escape below), and the target it unlocks never asks for
+ * more reps than the estimate supports. A high-rep overestimate just means trying the heavier weight a
+ * little earlier, at a low rep target.
+ */
 export function predictedReps(weight, reps, target) {
   if (!weight || !target) return 0;
   const oneRm = weight * (1 + Math.min(reps, 30) / 30);
@@ -182,6 +189,18 @@ export function nextTarget(ex, history, { inventory = {}, unit = 'lb', role = 's
     if (curSets < 5) {
       return { ...base, weight: w, sets: curSets + 1, reps: ext, repHi: ext, mode: 'sets', note: `${why}, and you’ve maxed the reps, so adding a set.` };
     }
+    // Tempo escape: after 2 tempo sessions (3 maxed sessions in a row, counting the one that maxed out)
+    // at this weight, take the bigger jump if your weakest
+    // set predicts at least 5 reps at the next weight (e.g. 30 → 40 lb). 5 → 30 lb predicts far less, so it
+    // still never jumps.
+    const maxedRun = hist.slice(0, 3).filter((h) => topWeight(h.sets) === w && h.sets.length >= 5 && Math.min(...h.sets.map((x) => x.reps || 0)) >= ext).length;
+    if (n != null && maxedRun >= 3) {
+      const pr = predictedReps(w, minReps, n);
+      if (pr >= 5) {
+        const r = Math.max(5, Math.min(pr, lo));
+        return { ...base, weight: n, reps: r, mode: 'weight', note: `Bigger jump to ${fmt(n)} ${unit}: aim for ${r} reps and build back up to ${lo}.` };
+      }
+    }
     return { ...base, weight: w, sets: 5, reps: ext, repHi: ext, mode: 'tempo', note: 'Maxed out reps and sets here: lower for 3–4 seconds and pause at the bottom.' };
   }
 
@@ -254,7 +273,7 @@ export function platesPerSide(total, unit = 'lb', bar = barWeight(unit)) {
 
 /**
  * PRs set by this session's sets, compared with earlier history (same unit, most recent first).
- * Returns [{ type: 'e1rm'|'weight'|'reps'|'time', value, label }]
+ * Returns [{ type: 'e1rm'|'weight'|'reps'|'time', value, prev, label }] — `prev` is the old best, for "185 → 192".
  */
 export function detectPRs(ex, sessionSets, history) {
   const prevSets = history.flatMap((h) => h.sets || []);
@@ -264,21 +283,22 @@ export function detectPRs(ex, sessionSets, history) {
   if (ex.timed) {
     const best = Math.max(...prevSets.map((s) => s.reps || 0));
     const now = Math.max(...sessionSets.map((s) => s.reps || 0));
-    if (now > best) prs.push({ type: 'time', value: now, label: `Longest hold: ${now}s` });
+    if (now > best) prs.push({ type: 'time', value: now, prev: best, label: `Longest hold: ${now}s` });
     return prs;
   }
   if (loaded) {
     const bestE = Math.max(0, ...prevSets.map((s) => e1rm(s.weight, s.reps) || 0));
     const nowE = Math.max(0, ...sessionSets.map((s) => e1rm(s.weight, s.reps) || 0));
-    if (nowE > bestE * 1.001 && bestE > 0) prs.push({ type: 'e1rm', value: nowE, label: `Est. 1-rep max ${Math.round(nowE)}` });
+    if (nowE > bestE * 1.001 && bestE > 0) prs.push({ type: 'e1rm', value: nowE, prev: bestE, label: `Est. 1-rep max ${Math.round(nowE)}` });
     const bestW = Math.max(...prevSets.map((s) => s.weight || 0));
     const nowW = Math.max(...sessionSets.map((s) => s.weight || 0));
-    if (nowW > bestW) prs.push({ type: 'weight', value: nowW, label: `Heaviest: ${nowW}` });
+    if (nowW > bestW) prs.push({ type: 'weight', value: nowW, prev: bestW, label: `Heaviest: ${nowW}` });
     // Rep PR at a weight you've used before (great for fixed dumbbells).
     for (const s of sessionSets) {
       const sameW = prevSets.filter((p) => p.weight === s.weight);
-      if (sameW.length && s.reps > Math.max(...sameW.map((p) => p.reps || 0))) {
-        prs.push({ type: 'reps', value: s.reps, label: `${s.reps} reps at ${s.weight}` });
+      const best = sameW.length ? Math.max(...sameW.map((p) => p.reps || 0)) : 0;
+      if (sameW.length && s.reps > best) {
+        prs.push({ type: 'reps', value: s.reps, prev: best, weight: s.weight, label: `${s.reps} reps at ${s.weight}` });
         break;
       }
     }
@@ -286,6 +306,6 @@ export function detectPRs(ex, sessionSets, history) {
   }
   const best = Math.max(...prevSets.map((s) => s.reps || 0));
   const now = Math.max(...sessionSets.map((s) => s.reps || 0));
-  if (now > best) prs.push({ type: 'reps', value: now, label: `Most reps in a set: ${now}` });
+  if (now > best) prs.push({ type: 'reps', value: now, prev: best, label: `Most reps in a set: ${now}` });
   return prs;
 }

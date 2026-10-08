@@ -11,6 +11,7 @@
   import './smoothing.test.js';
   import './workouts.test.js';
   import './csv.test.js';
+  import './session.test.js';
   const lines = [];
   const { fail } = await runAll((l) => lines.push(l));
   document.body.textContent = lines.join('\n');

@@ -244,7 +244,7 @@ details summary { cursor: pointer; font-weight: 600; min-height: 32px; display: 
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   padding: 6px 8px calc(var(--safe-bottom) + 6px);
   background: rgba(13, 15, 18, .92);
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
@@ -294,9 +294,7 @@ dialog.sheet::backdrop { background: rgba(0,0,0,.55); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .3; } }
 @keyframes up { from { transform: translateY(40px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before { animation: none !important; transition: none !important; }
-}
+/* Reduced motion is handled in css/motion.css: movement becomes fades, feedback stays. */
 
 /* ================= Checkpoint B: training ================= */
 .big-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }

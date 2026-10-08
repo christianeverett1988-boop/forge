@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.3.0 — Experience overhaul, drop 1 (2026-10-08)
+
+**⚠️ Rules changed.** Publish the new `firestore.rules` (Firebase console → Firestore Database → Rules → paste → Publish) **before** opening this version. Workouts now save `paused_at`, `paused_ms` and `duration_ms`.
+
+**Guided player (new default)**
+- **Start → 3-2-1 GO** full-screen countdown, then one exercise at a time: segmented progress bar, "Exercise 2 of 6", a huge reps × weight target, big −/+ steppers (your real weight steps: owned dumbbells, rack or barbell plates), an "in the tank" row, and a giant **Done set**.
+- **Full-screen rest**: shrinking ring, **Skip**, **−15 / +15**, and a card showing what's next.
+- **Supersets** alternate A1 → A2 → rest. **Timed sets** (planks, carries, boxing rounds) run a countdown and complete themselves. **Boxing days** use the player with the round timer and combo callouts inside it.
+- **Back / Next / Undo last set** at the bottom. First-time lifts carry set 1's weight and reps into set 2.
+- Prefer the old screen? **Settings → Workouts → List view**. The list view is still one tap away inside the player (☰).
+
+**Pause, resume, away**
+- ⏸ freezes the workout clock and the rest timer. The overlay offers **Resume**, **End workout** or **Discard**. The workout time on the summary leaves pauses out.
+- Come back after 10+ minutes without pausing and Forge asks: **"You were away 14 min. Count it?"** — keep it or remove it from your time.
+
+**Feel**
+- **Power-up** on every Done: button charge, burst, ring flash, "+1 set". It gets bigger on the last set of an exercise and the last set of the workout.
+- **PR explosion**: a gold card with old → new (counting up), sparks and a fanfare. Tap to dismiss.
+- **Sound + voice coach**: 3-2-1 beeps, "10 seconds", "Rest 2 minutes. Next: bench press, 8 reps", "Last set", "New record". Mixes with your music and stays silent when the ringer is off. Settings → Workouts → Coach audio: Off / Beeps / Voice; Sound effects on/off.
+- **Haptic tick** on Done (experimental, iPhone only). Settings → Workouts.
+- **Animated demos** (preview): code-drawn silhouettes with the working muscles glowing on the hardest part of the rep, for **barbell back squat, pull-up and dumbbell curl**. Approve the look and v0.3.1 brings the full library. Everything else shows the muscle list.
+- **Summary screen**: "Workout #N", count-up time / sets / volume / records, muscles worked, every exercise with ✓, its records (old → new) and "vs last time". XP and levels come in v0.3.2 (draft names in `docs/levels.md`).
+- **Motion system**: shared timing tokens, slide transitions between screens, fade-in sheets, rows that ease in as you scroll, skeletons while loading. **Reduce Motion** turns movement into fades.
+
+**Navigation:** five tabs — **Today, Train, Body, Progress, Settings**. Body holds recovery (moved from Train). Progress holds **Weight** and **History**.
+
+**Progression**
+- **Tempo is no longer a dead end.** After 3 maxed-out sessions on tempo, Forge re-checks the next weight; if your last session predicts 5+ reps there, you move up (30 → 40 lb yes; 5 → 30 lb no). See `docs/workout-algorithm.md`.
+- `predictedReps` now documents that it's Epley, capped at 30 reps.
+
+**iPhone web features used** (each one is optional; the app works without it):
+| Feature | Needs | If missing |
+|---|---|---|
+| Screen Wake Lock (screen stays on during a workout) | iOS 18.4+ home-screen app | The screen can dim and lock as normal; timers still keep correct time. |
+| Haptic tick (hidden `switch` input) | iOS 18+ | No tick; everything else is identical. |
+| View Transitions (screen slides) | Safari 18+ | Screens swap instantly. |
+| `@starting-style` (sheets fade in) | Safari 17.5+ | Sheets appear without the entrance. |
+| Scroll-driven animations (list rows ease in) | Safari 26+ | Rows are just there. |
+| `text-wrap: balance / pretty` | Safari 17.5+ | Normal line breaks. |
+| Audio Session `ambient` (mix with music, obey silent switch) | Safari 16.4+ | Default web-audio behaviour. |
+| Speech synthesis (voice coach) | All iOS | No spoken cues; the beeps still play. |
+
+**Review fixes (before merge)**
+1. **Undo takes the PR back.** Undoing a set recomputes that exercise's records from the sets still done, so an undone PR set leaves no PR behind (tested).
+2. **Sets save as the app hides.** A pending save is written immediately when the app goes to the background or is swiped away, instead of waiting out the 400 ms debounce.
+3. **The last set no longer auto-finishes.** A "Workout complete" card offers **Finish** or **Undo last set**.
+4. **Summary shows the right numbers straight away.** It renders the finished workout (status done, real duration, correct Workout #N) even before the database snapshot catches up, so the one-time celebration never counts up wrong numbers.
+5. **The animation loop sleeps on the player.** Demos stop drawing while paused or resting, the rest ring runs one task per screen (no more copies stacking up), and demo props are built once instead of every frame.
+
+**CI:** GitHub Actions runs the unit tests and the rules tests on every push and pull request.
+
+**Tests:** 99 unit tests (up from 80): pause-aware clock, away gap, set queue with supersets, rest rules, set labels, validation, session stats, vs-last-time, the tempo escape (30 → 40 escapes; 5 → 30 never does), demo muscle mapping, undo removing a PR. Rules tests cover the typed pause fields.
+
+**Size:** about 37 KB (gzipped) of new JS + CSS; no new libraries, no new origins in the CSP.
+
 ## 0.2.1 — Progression fixes (2026-10-08)
 
 No database rule changes; just copy the files and push.
