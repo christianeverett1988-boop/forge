@@ -1,5 +1,8 @@
 # Addendum 3: Replace Withings+ inside Forge (so I can cancel the $9.99/mo subscription)
 
+> **Update (Oct 8, 2026):** Christian's scale is a **Withings Body Comp**, and his watch is an **Apple Watch Ultra 2** (watchOS 26.6), which supports wrist temperature. He has **already cancelled Withings+, and access ends November 1, 2026**. W1 (Withings sync plus the data check) must ship and be verified on his account well before Nov 1, and W2 (Watch insights) should follow as soon as possible. Body Comp measures weight, fat/muscle/bone/water %, visceral fat, BMR, metabolic age, standing heart rate, vascular age (pulse wave velocity) and the nerve health score. There's no segmental data and no ECG on this model.
+
+
 Add this to the brief. It extends §4 (Apple Health), §5.5 (Weight and body), §5.6 (Coach), §6 (data model) and §7 (phases). Where this addendum and the brief disagree, this addendum wins.
 
 **The goal.** I step on my Withings scale and Forge shows every number the Withings app shows, plus everything Withings+ adds on top (the score, weekly breakdown, explanations, trend alerts, readiness, programs, assistant). Ideally it's better, because Forge also has my Apple Watch recovery data (HRV, resting HR, sleep, wrist temperature) and my real training and food logs. Once the checklist in §C passes, I cancel Withings+.
