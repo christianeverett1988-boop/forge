@@ -1,0 +1,75 @@
+// Export your data (JSON for everything, CSV for weights). Works offline from the on-device cache.
+import { COLLECTIONS, readAll } from './db.js';
+import { todayKey } from './ui.js';
+import { VERSION } from './version.js';
+import { exerciseById } from './workouts/library.js';
+import { toCSV } from './csv.js';
+
+async function deliver(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const file = new File([blob], filename, { type });
+  // On iPhone, the share sheet is the reliable way to save a file ("Save to Files").
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+export async function exportJSON() {
+  const out = { app: 'forge', version: VERSION, exported_at: new Date().toISOString(), data: {} };
+  for (const col of COLLECTIONS) out.data[col] = await readAll(col);
+  await deliver(`forge-export-${todayKey()}.json`, JSON.stringify(out, null, 2), 'application/json');
+}
+
+export async function exportWeightsCSV() {
+  const rows = (await readAll('weights'))
+    .filter((r) => !r.deleted)
+    .sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))
+    .map((r) => ({ ...r, lb: (r.kg / 0.45359237).toFixed(2), kg: r.kg.toFixed(3) }));
+  const csv = toCSV(rows, ['day', 'measured_at', 'kg', 'lb', 'source', 'id']);
+  await deliver(`forge-weights-${todayKey()}.csv`, csv, 'text/csv');
+}
+
+export async function exportWorkoutsCSV() {
+  const workouts = (await readAll('workouts')).filter((w) => !w.deleted && w.status === 'done')
+    .sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
+  const rows = [];
+  for (const w of workouts) {
+    for (const it of w.exercises || []) {
+      const ex = exerciseById(it.exercise_id);
+      let n = 0;
+      for (const s of it.sets || []) {
+        if (!s.done) continue;
+        rows.push({
+          date: w.started_at.slice(0, 10), started_at: w.started_at, workout: w.label, location_id: w.location_id,
+          exercise: ex ? ex.name : it.exercise_id, exercise_id: it.exercise_id, set: s.warmup ? 'W' : ++n,
+          weight_kg: s.weight_kg == null ? '' : s.weight_kg.toFixed(3),
+          weight_lb: s.weight_kg == null ? '' : (s.weight_kg / 0.45359237).toFixed(1),
+          reps_or_seconds: s.reps, rir: s.rir ?? '', workout_id: w.id,
+        });
+      }
+    }
+  }
+  const csv = toCSV(rows, ['date', 'started_at', 'workout', 'exercise', 'set', 'weight_lb', 'weight_kg', 'reps_or_seconds', 'rir', 'exercise_id', 'location_id', 'workout_id']);
+  await deliver(`forge-workouts-${todayKey()}.csv`, csv, 'text/csv');
+}
+
+export async function exportCardioCSV() {
+  const rows = (await readAll('cardio_sessions')).filter((r) => !r.deleted)
+    .sort((a, b) => (a.started_at < b.started_at ? -1 : 1))
+    .map((r) => ({ ...r, distance_mi: r.distance_km ? (r.distance_km / 1.609344).toFixed(2) : '' }));
+  const csv = toCSV(rows, ['day', 'started_at', 'activity', 'duration_min', 'distance_km', 'distance_mi', 'calories', 'avg_hr', 'notes', 'source', 'id']);
+  await deliver(`forge-cardio-${todayKey()}.csv`, csv, 'text/csv');
+}

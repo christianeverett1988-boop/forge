@@ -1,0 +1,144 @@
+# Changelog
+
+## 0.2.1 — Progression fixes (2026-10-08)
+
+No database rule changes; just copy the files and push.
+
+**Must-fix**
+1. **Deloads and resets no longer drop from 30 lb to 5 lb.**
+   - If the nearest lighter weight you own is more than 20% lighter, the weight stays the same.
+   - A deload then cuts sets in half, sets reps to the bottom of the range, and RIR 3+.
+   - A reset aims for the bottom of the range.
+   - Where a close lighter weight exists (gym rack, barbells), it's still ~10% lighter.
+2. **Deload sessions don't count as progression history.** Workouts already save `deload: true`. History now passes that flag through, and progression, the two-tough-sessions reset, and stall checks all use your last non-deload session. PRs, charts and History still show deload workouts. Bench at 200 → deload 180 → back to 200 the next session.
+3. **The "big jump" ladder can't loop.**
+   - It's now one-way at the same weight: reps up to the top + 8 (keeping your set count), then one more set at those reps up to 5, then tempo, which stays.
+   - The normal double-progression branch also keeps the sets you've built up.
+   - Weight jumps are now decided by estimated strength, not a fixed 25% rule. Small steps (+5 lb upper, +10 lb lower barbell, +5 lb machine or dumbbell) are always allowed. Bigger jumps happen when your last session predicts you can hit the bottom of the range at the new weight.
+4. **Pinned exercises respect your injury note and the level cap.**
+   - 5×5 day B no longer gives the barbell overhead press when your note mentions your shoulder. The slot falls back to its pattern, and if every option there stresses your shoulder, the session notes say exactly what was left out and why.
+   - Exercises you picked yourself in Build my own are kept, with a warning on that exercise.
+
+**Smaller fixes**
+5. **Finishing with zero completed sets** offers **Discard** (not Save), so empty workouts don't land in History or advance the program rotation.
+6. **A rejected ✓ tap** ("Enter the weight first") no longer leaves reps filled in. Checks run before anything is written.
+7. **CSV exports neutralise formula injection.** Cells starting with `=`, `+`, `-`, `@`, tab or CR get a leading `'`, while plain negative numbers stay numbers. The CSV helpers moved to `js/csv.js` with tests.
+8. **SETUP:** puts Homebrew's keg-only `openjdk@21` on your PATH (and checks `java -version`) before `npm test`.
+9. **CSP:** `img-src` allows `https://www.google.com`, so Firestore's offline network probe (`cleardot.gif`) isn't blocked and the console stays quiet.
+
+**Tests:** 80 unit tests (up from 65), including:
+- 40-session simulations that feed each target back in as the logged result (reaches 5 sets, then tempo, never loops, weight stays 30 lb);
+- deload and reset at 30 lb at home;
+- bench returning to 200 after a deload;
+- stall checks skipping deloads;
+- estimated-strength jumps;
+- pinned injury and level filtering;
+- custom-day warnings;
+- CSV injection.
+
+## 0.2.0 — Phase 1, Checkpoint B: workouts (2026-10-08)
+
+**⚠ Publish the new `firestore.rules`** (DEPLOY.md) and **close public sign-up** (SETUP.md step 7).
+
+**Workouts**
+- **Exercise library:** 280 curated exercises with movement patterns, muscles, equipment alternatives, rep ranges, original form cues, and injury tags.
+  - Calisthenics progression chains, with the no-equipment steps available at every location: push-up (9 steps), pull-up (9), muscle-up, dip, squat, hinge, L-sit, handstand, core, and ab wheel.
+  - Step-by-step instructions for 177 exercises from free-exercise-db by Yuhonas (public domain, Unlicense), credited in-app and in README.
+- **Deterministic generator** (no AI). Details in `docs/workout-algorithm.md`.
+  - Per-muscle recovery: fatigue decays over 48–72 h and scales with sets and effort.
+  - Smart mode picks the most recovered day.
+  - Fills each slot only from the active location's equipment.
+  - Skips injury-tagged moves.
+  - Keeps main lifts consistent so they can progress, and rotates accessories.
+  - Trims to your session length and supersets short sessions.
+- **Progressive overload:** double progression, with load steps from each location's own weights.
+  - When the next weight is too big a jump (your 5 → 30 lb dumbbells), it progresses reps, then sets, then tempo.
+  - 10% reset after two bad sessions; stall detection.
+  - Bodyweight chains suggest the next step.
+- **Deloads:** the last week of every 4–6 week cycle (by experience), or on demand when 2+ main lifts stall.
+- **Programs:**
+  - Smart (adapts to recovery)
+  - Full body 3×
+  - Upper/lower
+  - Push/pull/legs
+  - 5×5
+  - Hypertrophy
+  - Home dumbbells
+  - Boxing conditioning (shadowboxing when there's no heavy bag)
+  - Build my own
+- **Train tab:**
+  - pick a location (defaults to the last one used);
+  - see today's plan or pick a different day;
+  - start or resume a workout;
+  - recovery bars and program/cycle status.
+- **Logger:**
+  - big one-handed rows, with last session's numbers inline;
+  - planned weight and reps prefilled (tap ✓ to accept);
+  - reps in reserve (RIR), warm-up sets, add/remove sets, swap for a similar move doable here, reorder, add exercise;
+  - plate calculator, "how to" with cues and steps, timed holds with a countdown.
+  - Rest timer with ±15 s and beeps, rest after supersets, and the screen kept awake.
+  - PR detection (estimated 1RM, heaviest weight, reps at a weight, most reps, longest hold) with a celebration.
+- **Interval timer:**
+  - boxing rounds with combo callouts (optional voice);
+  - HIIT, EMOM, Tabata, and custom;
+  - "log as cardio" when it finishes.
+- **Cardio log:** manual entry, labelled as manual. Peloton rides go here until Phase 2/3 imports.
+- **History:**
+  - 12-week calendar heatmap;
+  - weekly sets per muscle against a 10–20 set guide;
+  - estimated 1RM / best-reps trend per exercise;
+  - PR board;
+  - recent workouts and cardio, with detail and delete.
+- **Exercise library screen:** search, filter by movement and location, favorites, "never suggest", and custom exercises.
+- **Locations:** a weight-inventory editor (dumbbell pairs and kettlebells) and the plate calculator.
+- **Today:** a workout card (start, resume, or done).
+- **Data:**
+  - new collections `workouts` (sets live inside each workout, one level deep, with `location_id`), `cardio_sessions`, `programs`, and `exercises` (custom);
+  - export adds workouts and cardio CSV;
+  - delete-everything covers every collection.
+
+**Review fixes (Checkpoint A feedback)**
+1. **Rule tests:**
+   - `npm test` copies the rules in first (the emulator only reads its own folder);
+   - `demo-forge` project ID in both files;
+   - firebase-tools ^15;
+   - SETUP says Java 21+.
+   - New tests: another user listing, collection-group queries, changing `user_id`, removing standard fields, deeper paths, unknown collections, type checks.
+2. **Closed public sign-up:** SETUP step 7. `auth/admin-restricted-operation` now shows a plain message.
+3. **`initializeAuth`** with IndexedDB and local persistence and no popup/redirect resolver, so there's no hidden apis.google.com iframe on iOS.
+4. **No endless spinner:** a failed data listener (for example, rules not published) shows a clear message with a retry button.
+5. **Calorie floor citation:** Harvard only, noted as more cautious than NIH/NHLBI's 1,000–1,200 (women) / 1,200–1,600 (men). Updated in targets.js, About, and README.
+6. **Service worker:** the first visit no longer reloads itself. It reloads only when a service worker already controlled the page, or after you tap the update banner.
+7. **`tests/run.html`** bypasses the service worker's app-page fallback.
+8. **Content-Security-Policy** meta tag:
+   - scripts: self + www.gstatic.com;
+   - connections: self + firestore / identitytoolkit / securetoken googleapis.com (+ gstatic);
+   - `object-src 'none'`, `base-uri 'self'`, `frame-src 'none'`.
+9. **SETUP step references** fixed.
+10. **Sync pill** uses Firestore's `hasPendingWrites` on every watched collection, so writes queued in an earlier session show as Saving… until confirmed.
+11. **`weight_inventory` stored in kg** (`dumbbells_kg`, `kettlebells_kg`), shown in your units. Home: 5 and 30 lb dumbbell pairs, one 20 lb kettlebell. Locations saved by v0.1.x (in pounds) are converted automatically on first load. Age escaped in Settings.
+12. **Delete everything:** if wiping the on-device copy fails after the account is gone, the app just reloads.
+13. **Soft deletes add `deleted_at`.** Rules allow only known collections and add basic type checks (for example, `kg is number`, profile/settings id `main`).
+
+## 0.1.1 — Home gym preset (2026-10-07)
+
+- Home gym location now comes preloaded from your photos: 5 lb and 30 lb dumbbell pairs, kettlebells, resistance band with handles, jump rope, ab wheel, rotating push-up handles, and Peloton bike.
+- New equipment types: ab wheel, push-up handles.
+- Locations store a weight inventory (dumbbells 5 and 30 lb for now). Checkpoint B uses it for progression steps.
+
+## 0.1.0 — Phase 1, Checkpoint A (2026-10-07)
+
+**Added**
+- Installable PWA shell: manifest, icons, offline service worker, "new version, tap to refresh" banner.
+- Email and password sign-in, password reset.
+- Offline-first data: Firestore's persistent on-device cache. Writes made offline survive app restarts and sync when back online. A status pill shows Synced, Saving…, or Offline.
+- Onboarding: goal, body stats, activity, training days and length, experience, injuries, locations, and targets with weekly pace.
+- Calorie and macro targets: Mifflin-St Jeor BMR and TDEE, safe floors (1,200 / 1,500 kcal, cited), a 1%/week loss cap (override up to 1.5%), protein at 1.6–2.2 g/kg, a "why these numbers" explanation, and safety notes for under-18s, underweight, BMI 40+, low targets, and out-of-range inputs.
+- Weight: manual logging, exponentially smoothed trend (10%/day), chart with weigh-in dots, trend line, goal line, and projected goal date, plus history with delete.
+- Today screen: weight trend with a 7-day arrow and sparkline, daily targets, and an install-to-Home-Screen prompt on iPhone.
+- Locations (Addendum 1): Home gym, YMCA (standard equipment preloaded), and Travel / no equipment. Rename, set default, toggle equipment, add custom items, add or remove locations.
+- Settings: units (lb/ft or kg/cm), edit profile and targets, export everything (JSON), export weights (CSV), delete everything (account plus cloud plus on-device copy), and version.
+- Security rules: owner-only access, required standard fields, immutable `created_at` and `user_id`, closed `private` area for server-only tokens, plus rule tests.
+- Unit tests: units, targets, and smoothing (29 tests), with a check that the version numbers match.
+
+**Data model**: `users/{uid}/{profile|settings|locations|weights}/{id}`. Every record has `id`, `user_id`, `created_at`, `updated_at`, `source`, and `deleted`.

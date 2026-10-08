@@ -1,0 +1,4 @@
+node_modules/
+# Copied from ../../firestore.rules by `npm test` (the emulator only reads files inside this folder).
+firestore.rules
+*.log

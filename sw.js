@@ -1,0 +1,113 @@
+// Service worker: caches the app so it opens with no signal, and hands off new versions.
+// Bump VERSION here AND in js/version.js on every release.
+const VERSION = '0.2.1';
+const CACHE = `forge-${VERSION}`;
+const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
+
+const SHELL = [
+  './',
+  './index.html',
+  './manifest.json',
+  './config.js',
+  './css/app.css',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
+  './js/app.js',
+  './js/version.js',
+  './js/firebase.js',
+  './js/db.js',
+  './js/auth.js',
+  './js/state.js',
+  './js/ui.js',
+  './js/units.js',
+  './js/export.js',
+  './js/csv.js',
+  './js/derived.js',
+  './js/nutrition/targets.js',
+  './js/weight/smoothing.js',
+  './js/weight/chart.js',
+  './js/workouts/equipment.js',
+  './js/workouts/exercises.js',
+  './js/workouts/library.js',
+  './js/workouts/history.js',
+  './js/workouts/plan.js',
+  './js/workouts/programs.js',
+  './js/workouts/generator.js',
+  './js/workouts/progression.js',
+  './js/workouts/recovery.js',
+  './js/timer.js',
+  './js/screens/auth.js',
+  './js/screens/onboarding.js',
+  './js/screens/today.js',
+  './js/screens/weight.js',
+  './js/screens/settings.js',
+  './js/screens/locations.js',
+  './js/screens/train.js',
+  './js/screens/session.js',
+  './js/screens/timer.js',
+  './js/screens/history.js',
+  './js/screens/library.js',
+  './js/screens/picker.js',
+  './js/screens/tools.js',
+  './data/exercise-instructions.json',
+  `${FB}/firebase-app.js`,
+  `${FB}/firebase-auth.js`,
+  `${FB}/firebase-firestore.js`,
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      Promise.all(
+        SHELL.map((url) =>
+          cache.add(new Request(url, { cache: 'reload', mode: url.startsWith('http') ? 'cors' : 'same-origin' }))
+        )
+      )
+    )
+  );
+  // No skipWaiting here: the page shows a "new version" banner and the user chooses when to refresh.
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('forge-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+  const isSdk = url.href.startsWith(FB);
+  if (!sameOrigin && !isSdk) return; // Firestore, Auth, APIs: let the network (and Firestore's own cache) handle them.
+
+  // The test page (tests/run.html) must load from the network, not the cached app page.
+  if (sameOrigin && url.pathname.includes('/tests/')) return;
+
+  if (req.mode === 'navigate') {
+    event.respondWith(caches.match('./index.html').then((r) => r || fetch(req)));
+    return;
+  }
+  event.respondWith(
+    caches.match(req).then(
+      (cached) =>
+        cached ||
+        fetch(req).then((res) => {
+          if (res.ok && sameOrigin) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+    )
+  );
+});

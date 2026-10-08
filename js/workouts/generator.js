@@ -1,0 +1,267 @@
+// Deterministic workout generator (no AI). Given a program, location, profile, history and recovery,
+// it builds today's session. Pure functions; see docs/workout-algorithm.md.
+import { DAY_TYPES, PROGRAMS, smartDayTypes, DAY_MUSCLES } from './programs.js';
+import { expandEquipment, canDo } from './equipment.js';
+import { averageRecovery } from './recovery.js';
+import { nextTarget, warmups, defaultSets } from './progression.js';
+
+const INJURY_WORDS = {
+  shoulder: /shoulder|rotator|labrum|ac joint/i,
+  elbow: /elbow|tennis|golfer/i,
+  wrist: /wrist|carpal/i,
+  lower_back: /back|spine|disc|lumbar|sciatic/i,
+  knee: /knee|acl|mcl|menisc|patell/i,
+  hip: /\bhip/i,
+  neck: /neck|cervical/i,
+};
+
+/** Turns the free-text injuries note into tags, e.g. "left shoulder" → ['shoulder']. */
+export function injuryTags(text = '') {
+  return Object.entries(INJURY_WORDS).filter(([, re]) => re.test(text)).map(([k]) => k);
+}
+
+const LEVEL = { beginner: 1, intermediate: 2, advanced: 3 };
+export const CYCLE_WEEKS = { beginner: 6, intermediate: 5, advanced: 4 };
+
+/** Planned deload: the last week of each cycle (cycle length by experience), or a manually started deload week. */
+export function deloadInfo(program, experience = 'beginner', now = Date.now()) {
+  if (!program || !program.started_at) return { deload: false, week: 1, cycle: CYCLE_WEEKS[experience] };
+  const cycle = CYCLE_WEEKS[experience] || 5;
+  const days = Math.floor((now - Date.parse(program.started_at)) / 86400000);
+  const week = Math.floor(days / 7);
+  const manual = program.deload_started_at && now - Date.parse(program.deload_started_at) < 7 * 86400000;
+  return { deload: manual || week % cycle === cycle - 1, week: (week % cycle) + 1, cycle, manual: !!manual };
+}
+
+/** Which day of the program is next. Smart mode: the day type whose muscles are most recovered. */
+export function pickDayType(programKey, { recovery, doneCount = 0, daysPerWeek = 3, lastDayType = null, customDays = [] } = {}) {
+  const prog = PROGRAMS[programKey] || PROGRAMS.smart;
+  if (prog.custom) return customDays.length ? `custom_${doneCount % customDays.length}` : null;
+  if (!prog.smart) return prog.days[doneCount % prog.days.length];
+  const options = smartDayTypes(daysPerWeek);
+  let best = null;
+  let bestScore = -Infinity;
+  options.forEach((d, i) => {
+    let score = averageRecovery(recovery, DAY_MUSCLES[d]);
+    if (d === lastDayType) score -= 15; // avoid repeating the same day back to back
+    score -= i * 0.01; // stable tie-break
+    if (score > bestScore) {
+      bestScore = score;
+      best = d;
+    }
+  });
+  return best;
+}
+
+/** Chain step to use when you've never done any exercise in the chain. */
+function defaultChainStep(chainLength, experience) {
+  const f = { beginner: 0.34, intermediate: 0.5, advanced: 0.7 }[experience] || 0.34;
+  return Math.max(1, Math.ceil(chainLength * f));
+}
+
+const ROLE_LOAD_PREF = {
+  main: { barbell: 30, dumbbell: 26, smith: 16, machine: 16, kettlebell: 16, bodyweight: 14, cable: 10, band: 4, other: 0 },
+  secondary: { dumbbell: 26, barbell: 22, machine: 20, cable: 18, kettlebell: 16, bodyweight: 14, smith: 12, band: 6, other: 0 },
+  accessory: { cable: 22, dumbbell: 22, machine: 20, bodyweight: 16, band: 12, kettlebell: 12, barbell: 8, smith: 6, other: 4 },
+};
+
+/**
+ * Scores every candidate for a slot and returns the best, or null.
+ * ctx: { available:Set, avoid:Set, maxLevel, recovery, daysSince(id), chainChoice: Map(chain → id), used:Set, prefer[], excluded:Set, favorites:Set }
+ */
+export function pickExercise(slot, all, ctx) {
+  const pinned = slot.ids || [];
+  for (const id of pinned) {
+    const ex = all.find((e) => e.id === id);
+    if (!ex || !canDo(ex, ctx.available) || ctx.used.has(id)) continue;
+    // Your own picks (Build my own) are kept even if risky; the generator adds a warning instead.
+    if (slot.userPicked) return ex;
+    // Template pins (e.g. 5x5) get the same filters as everything else, then fall back to the slot's patterns.
+    if (ctx.excluded.has(id)) continue;
+    if ((ex.avoid || []).some((t) => ctx.avoid.has(t))) continue;
+    if ((ex.level || 1) > ctx.maxLevel) continue;
+    return ex;
+  }
+  for (let pi = 0; pi < slot.patterns.length; pi++) {
+    const pattern = slot.patterns[pi];
+    const cands = all.filter((e) =>
+      e.pattern === pattern &&
+      canDo(e, ctx.available) &&
+      !ctx.used.has(e.id) &&
+      !ctx.excluded.has(e.id) &&
+      !(e.avoid || []).some((t) => ctx.avoid.has(t)) &&
+      (e.level || 1) <= ctx.maxLevel &&
+      (!e.chain || ctx.chainChoice.get(`${e.chain}|${e.pattern}`) === e.id) &&
+      !(slot.role !== 'accessory' && e.kind === 'conditioning' && pattern !== 'conditioning')
+    );
+    if (!cands.length) continue;
+    let best = null;
+    let bestScore = -Infinity;
+    for (const e of cands) {
+      let s = 0;
+      s += ROLE_LOAD_PREF[slot.role][e.load] ?? 0;
+      if (ctx.prefer && ctx.prefer.length) s += ctx.prefer.includes(e.load) ? 25 - ctx.prefer.indexOf(e.load) * 3 : -20;
+      if (slot.role !== 'accessory') s += e.kind === 'compound' ? 20 : -10;
+      if (e.unilateral && slot.role === 'main') s -= 6; // bilateral lifts make better main lifts
+      if (e.timed && slot.role !== 'accessory' && pattern !== 'conditioning') s -= 25; // holds don't anchor a session
+      s += averageRecovery(ctx.recovery, e.primary || []) * 0.2;
+      const since = ctx.daysSince(e.id);
+      if (since != null) {
+        if (slot.role !== 'accessory' && since <= 28) s += 40; // stick with your main lifts so they progress
+        if (slot.role === 'accessory' && since <= 3) s -= 15; // rotate accessories
+      }
+      if (ctx.favorites.has(e.id)) s += 15;
+      s -= Math.max(0, (e.level || 1) - ctx.userLevel) * 6; // harder than your level costs points; easier doesn't
+      if (s > bestScore || (s === bestScore && e.id < best.id)) {
+        bestScore = s;
+        best = e;
+      }
+    }
+    return best;
+  }
+  return null;
+}
+
+function minutesFor(ex, sets, role, target) {
+  if (ex.timed) return sets * ((target?.reps || ex.reps[1]) / 60 + 1);
+  return sets * (role === 'main' ? 3.5 : role === 'secondary' ? 3 : 2);
+}
+
+/**
+ * Builds a session.
+ * opts: {
+ *   programKey, program (stored doc), dayType (optional override), location { equipment[], weight_inventory },
+ *   profile { experience, sessionMin, trainingDays, injuries }, unit, exercises (library + custom),
+ *   historyFor(exId) → [{ date, sets:[{weight,reps,rir}] }] most recent first (weights in unit),
+ *   daysSince(exId) → number|null, recovery {muscle:%}, doneCount, lastDayType, settings { excluded[], favorites[] }, now
+ * }
+ */
+export function generateWorkout(opts) {
+  const {
+    programKey = 'smart', program = null, location, profile, unit = 'lb', exercises,
+    historyFor = () => [], daysSince = () => null, recovery = {}, doneCount = 0, lastDayType = null,
+    settings = {}, now = Date.now(),
+  } = opts;
+  const experience = profile.experience || 'beginner';
+  const notes = [];
+  const prog = PROGRAMS[programKey] || PROGRAMS.smart;
+
+  const dayType = opts.dayType || pickDayType(programKey, {
+    recovery, doneCount, daysPerWeek: profile.trainingDays || 3, lastDayType, customDays: (program && program.custom_days) || [],
+  });
+
+  let day;
+  if (dayType && dayType.startsWith('custom_')) {
+    const cd = program.custom_days[Number(dayType.split('_')[1])];
+    day = { label: cd.name, slots: cd.exercise_ids.map((id) => ({ patterns: [], role: 'secondary', ids: [id], userPicked: true })) };
+  } else {
+    day = DAY_TYPES[dayType];
+  }
+  if (!day) return { dayType: null, label: 'No workout', exercises: [], notes: ['Set up your days in Build my own.'], deload: false };
+
+  const available = expandEquipment(location.equipment || []);
+  if (prog.requires && !prog.requires.every((k) => available.has(k))) {
+    notes.push(`${prog.name} needs a barbell and rack. This location doesn’t have them, so similar moves were picked instead.`);
+  }
+
+  const avoid = new Set(injuryTags(profile.injuries));
+  if (avoid.size) notes.push(`Skipping moves that commonly stress your ${[...avoid].map((t) => t.replace('_', ' ')).join(', ')}. Swap any exercise if it feels fine for you.`);
+
+  const { deload, week, cycle } = deloadInfo(program, experience, now);
+  if (deload) notes.push('Deload week: lighter weights and fewer sets so you recover and come back stronger.');
+
+  // Chains: per chain AND movement pattern (e.g. the squat chain has squat steps and split-squat steps),
+  // use the step you last trained; otherwise a starting step for your experience.
+  const chainChoice = new Map();
+  const groups = new Map();
+  for (const e of exercises) {
+    if (!e.chain) continue;
+    const key = `${e.chain}|${e.pattern}`;
+    groups.set(key, [...(groups.get(key) || []), e]);
+  }
+  for (const [key, list] of groups) {
+    list.sort((a, b) => a.step - b.step);
+    const doable = list.filter((e) => canDo(e, available) && (e.level || 1) <= (experience === 'advanced' ? 3 : 2));
+    if (!doable.length) continue;
+    let pick = null;
+    let recent = Infinity;
+    for (const e of doable) {
+      const d = daysSince(e.id);
+      if (d != null && d < recent) {
+        recent = d;
+        pick = e;
+      }
+    }
+    if (!pick) {
+      const target = defaultChainStep(list.length, experience);
+      pick = doable.reduce((b, e) => (Math.abs(e.step - target) < Math.abs(b.step - target) ? e : b), doable[0]);
+    }
+    chainChoice.set(key, pick.id);
+  }
+
+  const ctx = {
+    available, avoid, recovery, daysSince, chainChoice, used: new Set(),
+    maxLevel: experience === 'advanced' ? 3 : 2, userLevel: LEVEL[experience] || 1,
+    prefer: day.prefer || null,
+    excluded: new Set(settings.excluded || []), favorites: new Set(settings.favorites || []),
+  };
+
+  const volume = prog.volume || 1;
+  const items = [];
+  let injuryDropped = false;
+  for (const slot of day.slots) {
+    const ex = pickExercise(slot, exercises, ctx);
+    if (!ex) {
+      // Say why a slot is empty when it's your injury note (not missing equipment) that ruled it out.
+      if (avoid.size) {
+        const blocked = exercises.some((e) =>
+          (slot.ids || []).includes(e.id) || slot.patterns.includes(e.pattern)
+            ? canDo(e, available) && (e.avoid || []).some((t) => avoid.has(t))
+            : false);
+        if (blocked) {
+          const what = (slot.patterns[0] || 'this slot').replace(/_/g, ' ');
+          notes.push(`Left out ${what}: every option here commonly stresses your ${[...avoid].map((t) => t.replace('_', ' ')).join(', ')}. Add one back with “+ Add exercise” if it feels fine.`);
+          injuryDropped = true;
+        }
+      }
+      continue;
+    }
+    ctx.used.add(ex.id);
+    const exForTarget = slot.reps ? { ...ex, reps: slot.reps } : prog.repBias === 'high' && !ex.timed ? { ...ex, reps: [Math.max(ex.reps[0], 8), Math.max(ex.reps[1], 12)] } : ex;
+    const chainNext = ex.chain ? exercises.find((e) => e.chain === ex.chain && e.step === ex.step + 1 && canDo(e, available)) : null;
+    const target = nextTarget(exForTarget, historyFor(ex.id), {
+      inventory: location.weight_inventory || {}, unit, role: slot.role, experience, deload, chainNext,
+    });
+    if (slot.sets && !deload) target.sets = slot.sets;
+    else if (!deload && volume !== 1) target.sets = Math.min(5, Math.round(defaultSets(slot.role, experience) * volume));
+    const wu = slot.role !== 'accessory' && target.weight ? warmups(ex, target.weight, { inventory: location.weight_inventory || {}, unit }) : [];
+    const risky = (ex.avoid || []).filter((t) => avoid.has(t));
+    const warning = risky.length ? `Heads up: this commonly stresses your ${risky.map((t) => t.replace('_', ' ')).join(', ')} (from your injury note). Swap it if it bothers you.` : null;
+    items.push({ exercise_id: ex.id, role: slot.role, target, warmups: items.length < 2 ? wu : wu.slice(-1), superset: null, warning });
+  }
+
+  if (items.length < 3 && !injuryDropped) {
+    notes.push('This location doesn’t have much for today’s focus. Try a different day, or add equipment in Settings → Locations.');
+  }
+
+  // Fit the session length: drop accessories from the end until it fits.
+  const budget = (profile.sessionMin || 60) - 5;
+  const total = () => items.reduce((m, it) => m + minutesFor(exercises.find((e) => e.id === it.exercise_id), it.target.sets, it.role, it.target), 0);
+  while (total() > budget) {
+    const idx = items.map((it) => it.role).lastIndexOf('accessory');
+    if (idx === -1) break;
+    items.splice(idx, 1);
+  }
+
+  // Short sessions: pair accessories into supersets.
+  if ((profile.sessionMin || 60) <= 45) {
+    const acc = items.filter((it) => it.role === 'accessory' && !exercises.find((e) => e.id === it.exercise_id).timed);
+    for (let i = 0; i + 1 < acc.length; i += 2) {
+      const g = String.fromCharCode(65 + i / 2);
+      acc[i].superset = g;
+      acc[i + 1].superset = g;
+    }
+  }
+
+  return { dayType, label: day.label, deload, week, cycle, notes, exercises: items, est_minutes: Math.round(total() + 5) };
+}
