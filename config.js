@@ -3,12 +3,12 @@
 // These values are NOT secrets — every Firebase web app ships them publicly. Your data is protected by
 // the security rules in firestore.rules, not by hiding this file.
 export const FIREBASE_CONFIG = {
-  apiKey: 'PASTE_API_KEY',
-  authDomain: 'PASTE_PROJECT_ID.firebaseapp.com',
-  projectId: 'PASTE_PROJECT_ID',
-  storageBucket: 'PASTE_PROJECT_ID.firebasestorage.app',
-  messagingSenderId: 'PASTE_SENDER_ID',
-  appId: 'PASTE_APP_ID',
+  apiKey: 'AIzaSyAaLuFB4sen_zSxx33uXBKXTi2w0JVkHCM',
+  authDomain: 'forge-web-f2351.firebaseapp.com',
+  projectId: 'forge-web-f2351',
+  storageBucket: 'forge-web-f2351.firebasestorage.app',
+  messagingSenderId: '535941075431',
+  appId: '1:535941075431:web:557d07f80e0be0a4ac2d42',
 };
 
 export const APP_NAME = 'Forge';
