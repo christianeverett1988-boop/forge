@@ -80,16 +80,50 @@ export function tombstone(col, id) {
   updateDoc(doc(db, 'users', uid(), col, id), { deleted: true, deleted_at: t, updated_at: t }).catch(reportWriteError);
 }
 
-/** "That's me" / "Not me" for a weigh-in Withings couldn't match to you. */
-export function reviewBodyMeasure(id, isMe) {
+/**
+ * "That's me" / "Not me" for a weigh-in in the review queue. item: { id, hasBody, hasWeight } — a reading
+ * may have only a body_measures doc (no weight: heart rate only) or only a weights doc (weight.csv import),
+ * and updating a document that doesn't exist fails, so each side is written only when it exists.
+ */
+export function reviewBodyMeasure(item, isMe) {
+  const it = typeof item === 'string' ? { id: item, hasBody: true, hasWeight: true } : item;
   const t = now();
   if (isMe) {
-    updateDoc(doc(db, 'users', uid(), 'body_measures', id), { needs_review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
-    updateDoc(doc(db, 'users', uid(), 'weights', id), { review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
+    if (it.hasBody) updateDoc(doc(db, 'users', uid(), 'body_measures', it.id), { needs_review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
+    if (it.hasWeight) updateDoc(doc(db, 'users', uid(), 'weights', it.id), { review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
   } else {
-    tombstone('body_measures', id);
-    updateDoc(doc(db, 'users', uid(), 'weights', id), { deleted: true, deleted_at: t, updated_at: t }).catch(reportWriteError);
+    bulkNotMe([it]);
   }
+}
+
+/**
+ * "Not me" for many weigh-ins at once (a whole day, or everything under a weight): the body measurement
+ * gets a tombstone the sync respects, and the weigh-in is deleted. Batched (≤400 writes per batch).
+ */
+export function bulkNotMe(items) {
+  const t = now();
+  const writes = [];
+  for (const it of items) {
+    if (it.hasBody) writes.push(['body_measures', it.id, { deleted: true, deleted_at: t, updated_at: t }]);
+    if (it.hasWeight) writes.push(['weights', it.id, { deleted: true, deleted_at: t, updated_at: t, review: false, reviewed_at: t }]);
+  }
+  return commitInBatches(writes.map(([col, id, data]) => (b) => b.update(doc(db, 'users', uid(), col, id), data)));
+}
+
+/** Add many new records to a user collection (e.g. a weight.csv import), batched. */
+export function putMany(col, records) {
+  readOnly(col);
+  return commitInBatches(records.map((r) => (b) => b.set(doc(db, 'users', uid(), col, r.id), r)));
+}
+
+async function commitInBatches(ops, size = 400) {
+  for (let i = 0; i < ops.length; i += size) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + size).forEach((op) => op(batch));
+    // Offline, commit() only resolves once the server has it; the writes are already in the local cache.
+    batch.commit().catch(reportWriteError);
+  }
+  return ops.length;
 }
 
 // ---- reads ----

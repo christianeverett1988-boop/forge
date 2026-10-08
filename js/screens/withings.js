@@ -3,10 +3,11 @@
 // "safe to cancel Withings+?" verdict). Everything here is read from users/{uid}/integrations/withings and
 // body_measures, which only Cloud Functions write.
 import { state, units as getUnits } from '../state.js';
-import { esc, $, $$, sheet, toast } from '../ui.js';
-import { reviewBodyMeasure } from '../db.js';
-import { formatWeight } from '../units.js';
-import { classify, verdict, compare, STATE_LABEL, median } from '../withings/check.js';
+import { esc, $, $$, sheet, toast, formatDay } from '../ui.js';
+import { reviewBodyMeasure, bulkNotMe, putMany, readAll, newRecord } from '../db.js';
+import { formatWeight, weightToDisplay, weightFromInput, weightUnit } from '../units.js';
+import { classify, verdict, compare, STATE_LABEL, median, yearRows, backfillYears } from '../withings/check.js';
+import { reviewQueue, byDay, suggestCutoff, underCutoff, parseWeightCSV, planCsvImport } from '../withings/review.js';
 import { fmtMetric, KEY_OF_TYPE } from '../withings/body.js';
 
 const W = () => (state.integrations && state.integrations.withings) || null;
@@ -19,14 +20,24 @@ const EXISTING_ACCOUNT = 'Log in with your <b>existing</b> Withings account. Don
 
 let connectUrl = null; // the Withings sign-in link, ready to tap (popup blockers never see it)
 let busy = '';
+let cutoffInput = null; // the "Not me: all under X" value, in display units, once you've changed it
+let showAllReview = false;
+const REVIEW_DAYS = 15;
 
 export function renderWithings(el, sub) {
   if (sub === 'check') return renderCheck(el);
   const w = W();
   const u = getUnits();
   const connected = !!(w && w.connected);
-  const review = state.body_measures.filter((d) => d.needs_review).sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1));
+  const review = reviewQueue(state.weights, state.body_measures);
+  const days = byDay(review);
+  const suggested = suggestCutoff(state.weights);
+  const cutDisp = cutoffInput != null ? cutoffInput : suggested != null ? niceCutoff(suggested, u) : null;
+  const cutKg = cutDisp != null ? weightFromInput(String(cutDisp), u) : null;
+  const under = underCutoff(review, cutKg);
   const bf = (w && w.backfill) || {};
+  const years = backfillYears(bf);
+  const csvCount = state.weights.filter((x) => x.source === 'withings_csv').length;
 
   el.innerHTML = `
     <section class="stack">
@@ -49,28 +60,51 @@ export function renderWithings(el, sub) {
         <div class="row between center"><p class="label">Connected</p><span class="small muted">${esc(w.model || 'Scale')}</span></div>
         <div class="stats">
           <div><span>Last weigh-in</span><b>${w.last_weigh_in_at ? when(w.last_weigh_in_at) : '—'}</b></div>
-          <div><span>Arrived in</span><b>${mins(w.last_latency_s)}</b></div>
+          <div><span>Arrived in</span><b>${w.last_latency_s == null ? '<small class="muted" data-arrived>waiting for your next weigh-in</small>' : mins(w.last_latency_s)}</b></div>
           <div><span>Notifications</span><b>${w.subscription_ok === true ? '✓ On' : w.subscription_ok === false ? '✗ Off' : '…'}</b></div>
         </div>
-        <p class="small muted">History: ${bf.done ? `✓ ${(bf.groups || 0).toLocaleString()} measurements since ${dateOnly(bf.from)}` : `importing… ${(bf.groups || 0).toLocaleString()} so far${bf.from ? ` (back to ${dateOnly(bf.from)})` : ''}`}</p>
+        <p class="small muted" data-history>${historyLine(bf)}</p>
+        ${years.length ? `<details class="small"><summary>History by year</summary>
+          <ul class="list dc-years">${years.map((y) => `<li><span>${y.year}</span><small class="muted">${y.weighins.toLocaleString()} weigh-in${y.weighins === 1 ? '' : 's'} · ${y.groups.toLocaleString()} measurements</small></li>`).join('')}</ul></details>` : ''}
+        <button class="btn ghost small" data-reimport ${busy === 'reimport' || (!bf.done && !bf.error && bf.updated_at && Date.now() - Date.parse(bf.updated_at) < 30 * 60000) ? 'disabled' : ''}>${busy === 'reimport' ? 'Starting…' : 'Re-import history'}</button>
+        <p class="small muted">Re-import asks Withings for everything again, year by year, without disconnecting. Nothing is duplicated, and weigh-ins you deleted or marked “Not me” stay gone.</p>
         <div class="row gap">
           <button class="btn ghost grow" data-sync ${busy === 'sync' ? 'disabled' : ''}>${busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>
           <a class="btn ghost grow" href="#/withings/check">Data check</a>
         </div>
         <p class="small muted">Last synced ${when(w.last_sync_at)}. Weigh-ins normally arrive by themselves; Sync now is for when one hasn’t.</p>
         ${w.last_error_code ? `<p class="small muted">Last problem: <code>${esc(w.last_error_code)}</code>${/enqueue/.test(w.last_error_code) ? ' — see docs/withings.md → “If the import or notifications never start”.' : ''}</p>` : ''}
-        ${bf.error ? `<p class="small muted">History import stopped (<code>${esc(bf.error)}</code>). Run the data check and send it to me.</p>` : ''}
       </div>`}
 
       ${review.length ? `
-      <div class="card stack">
-        <p class="label">Is this you?</p>
-        <p class="small muted">Withings wasn’t sure who stepped on the scale. These stay out of your trend until you decide.</p>
-        <ul class="list">${review.map((d) => `
-          <li><div><b>${formatWeight(d.metrics.weight_kg, u)}</b><small class="muted">${when(d.measured_at)}</small></div>
-            <div class="row gap"><button class="btn small" data-me="${esc(d.id)}">That’s me</button><button class="btn ghost small" data-notme="${esc(d.id)}">Not me</button></div></li>`).join('')}
-        </ul>
+      <div class="card stack" data-review>
+        <p class="label">Is this you? <span class="muted">(${review.length.toLocaleString()})</span></p>
+        <p class="small muted">Weigh-ins Withings wasn’t sure about, and ones far from your own weight at the time (probably someone else in the family). They stay out of your trend and body stats until you decide.</p>
+        ${cutDisp != null ? `
+        <div class="stack bulk">
+          <label class="row gap center"><span class="small">Not me: everything under</span>
+            <input type="number" inputmode="decimal" name="cutoff" value="${cutDisp}" step="1" class="short" aria-label="Weight cutoff"><span class="small">${weightUnit(u)}</span></label>
+          <p class="small muted" data-preview>${under.count ? `${under.count.toLocaleString()} weigh-in${under.count === 1 ? '' : 's'} from ${formatDay(under.from, { month: 'short', year: 'numeric' })} to ${formatDay(under.to, { month: 'short', year: 'numeric' })}` : 'Nothing in the list is under that weight.'}</p>
+          <button class="btn small" data-under ${under.count ? '' : 'disabled'}>Not me: ${under.count.toLocaleString()} under ${cutDisp} ${weightUnit(u)}</button>
+        </div>` : ''}
+        ${(showAllReview ? days : days.slice(0, REVIEW_DAYS)).map((g) => `
+        <div class="review-day">
+          <div class="row between center"><p class="small"><b>${formatDay(g.day, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</b></p>
+            ${g.items.length > 1 ? `<button class="btn ghost small" data-notme-day="${esc(g.day)}">Not me — whole day (${g.items.length})</button>` : ''}</div>
+          <ul class="list">${g.items.map((d) => `
+            <li><div><b>${d.kg == null ? 'No weight' : formatWeight(d.kg, u)}</b><small class="muted">${timeOnly(d.measured_at)}${d.reason === 'outlier' ? ' · far from your weight' : ' · Withings unsure'}</small></div>
+              <div class="row gap"><button class="btn small" data-me="${esc(d.id)}">That’s me</button><button class="btn ghost small" data-notme="${esc(d.id)}">Not me</button></div></li>`).join('')}
+          </ul>
+        </div>`).join('')}
+        ${!showAllReview && days.length > REVIEW_DAYS ? `<button class="btn ghost small" data-review-all>Show all ${days.length} days</button>` : ''}
       </div>` : ''}
+
+      <div class="card stack">
+        <p class="label">Import weight.csv</p>
+        <p class="small muted">From a Withings data export (Health Mate → Settings → Download my data). Use it if the history import can’t reach your older weigh-ins. Rows Forge already has from Withings are skipped, and importing the same file again adds nothing.</p>
+        <label class="btn ghost small file"><input type="file" accept=".csv,text/csv" name="wcsv" hidden ${busy === 'csv' ? 'disabled' : ''}>${busy === 'csv' ? 'Importing…' : 'Choose weight.csv'}</label>
+        ${csvCount ? `<p class="small muted" data-csv-count>${csvCount.toLocaleString()} weigh-ins imported from weight.csv.</p>` : ''}
+      </div>
 
       ${connected ? '<button class="btn danger-ghost" data-disconnect>Disconnect Withings</button>' : ''}
       <p class="small muted">Forge uses Withings’ official API with read-only access to your measurements. Your Withings sign-in tokens live only on Forge’s server, never in the app.</p>
@@ -105,10 +139,97 @@ export function renderWithings(el, sub) {
     busy = '';
     renderWithings(el);
   };
-  $$('[data-me]', el).forEach((b) => (b.onclick = () => reviewBodyMeasure(b.dataset.me, true)));
-  $$('[data-notme]', el).forEach((b) => (b.onclick = () => reviewBodyMeasure(b.dataset.notme, false)));
+  const item = (id) => review.find((q) => q.id === id);
+  $$('[data-me]', el).forEach((b) => (b.onclick = () => item(b.dataset.me) && reviewBodyMeasure(item(b.dataset.me), true)));
+  $$('[data-notme]', el).forEach((b) => (b.onclick = () => item(b.dataset.notme) && reviewBodyMeasure(item(b.dataset.notme), false)));
+  $$('[data-notme-day]', el).forEach((b) => (b.onclick = () => {
+    const g = days.find((x) => x.day === b.dataset.notmeDay);
+    if (!g) return;
+    bulkNotMe(g.items);
+    toast(`Removed ${g.items.length} weigh-ins`);
+  }));
+  const cut = $('input[name=cutoff]', el);
+  if (cut) cut.addEventListener('input', () => {
+    const v = Number(cut.value);
+    cutoffInput = Number.isFinite(v) && v > 0 ? v : null;
+    const kg = cutoffInput != null ? weightFromInput(String(cutoffInput), u) : null;
+    const p = underCutoff(review, kg);
+    $('[data-preview]', el).textContent = p.count ? `${p.count.toLocaleString()} weigh-in${p.count === 1 ? '' : 's'} from ${formatDay(p.from, { month: 'short', year: 'numeric' })} to ${formatDay(p.to, { month: 'short', year: 'numeric' })}` : 'Nothing in the list is under that weight.';
+    const btn = $('[data-under]', el);
+    btn.disabled = !p.count;
+    btn.textContent = `Not me: ${p.count.toLocaleString()} under ${cut.value} ${weightUnit(u)}`;
+  });
+  const underBtn = $('[data-under]', el);
+  if (underBtn) underBtn.onclick = () => {
+    const kg = cut ? weightFromInput(String(cut.value), u) : null;
+    const p = underCutoff(review, kg);
+    if (!p.count) return;
+    bulkNotMe(p.items);
+    cutoffInput = null;
+    toast(`Removed ${p.count} weigh-ins`);
+  };
+  const allBtn = $('[data-review-all]', el);
+  if (allBtn) allBtn.onclick = () => { showAllReview = true; renderWithings(el); };
+  const re = $('[data-reimport]', el);
+  if (re) re.onclick = async () => {
+    busy = 'reimport';
+    renderWithings(el);
+    try {
+      await call('withingsReimport');
+      toast('History import started');
+    } catch (e) {
+      toast(e.message);
+    }
+    busy = '';
+    renderWithings(el);
+  };
+  const file = $('input[name=wcsv]', el);
+  if (file) file.addEventListener('change', async () => {
+    const f = file.files && file.files[0];
+    if (!f) return;
+    busy = 'csv';
+    renderWithings(el);
+    try {
+      const r = await importWeightCsv(await f.text());
+      toast(r.added ? `Imported ${r.added.toLocaleString()} weigh-ins (${r.skipped.toLocaleString()} already in Forge)` : `Nothing new: all ${r.skipped.toLocaleString()} rows are already in Forge`);
+    } catch (e) {
+      toast(e.message);
+    }
+    busy = '';
+    renderWithings(el);
+  });
   const dis = $('[data-disconnect]', el);
   if (dis) dis.onclick = () => openDisconnect(el);
+}
+
+/** The history line under the connected card. */
+export function historyLine(bf) {
+  const n = (x) => (x || 0).toLocaleString();
+  const what = bf.weighins != null ? `${n(bf.weighins)} weigh-ins (${n(bf.groups)} measurements)` : `${n(bf.groups)} measurements`;
+  if (bf.error) return `History import stopped (<code>${esc(bf.error)}</code>) after ${what}. Try Re-import; if it stops again, run the data check and send it to me.`;
+  if (bf.done) return `History: ✓ ${what} since ${dateOnly(bf.from)}`;
+  if (!bf.updated_at && !bf.groups) return 'History: starting…';
+  return `History: importing… ${what} so far${bf.year ? `, now at ${bf.year}` : ''}${bf.from ? ` (back to ${dateOnly(bf.from)})` : ''}`;
+}
+
+const timeOnly = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
+
+/** A round cutoff in display units (nearest 5 lb or 2 kg) for the "Not me: all under X" control. */
+export function niceCutoff(kg, u) {
+  const v = weightToDisplay(kg, u);
+  const step = u === 'metric' ? 2 : 5;
+  return Math.round(v / step) * step;
+}
+
+/** Import Withings' weight.csv as scale weigh-ins (source withings_csv). Returns { added, skipped }. */
+async function importWeightCsv(text) {
+  const { rows } = parseWeightCSV(text);
+  if (!rows.length) throw new Error('No weigh-ins found in that file.');
+  const existing = await readAll('weights'); // includes deleted ones, so a "Not me" isn't brought back
+  const plan = planCsvImport(rows, existing);
+  await putMany('weights', plan.add.map((r) => newRecord(r, { id: r.id, source: 'withings_csv' })));
+  try { localStorage.setItem(CSV_KEY, String(rows.length)); } catch { /* private mode */ }
+  return { added: plan.add.length, skipped: plan.already + plan.matched };
 }
 
 function openDisconnect(el) {
@@ -154,7 +275,9 @@ function renderCheck(el) {
   const u = getUnits();
   const report = w && w.data_check;
   const rows = report ? classify(report) : [];
-  const v = verdict(report, { csvRows: csvRows() });
+  const csvImported = state.weights.filter((x) => x.source === 'withings_csv').length;
+  const v = verdict(report, { csvRows: csvRows(), csvImported });
+  const yrs = yearRows(report);
   const history = (w && w.data_check_history) || [];
   const lat = (report && report.latencies_s) || (w && w.latencies_s) || [];
   const med = median(lat);
@@ -203,6 +326,12 @@ function renderCheck(el) {
           <div><span>Forge has</span><b data-wf>${(report.stored_weight_groups ?? 0).toLocaleString()}</b></div>
           <div><span>weight.csv</span><b>${csvRows() == null ? '—' : csvRows().toLocaleString()}</b></div>
         </div>
+        ${report.stored_not_me ? `<p class="small muted" data-notme-count>Forge’s count includes ${report.stored_not_me.toLocaleString()} you marked “Not me” or deleted (they’re accounted for, just not in your trend).</p>` : ''}
+        ${csvImported ? `<p class="small muted">Plus ${csvImported.toLocaleString()} imported from weight.csv.</p>` : ''}
+        ${yrs.length ? `<details class="small" data-years ${yrs.some((r) => r.forge < r.withings) ? 'open' : ''}><summary>By year</summary>
+          <table class="dc-years"><thead><tr><th>Year</th><th>Withings</th><th>Forge</th></tr></thead><tbody>${yrs.map((r) => `<tr class="${r.forge < r.withings ? 'dc-lost' : ''}"><td>${r.year}</td><td>${r.withings.toLocaleString()}</td><td>${r.forge.toLocaleString()}</td></tr>`).join('')}</tbody></table>
+          <p class="small muted">If Withings shows nothing before a year that your weight.csv has, the free API doesn’t return those readings: import weight.csv on the Withings screen.</p></details>` : ''}
+        ${report.types_list_rejected ? '<p class="small muted">Withings rejected Forge’s list of measurement types, so the check asked for every type instead.</p>' : ''}
         <p class="small muted">Oldest ${dateOnly(report.backfill && report.backfill.from)} · all measurement groups: Withings ${(report.groups ?? 0).toLocaleString()}, Forge ${(report.stored_groups ?? 0).toLocaleString()} (includes heart-rate-only and nerve-only readings, and ones you deleted)</p>
         <label class="field"><span class="small muted">Rows in weight.csv from your Withings export, <b>not counting the header row</b></span>
           <input type="number" inputmode="numeric" name="csv" value="${csvRows() ?? ''}" placeholder="e.g. 1243"></label>

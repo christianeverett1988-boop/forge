@@ -2,9 +2,18 @@
 import { state } from './state.js';
 import { dailyWeights, smooth } from './weight/smoothing.js';
 import { computeTargets } from './nutrition/targets.js';
+import { suspectIds } from './withings/review.js';
 
+/** Your trend. Weigh-ins waiting in "Is this you?" (Withings unsure, or probably a family member's) are left out. */
 export function weightSeries() {
-  return smooth(dailyWeights(state.weights.map((w) => ({ day: w.day, kg: w.kg, source: w.source, measured_at: w.measured_at, review: w.review }))));
+  const sus = suspectIds(state.weights);
+  return smooth(dailyWeights(state.weights.map((w) => ({ day: w.day, kg: w.kg, source: w.source, measured_at: w.measured_at, review: w.review || sus.has(w.id) }))));
+}
+
+/** Body measurements that are yours: not waiting in "Is this you?" (a family member's body fat shouldn't be in your tiles). */
+export function myBodyMeasures() {
+  const sus = suspectIds(state.weights);
+  return (state.body_measures || []).filter((d) => !sus.has(d.id));
 }
 
 /** Latest trend weight, falling back to the weight entered in onboarding. */

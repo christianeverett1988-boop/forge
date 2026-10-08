@@ -6,11 +6,11 @@ import { decodeValue, METRIC_OF_TYPE } from '../src/meastypes.js';
 import { decodeGroup, weightMirror, dayIn, rawHash } from '../src/decode.js';
 import { applyGroups, incrementalSync, reconcile90, getmeasSafe } from '../src/sync.js';
 import { handleWebhook, notifyTaskId } from '../src/webhook.js';
-import { runTask, requestBackfill, backfillTaskId, MAX_PAGES } from '../src/tasks.js';
-import { getAccessToken, NotConnected } from '../src/tokens.js';
+import { runTask, requestBackfill, backfillTaskId, MAX_PAGES, reimport } from '../src/tasks.js';
+import { getAccessToken, NotConnected, withToken, NeedsReconnect } from '../src/tokens.js';
 import { startAuth, consumeState, handleCallback } from '../src/oauth.js';
-import { runDataCheck, saveReport } from '../src/datacheck.js';
-import { maintainUser, disconnect } from '../src/maintenance.js';
+import { runDataCheck, saveReport, walkHistory } from '../src/datacheck.js';
+import { maintainUser, maintainAll, disconnect, expireStates } from '../src/maintenance.js';
 import { WithingsError, makeClient } from '../src/withings-api.js';
 import { clean, log, setSink } from '../src/log.js';
 import { P } from '../src/paths.js';
@@ -218,30 +218,6 @@ test('task: a notify task runs one incremental sync', async () => {
   assert.equal(q.tasks.length, 0, 'a sync never queues more work');
 });
 
-test('backfill: one request = one run of each page, even when a page is retried', async () => {
-  const db = fakeDb();
-  connected(db);
-  const pageOf = (off) => ({ updatetime: sec(T0), more: off < 2 ? 1 : 0, offset: off + 1, measuregrps: [group(1000 + off, T0 - (off + 1) * 86400_000)] });
-  const api = fakeApi({ getmeas: (_t, o) => pageOf(o.offset || 0) });
-  const q = fakeQueue();
-  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r1', now: () => T0 });
-  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r1', now: () => T0 }); // double tap / retried callback
-  assert.equal(q.tasks.length, 1, 'the same request queues once');
-  const ran = [];
-  let task;
-  while ((task = q.take())) {
-    ran.push(task.id);
-    await runTask(task.data, { db, api, enqueue: q.enqueue, now: () => T0 });
-    if (task.data.page === 1) await runTask(task.data, { db, api, enqueue: q.enqueue, now: () => T0 }); // Cloud Tasks retries page 1
-  }
-  assert.deepEqual(ran, [backfillTaskId(UID, 'r1', 0), backfillTaskId(UID, 'r1', 1), backfillTaskId(UID, 'r1', 2)]);
-  const bf = db.dump(P.status(UID)).backfill;
-  assert.equal(bf.done, true);
-  assert.equal(bf.from, new Date(Math.floor((T0 - 3 * 86400_000) / 1000) * 1000).toISOString());
-  assert.equal([...db.docs.keys()].filter((k) => k.startsWith(`users/${UID}/body_measures/`)).length, 3);
-  assert.equal(q.tasks.length, 0, 'the chain ends');
-});
-
 test('backfill: nothing in the job writes to a trigger path (no Firestore-triggered functions exist)', async () => {
   const src = await import('node:fs').then((fs) => fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8'));
   assert.ok(!/onDocument(Created|Written|Updated|Deleted)/.test(src), 'no Firestore triggers');
@@ -297,21 +273,6 @@ test('tokens: two callers at once → one refresh (the lease); the second waits 
   assert.equal(refreshes, 1);
   assert.equal(a, 'ATn');
   assert.equal(b, 'ATn');
-});
-
-test('tokens: if saving the new pair fails, the call fails (and the old refresh token still works for 8 h)', async () => {
-  const db = fakeDb();
-  connected(db, { expiresIn: 0 });
-  const api = fakeApi({ refreshToken: { access_token: 'AT1', refresh_token: 'RT1', expires_in: 10800 } });
-  const realDoc = db.doc;
-  db.doc = (path) => {
-    const r = realDoc(path);
-    if (path === P.priv(UID)) return { ...r, update: async () => { throw new Error('UNAVAILABLE'); } };
-    return r;
-  };
-  await assert.rejects(getAccessToken({ db, api, uid: UID, now: () => T0, sleep: async () => {} }), (e) => e.status === 'save_failed' && e.transient);
-  db.doc = realDoc;
-  assert.equal(db.dump(P.priv(UID)).refresh_token, 'RT0', 'old pair still stored; next run refreshes with it');
 });
 
 test('tokens: invalid refresh → one retry, then needs_reconnect; not connected → NotConnected', async () => {
@@ -378,56 +339,6 @@ test('oauth callback: denied, failed exchange and a Withings account linked else
 });
 
 // ---------- data check ----------
-test('data check: per-type counts, dates, last value, positions; falls back to one type at a time when the list is rejected', async () => {
-  const db = fakeDb();
-  connected(db);
-  await applyGroups(db, UID, [group(1, T0)], { now: T0 });
-  const api = fakeApi({
-    getdevice: { devices: [{ type: 'Scale', model: 'Body Comp', last_session_date: sec(T0) }] },
-    getmeas: (_t, o) => {
-      if (o.meastypes.length > 1) throw new WithingsError(2555, 'getmeas');
-      if (o.meastypes[0] === 140) throw new WithingsError(503, 'getmeas'); // JSON status: invalid params
-      if (o.meastypes[0] === 1) return { more: 0, measuregrps: [group(1, T0 - 86400_000, 83), group(2, T0, 82.3)].map((g) => ({ ...g, measures: g.measures.filter((m) => m.type === 1) })) };
-      return { more: 0, measuregrps: [] };
-    },
-    notifyList: { profiles: [{ appli: 1, callbackurl: `https://x/wh?k=${KEY}`, expires: sec(T0) + 86400 }] },
-  });
-  const r = await runDataCheck({ db, api, uid: UID, token: 'AT', webhookUrl: `https://x/wh?k=${KEY}`, now: () => T0 });
-  assert.deepEqual(r.rejected, [140]);
-  assert.equal(r.types[1].count, 2);
-  assert.equal(r.types[1].last_value, 82.3);
-  assert.equal(r.types[1].last, new Date(sec(T0) * 1000).toISOString());
-  assert.equal(r.subscription.present, true);
-  assert.equal(r.subscription.key_ok, true);
-  assert.ok(!r.subscription.callback.includes(KEY), 'key masked');
-  assert.equal(r.stored_groups, 1);
-  assert.equal(r.model, 'Body Comp');
-  assert.ok(db.dump(P.status(UID)).data_check);
-  await saveReport({ db, uid: UID, label: 'subscribed', now: () => T0 });
-  await saveReport({ db, uid: UID, label: 'after cancelling', now: () => T0 + 1 });
-  assert.deepEqual(db.dump(P.status(UID)).data_check_history.map((h) => h.label), ['subscribed', 'after cancelling']);
-});
-
-// ---------- maintenance and disconnect ----------
-test('maintenance: forces a refresh, re-subscribes when the subscription is gone, syncs, resumes a stalled backfill', async () => {
-  const db = fakeDb();
-  connected(db);
-  db.put(P.status(UID), { ...db.dump(P.status(UID)), backfill: { done: false, pages: 4, offset: 4, updated_at: new Date(T0 - 7 * 3600_000).toISOString() } });
-  const api = fakeApi({
-    refreshToken: { access_token: 'AT1', refresh_token: 'RT1', expires_in: 10800 },
-    notifyList: { profiles: [] },
-    getmeas: { updatetime: sec(T0), more: 0, measuregrps: [] },
-  });
-  const q = fakeQueue();
-  const r = await maintainUser({ db, api, enqueue: q.enqueue, uid: UID, webhookUrl: 'https://x/wh?k=1', now: () => T0 });
-  assert.equal(api.calls.filter((c) => c[0] === 'refreshToken').length, 1);
-  assert.equal(r.resubscribed, true);
-  assert.ok(api.calls.some((c) => c[0] === 'notifySubscribe'));
-  assert.equal(r.backfill_resumed, true);
-  assert.equal(q.tasks[0].data.offset, 4);
-  assert.equal(q.tasks[0].data.page, 4);
-});
-
 test('disconnect: revokes, deletes tokens and mapping; deleteData also removes synced docs and Withings weights', async () => {
   const db = fakeDb();
   connected(db);
@@ -532,34 +443,6 @@ test('sync: if Withings rejects the type list, it asks again without one; token 
   await assert.rejects(getmeasSafe(fakeApi({ getmeas: new WithingsError('http_502', 'getmeas') }), 'AT', {}), (e) => e.transient);
 });
 
-test('backfill stops (and says why) if the offset doesn\'t advance or pages run past the cap', async () => {
-  const db = fakeDb();
-  connected(db);
-  const q = fakeQueue();
-  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r', now: () => T0 });
-  const stuck = fakeApi({ getmeas: { more: 1, offset: 0, measuregrps: [group(1, T0)] } });
-  const r = await runTask(q.take().data, { db, api: stuck, enqueue: q.enqueue, now: () => T0 });
-  assert.equal(r.stopped, true);
-  assert.equal(q.tasks.length, 0, 'no next page queued');
-  assert.equal(db.dump(P.status(UID)).backfill.error, 'offset_stuck');
-  const capped = await runTask({ kind: 'backfill', uid: UID, runId: 'r', page: MAX_PAGES - 1, offset: 10 }, { db, api: fakeApi({ getmeas: { more: 1, offset: 11, measuregrps: [] } }), enqueue: q.enqueue, now: () => T0 });
-  assert.equal(capped.stopped, true);
-  assert.equal(q.tasks.length, 0);
-});
-
-test('a new backfill run replaces the old record (no leftover offset or dates)', async () => {
-  const db = fakeDb();
-  connected(db);
-  db.put(P.status(UID), { ...db.dump(P.status(UID)), backfill: { run_id: 'old', offset: 900, from: '2019-01-01T00:00:00.000Z', finished_at: 'x', done: true } });
-  await requestBackfill({ db, enqueue: fakeQueue().enqueue, uid: UID, runId: 'new', now: () => T0 });
-  const bf = db.dump(P.status(UID)).backfill;
-  assert.equal(bf.run_id, 'new');
-  assert.equal(bf.offset, 0);
-  assert.equal(bf.from, null);
-  assert.equal(bf.finished_at, undefined);
-  assert.equal(db.dump(P.status(UID)).model, 'Body Comp', 'the rest of the status doc is untouched');
-});
-
 test('an expired refresh token (Withings JSON 503) → needs_reconnect', async () => {
   const db = fakeDb();
   connected(db, { expiresIn: 0 });
@@ -656,21 +539,278 @@ test('reconcile restores its own removals when Withings lists the weigh-in again
   assert.equal(db.dump(P.body(UID, 'w_701')).deleted, true, 'yours stays deleted');
 });
 
-test('data check: weigh-in counts on both sides (weight.csv compares with these), report replaced whole', async () => {
+
+// ---------- v0.4.1: the whole history, in yearly windows ----------
+// A fake Withings account that misbehaves the ways the live import suggested:
+//   - startdate 0 / missing → only data since 2025-01-07 (what Christian got);
+//   - one request never reaches back more than 400 days from its enddate;
+//   - small pages (offset/more).
+const JAN7_2025 = Date.parse('2025-01-07T00:00:00Z') / 1000;
+function withingsAccount(groups, { pageSize = 3 } = {}) {
+  const calls = [];
+  const getmeas = (_t, o) => {
+    calls.push(o);
+    let lo = Number(o.startdate) || 0;
+    const hi = Number(o.enddate) || Infinity;
+    if (!lo) lo = JAN7_2025; // "not set": default window
+    lo = Math.max(lo, hi - 400 * 86400); // range cap
+    const inRange = groups.filter((g) => g.date >= lo && g.date < hi).sort((a, b) => b.date - a.date);
+    const off = Number(o.offset) || 0;
+    const page = inRange.slice(off, off + pageSize);
+    const more = off + pageSize < inRange.length;
+    return { updatetime: sec(T0), more: more ? 1 : 0, offset: more ? off + pageSize : 0, measuregrps: page };
+  };
+  return { api: fakeApi({ getmeas }), calls };
+}
+// Weigh-ins from 2009-12-31 to Oct 2026: 2 a year plus a heart-rate-only reading in 2016.
+const HISTORY = (() => {
+  const out = [group(9000, Date.parse('2009-12-31T12:00:00Z'))];
+  let id = 9001;
+  for (let y = 2010; y <= 2026; y++) for (const m of [2, 8]) {
+    const t = Date.parse(`${y}-${String(m).padStart(2, '0')}-15T12:00:00Z`);
+    if (t < T0) out.push(group(id++, t));
+  }
+  out.push({ ...group(id++, Date.parse('2016-05-01T12:00:00Z')), measures: [{ type: 11, value: 60, unit: 0 }] });
+  return out;
+})();
+const runAll = async (db, api, q) => {
+  let task;
+  let n = 0;
+  while ((task = q.take())) {
+    await runTask(task.data, { db, api, enqueue: q.enqueue, now: () => T0 });
+    if (++n > 500) throw new Error('runaway');
+  }
+  return n;
+};
+
+test('history: one open-ended request would stop at Jan 7 2025; the yearly walk gets back to Dec 31 2009', async () => {
+  const acct = withingsAccount(HISTORY);
+  // What v0.4.0 did:
+  const old = await acct.api.getmeas('AT', { startdate: 0, enddate: sec(T0) + 3600 });
+  assert.ok(old.measuregrps.every((g) => g.date >= JAN7_2025), 'the bug, reproduced');
+  // v0.4.1:
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r1', now: () => T0 });
+  await runAll(db, acct.api, q);
+  const bf = db.dump(P.status(UID)).backfill;
+  assert.equal(bf.done, true);
+  assert.equal(bf.from, '2009-12-31T12:00:00.000Z', 'the real oldest date');
+  assert.equal(bf.groups, HISTORY.length);
+  assert.equal(bf.weighins, HISTORY.length - 1);
+  const stored = [...db.docs.keys()].filter((k) => k.startsWith(`users/${UID}/body_measures/`)).length;
+  assert.equal(stored, HISTORY.length, 'every group stored');
+  // Every request had a real startdate and the run's pinned enddate; no window is wider than a year.
+  const bfCalls = acct.calls.slice(1); // everything after the v0.4.0-style probe above
+  assert.ok(bfCalls.every((c) => c.startdate > 0 && c.enddate - c.startdate <= 366 * 86400));
+  assert.equal(new Set(bfCalls.map((c) => c.enddate > Date.UTC(2026, 0, 1) / 1000 ? 'pinned' : 'year')).has('pinned'), true);
+  // It stopped after three empty years below 2009 and never went before 2005.
+  const years = Object.keys(bf.years).map(Number).sort();
+  assert.equal(years[0], 2006);
+  assert.equal(bf.years[2008].p0.g + bf.years[2007].p0.g + bf.years[2006].p0.g, 0);
+  // "Last weigh-in" is set by the backfill too.
+  assert.equal(db.dump(P.status(UID)).last_weigh_in_at, new Date(Math.max(...HISTORY.filter((g) => g.measures.some((m) => m.type === 1)).map((g) => g.date * 1000))).toISOString());
+});
+
+test('history: a gap year in the middle doesn\'t stop the walk early; it only stops below 2009', async () => {
+  const sparse = HISTORY.filter((g) => !new Date(g.date * 1000).toISOString().startsWith('2013') && !new Date(g.date * 1000).toISOString().startsWith('2014') && !new Date(g.date * 1000).toISOString().startsWith('2015'));
+  const acct = withingsAccount(sparse);
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r', now: () => T0 });
+  await runAll(db, acct.api, q);
+  assert.equal(db.dump(P.status(UID)).backfill.from, '2009-12-31T12:00:00.000Z');
+});
+
+test('history: one request = one run of each page, even when a page is retried; counts aren\'t inflated', async () => {
+  const acct = withingsAccount(HISTORY);
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r1', now: () => T0 });
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r1', now: () => T0 }); // double tap
+  assert.equal(q.tasks.length, 1);
+  const seen = new Set();
+  let task;
+  while ((task = q.take())) {
+    assert.ok(!seen.has(task.id), 'no task id runs twice');
+    seen.add(task.id);
+    await runTask(task.data, { db, api: acct.api, enqueue: q.enqueue, now: () => T0 });
+    await runTask(task.data, { db, api: acct.api, enqueue: q.enqueue, now: () => T0 }); // Cloud Tasks retry
+  }
+  assert.equal(db.dump(P.status(UID)).backfill.groups, HISTORY.length, 'retries set counts, never add');
+});
+
+test('history: re-import on an existing connection is idempotent, keeps your deletions, and refuses a double start', async () => {
+  const acct = withingsAccount(HISTORY);
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'a', now: () => T0 });
+  await runAll(db, acct.api, q);
+  const first = [...db.docs.keys()].filter((k) => k.includes('/body_measures/')).length;
+  db.put(P.body(UID, 'w_9000'), { ...db.dump(P.body(UID, 'w_9000')), deleted: true, deleted_at: 'x' });
+  const started = await reimport({ db, enqueue: q.enqueue, uid: UID, runId: 'b', now: () => T0 + 60_000 });
+  assert.equal(started.started, true);
+  const again = await reimport({ db, enqueue: q.enqueue, uid: UID, runId: 'c', now: () => T0 + 61_000 });
+  assert.equal(again.started, true, 'nothing has moved yet: a stuck start can be retried');
+  let t;
+  while ((t = q.take()) && t.data.runId !== 'c') await runTask(t.data, { db, api: acct.api, enqueue: q.enqueue, now: () => T0 + 62_000 }); // b's chain: stale, stops
+  await runTask(t.data, { db, api: acct.api, enqueue: q.enqueue, now: () => T0 + 62_000 }); // run c's first page
+  const busy = await reimport({ db, enqueue: q.enqueue, uid: UID, runId: 'd', now: () => T0 + 63_000 });
+  assert.equal(busy.reason, 'running');
+  await runAll(db, acct.api, q);
+  assert.equal([...db.docs.keys()].filter((k) => k.includes('/body_measures/')).length, first, 'same docs, no duplicates');
+  assert.equal(db.dump(P.body(UID, 'w_9000')).deleted, true, 'your deletion stays');
+  assert.equal((await reimport({ db: fakeDb(), enqueue: q.enqueue, uid: UID, runId: 'z' })).reason, 'not_connected');
+});
+
+test('history: stops (and says why) if the offset inside a year doesn\'t advance, or past the page cap', async () => {
+  const db = fakeDb();
+  connected(db);
+  const q = fakeQueue();
+  await requestBackfill({ db, enqueue: q.enqueue, uid: UID, runId: 'r', now: () => T0 });
+  const stuck = fakeApi({ getmeas: { more: 1, offset: 0, measuregrps: [group(1, T0)] } });
+  const r = await runTask(q.take().data, { db, api: stuck, enqueue: q.enqueue, now: () => T0 });
+  assert.equal(r.stopped, true);
+  assert.equal(q.tasks.length, 0);
+  assert.equal(db.dump(P.status(UID)).backfill.error, 'offset_stuck');
+  const capped = await runTask({ kind: 'backfill', uid: UID, runId: 'r', end: sec(T0), year: 2020, page: MAX_PAGES - 1, offset: 0 }, { db, api: fakeApi({ getmeas: { more: 0, measuregrps: [] } }), enqueue: q.enqueue, now: () => T0 });
+  assert.equal(capped.stopped, true);
+  assert.equal(q.tasks.length, 0);
+});
+
+test('a new backfill run replaces the old record (no leftover year, offset or dates)', async () => {
+  const db = fakeDb();
+  connected(db);
+  db.put(P.status(UID), { ...db.dump(P.status(UID)), backfill: { run_id: 'old', offset: 900, from: '2019-01-01T00:00:00.000Z', finished_at: 'x', done: true, years: { 2019: { p0: { g: 5, w: 5 } } } } });
+  await requestBackfill({ db, enqueue: fakeQueue().enqueue, uid: UID, runId: 'new', now: () => T0 });
+  const bf = db.dump(P.status(UID)).backfill;
+  assert.equal(bf.run_id, 'new');
+  assert.equal(bf.from, null);
+  assert.deepEqual(bf.years, {});
+  assert.equal(bf.finished_at, undefined);
+  assert.equal(bf.year, 2026);
+  assert.equal(db.dump(P.status(UID)).model, 'Body Comp');
+});
+
+test('data check walks the same years: "Withings has" covers the whole account, with weigh-ins per year', async () => {
+  const acct = withingsAccount(HISTORY, { pageSize: 50 });
+  const db = fakeDb();
+  connected(db);
+  const r = await runDataCheck({ db, api: acct.api, uid: UID, token: 'AT', webhookUrl: 'w', now: () => T0 });
+  assert.equal(r.withings_weight_groups, HISTORY.length - 1);
+  assert.equal(r.years_withings[2009].weighins, 1);
+  assert.equal(r.years_withings[2016].groups, 3);
+  assert.equal(r.years_withings[2016].weighins, 2);
+  assert.equal(r.types[1].first, '2009-12-31T12:00:00.000Z');
+  assert.equal(r.truncated, false);
+});
+
+test('data check: if Withings refuses the type list, it walks with every type instead', async () => {
+  const acct = withingsAccount(HISTORY, { pageSize: 50 });
+  const api = fakeApi({ getmeas: (t, o) => { if (o.meastypes) throw new WithingsError(2555, 'getmeas'); return acct.api.getmeas(t, o); }, notifyList: { profiles: [] } });
+  const db = fakeDb();
+  connected(db);
+  const r = await runDataCheck({ db, api, uid: UID, token: 'AT', webhookUrl: 'w', now: () => T0 });
+  assert.equal(r.types_list_rejected, true);
+  assert.equal(r.withings_weight_groups, HISTORY.length - 1);
+  await assert.rejects(walkHistory(fakeApi({ getmeas: new WithingsError(522, 'getmeas') }), 'AT', { now: () => T0 }), (e) => e.transient, '522 = try later, not "rejected"');
+});
+
+test('data check: your deletions and "Not me" count as accounted for; reconcile removals as missing; report replaced whole', async () => {
   const db = fakeDb();
   connected(db);
   const hrOnly = { ...group(41, T0 - 3 * 86400_000), measures: [{ type: 11, value: 60, unit: 0 }] };
-  await applyGroups(db, UID, [group(40, T0), hrOnly, group(42, T0 - 86400_000)], { now: T0 });
-  db.put(P.body(UID, 'w_42'), { ...db.dump(P.body(UID, 'w_42')), deleted: true, deleted_at: 'z' });
+  await applyGroups(db, UID, [group(40, T0), hrOnly, group(42, T0 - 86400_000), group(43, T0 - 2 * 86400_000)], { now: T0 });
+  db.put(P.body(UID, 'w_42'), { ...db.dump(P.body(UID, 'w_42')), deleted: true, deleted_at: 'z' }); // yours
+  db.put(P.body(UID, 'w_43'), { ...db.dump(P.body(UID, 'w_43')), deleted: true, deleted_at: 'z', deleted_by: 'withings' }); // reconcile
   db.put(P.status(UID), { ...db.dump(P.status(UID)), data_check: { types: { 170: { count: 9 } } }, last_reconcile: { removed: 0, aborted: true, suspicious: 40 } });
-  const api = fakeApi({
-    getmeas: { more: 0, measuregrps: [group(40, T0), hrOnly, group(42, T0 - 86400_000)] },
-    notifyList: { profiles: [] },
-  });
+  const api = fakeApi({ getmeas: (_t, o) => (o.startdate >= Date.UTC(2026, 0, 1) / 1000 ? { more: 0, measuregrps: [group(40, T0), hrOnly, group(42, T0 - 86400_000), group(43, T0 - 2 * 86400_000)] } : { more: 0, measuregrps: [] }), notifyList: { profiles: [] } });
   const r = await runDataCheck({ db, api, uid: UID, token: 'AT', webhookUrl: 'w', now: () => T0 });
-  assert.equal(r.withings_weight_groups, 2);
-  assert.equal(r.stored_weight_groups, 1, 'HR-only and deleted docs are not weigh-ins');
-  assert.equal(r.stored_groups, 3);
+  assert.equal(r.withings_weight_groups, 3);
+  assert.equal(r.stored_weight_groups, 2, 'yours counts; the reconcile-removed one does not; HR-only is not a weigh-in');
+  assert.equal(r.stored_not_me, 1);
+  assert.equal(r.years_forge['2026'], 2);
   assert.equal(r.last_reconcile.aborted, true);
   assert.equal(db.dump(P.status(UID)).data_check.types[170], undefined, 'no stale types from an older report');
+});
+
+// ---------- v0.4.1: tokens and maintenance ----------
+test('tokens: an access token Withings refuses → one forced refresh; refused again → needs_reconnect, no retries', async () => {
+  const db = fakeDb();
+  connected(db);
+  const api = fakeApi({ refreshToken: { access_token: 'AT1', refresh_token: 'RT1', expires_in: 10800 } });
+  const seen = [];
+  const ok = await withToken({ db, api, uid: UID, now: () => T0 }, async (t) => { seen.push(t); if (t === 'AT0') throw new WithingsError(401, 'getmeas'); return 'done'; });
+  assert.equal(ok, 'done');
+  assert.deepEqual(seen, ['AT0', 'AT1']);
+  await assert.rejects(withToken({ db, api, uid: UID, now: () => T0 }, async () => { throw new WithingsError(401, 'getmeas'); }), NeedsReconnect);
+  assert.equal(db.dump(P.status(UID)).needs_reconnect, true);
+  const r = await runTask({ kind: 'notify', uid: UID }, { db, api: fakeApi({ refreshToken: { access_token: 'x', refresh_token: 'y', expires_in: 10800 }, getmeas: new WithingsError(401, 'getmeas') }), enqueue: async () => {}, now: () => T0 });
+  assert.equal(r.skipped, 'needs_reconnect', 'returned, not thrown: Cloud Tasks won\'t retry five times');
+});
+
+test('tokens: a refresh whose lease was taken over doesn\'t overwrite the newer pair', async () => {
+  const db = fakeDb();
+  connected(db, { expiresIn: 0 });
+  const api = fakeApi({ refreshToken: async () => {
+    // While we wait for Withings, our lease runs out and another call stores its pair.
+    db.put(P.priv(UID), { ...db.dump(P.priv(UID)), lease_id: 'someone-else', access_token: 'ATx', refresh_token: 'RTx', expires_at: T0 + 3 * 3600_000 });
+    return { access_token: 'ATmine', refresh_token: 'RTmine', expires_in: 10800 };
+  } });
+  const tok = await getAccessToken({ db, api, uid: UID, now: () => T0 });
+  assert.equal(tok, 'ATmine', 'our token still works for this call');
+  assert.equal(db.dump(P.priv(UID)).refresh_token, 'RTx', 'the stored pair is not overwritten');
+});
+
+test('tokens: if saving the new pair keeps failing, the call fails and the old refresh token is still stored', async () => {
+  const db = fakeDb();
+  connected(db, { expiresIn: 0 });
+  const api = fakeApi({ refreshToken: { access_token: 'AT1', refresh_token: 'RT1', expires_in: 10800 } });
+  const real = db.runTransaction.bind(db);
+  let n = 0;
+  db.runTransaction = (fn, o) => (++n === 1 ? real(fn, o) : Promise.reject(Object.assign(new Error('UNAVAILABLE'), { code: 14 })));
+  await assert.rejects(getAccessToken({ db, api, uid: UID, now: () => T0, sleep: async () => {} }), (e) => e.status === 'save_failed' && e.transient);
+  db.runTransaction = real;
+  assert.equal(db.dump(P.priv(UID)).refresh_token, 'RT0');
+});
+
+test('maintenance: each step runs on its own (a reconcile error doesn\'t skip the backfill resume); resumes at the stored year/offset', async () => {
+  const db = fakeDb();
+  connected(db);
+  db.put(P.status(UID), { ...db.dump(P.status(UID)), backfill: { done: false, end: sec(T0), year: 2014, offset: 6, page: 9, updated_at: new Date(T0 - 7 * 3600_000).toISOString() } });
+  let n = 0;
+  const api = fakeApi({
+    refreshToken: { access_token: 'AT1', refresh_token: 'RT1', expires_in: 10800 },
+    notifyList: { profiles: [] },
+    getmeas: (_t, o) => { n++; if (o.meastypes && o.meastypes.length === 1) throw new WithingsError('http_502', 'getmeas'); return { updatetime: sec(T0), more: 0, measuregrps: [] }; },
+  });
+  const q = fakeQueue();
+  const r = await maintainUser({ db, api, enqueue: q.enqueue, uid: UID, webhookUrl: 'https://x/wh?k=1', now: () => T0 });
+  assert.equal(r.resubscribed, true);
+  assert.equal(r.reconcile_error, 'http_502');
+  assert.equal(r.backfill_resumed, true);
+  assert.deepEqual([q.tasks[0].data.year, q.tasks[0].data.offset, q.tasks[0].data.page, q.tasks[0].data.end], [2014, 6, 9, sec(T0)]);
+  assert.ok(n >= 2);
+});
+
+test('maintenance deletes expired one-time OAuth states', async () => {
+  const db = fakeDb();
+  db.put('oauth_states/old', { uid: 'u', expires_at: T0 - 1 });
+  db.put('oauth_states/new', { uid: 'u', expires_at: T0 + 60_000 });
+  assert.equal(await expireStates(db, () => T0), 1);
+  assert.equal(db.dump('oauth_states/old'), undefined);
+  assert.ok(db.dump('oauth_states/new'));
+  db.put('oauth_states/old2', { uid: 'u', expires_at: T0 - 1 });
+  await maintainAll({ db, api: fakeApi(), enqueue: async () => {}, webhookUrl: 'w', now: () => T0 });
+  assert.equal(db.dump('oauth_states/old2'), undefined, 'runs even with no connected users');
+});
+
+test('readings are labelled with the scale that took them', async () => {
+  const db = fakeDb();
+  await applyGroups(db, UID, [{ ...group(77, T0), model: 'Body+' }], { device: { model: 'Body Comp' }, now: T0 });
+  assert.equal(db.dump(P.body(UID, 'w_77')).model, 'Body+');
 });

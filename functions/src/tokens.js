@@ -78,11 +78,23 @@ export async function getAccessToken({ db, api, uid, now = () => Date.now(), sle
 
     // Persist the new pair BEFORE using it. If every save fails, the old refresh token still works for
     // 8 hours, so the next run refreshes again; nothing is lost.
+    // Saved only while we still hold the lease: if it ran out and another call refreshed meanwhile, its pair
+    // is the stored one and ours (still valid for this call) isn't written over it.
     const fields = tokenFields(body, now());
     let saved = false;
     for (let attempt = 0; attempt < 3 && !saved; attempt++) {
       try {
-        await db.doc(P.priv(uid)).update(fields);
+        const res = await db.runTransaction(async (tx) => {
+          const cur = await tx.get(ref);
+          if (!cur.exists) return 'gone';
+          if (cur.data().lease_id !== step.leaseId) return 'superseded';
+          tx.update(ref, fields);
+          return 'saved';
+        });
+        if (res !== 'saved') {
+          log('token_save_skipped', { reason: res });
+          return fields.access_token;
+        }
         saved = true;
       } catch {
         await sleep(300 * (attempt + 1));
@@ -96,4 +108,31 @@ export async function getAccessToken({ db, api, uid, now = () => Date.now(), sle
     return fields.access_token;
   }
   throw new WithingsError('lease_timeout', 'refresh');
+}
+
+/**
+ * Run fn(token). If Withings says the access token is invalid, force ONE refresh and try again; if it's
+ * still refused, mark needs_reconnect and stop (no point letting Cloud Tasks retry five times).
+ */
+export async function withToken({ db, api, uid, now = () => Date.now() }, fn) {
+  const token = await getAccessToken({ db, api, uid, now });
+  try {
+    return await fn(token);
+  } catch (e) {
+    if (!(e instanceof WithingsError) || !e.invalidToken) throw e;
+    const fresh = await getAccessToken({ db, api, uid, now, force: true });
+    try {
+      return await fn(fresh);
+    } catch (e2) {
+      if (e2 instanceof WithingsError && e2.invalidToken) {
+        await db.doc(P.status(uid)).set({ needs_reconnect: true, last_error_code: String(e2.status) }, { merge: true });
+        throw new NeedsReconnect();
+      }
+      throw e2;
+    }
+  }
+}
+
+export class NeedsReconnect extends Error {
+  constructor() { super('needs reconnect'); this.code = 'needs_reconnect'; }
 }

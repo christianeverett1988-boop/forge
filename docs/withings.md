@@ -1,4 +1,4 @@
-# Withings in Forge (v0.4.0, "W1")
+# Withings in Forge (v0.4.3, "W1")
 
 Your Withings Body Comp weigh-ins (weight, fat, muscle, water, bone, standing heart rate, and visceral fat, BMR, metabolic age and vascular age where the free API returns them) arrive in Forge on their own, a few minutes after you step off the scale. Your whole Withings history is imported once. The **data check** shows what the free API really returns for your account and says when it's safe to let Withings+ lapse.
 
@@ -88,10 +88,17 @@ Each block says **when**. Only ever send me the **non-secret** values marked �
    ```
    Copy the 48-character line the first command printed, and paste it at the second command's prompt. (It's the secret key in the address Withings uses to notify Forge. You never need it again.)
    - If it says the Secret Manager API isn't enabled, answer **Y** to enable it.
-10. **Deploy the functions and the rules:**
+10. **Deploy the functions and the rules.** First install the functions' packages (the deploy fails without them), then deploy:
     ```
+    npm --prefix functions install
     firebase deploy --only functions,firestore:rules
     ```
+    - The install creates `functions/package-lock.json`. **Commit it** (GitHub Desktop) so every deploy uses the same package versions.
+    - If `npm` says **EACCES** / permission denied under `~/.npm` (it happens after an earlier `sudo npm install`), fix the folder's owner once, then run the install again:
+      ```
+      sudo chown -R $(whoami) ~/.npm
+      ```
+    - If the deploy stops with **timeouts connecting to `googleapis.com`** (`ETIMEDOUT`, `ECONNRESET`), it's the network, not Forge: some Wi-Fi networks block or throttle Google's APIs. Switch your Mac to another network (your **phone's hotspot** works) and run the deploy again.
     - It asks for **WITHINGS_CLIENT_ID**: paste the Client ID. (It saves it in `functions/.env.forge-web-f2351`; that's fine to commit, it isn't secret.)
     - Say **Y** to enabling any Google APIs it lists (Cloud Functions, Cloud Build, Artifact Registry, Cloud Run, Cloud Tasks, Cloud Scheduler, Eventarc).
     - When it asks how many days to keep container images, enter **1** (keeps storage at $0).
@@ -151,13 +158,26 @@ No function is triggered by Firestore writes, so nothing a function writes can s
 
 ---
 
+### Updating to v0.4.3 (history fix)
+
+16. **Pull and deploy** (GitHub Desktop → Fetch → Pull), then in Terminal:
+    ```
+    npm --prefix functions install
+    firebase deploy --only functions
+    ```
+    Then refresh Forge until Settings shows **0.4.3**.
+17. **Check what Withings returns before re-importing:** Settings → Withings → **Data check → Run check**. Open **By year**. If Withings lists weigh-ins back to 2009/2010, the API has your whole history.
+18. **Settings → Withings → Re-import history.** You stay connected. It walks your history one year at a time, from now back to 2009 (and three empty years further, to be sure). **History by year** fills in as it goes. Nothing is duplicated, and weigh-ins you deleted or marked "Not me" stay gone. It takes a few minutes.
+19. **If By year shows nothing before 2025** (the free API doesn't return your older readings): Settings → Withings → **Import weight.csv** → pick `weight.csv` from your export. Rows Forge already has from Withings are skipped. Importing the same file twice adds nothing.
+20. **Family weigh-ins:** under **Is this you?**, use **Not me: everything under ___ lb**. It suggests a number between the family's readings and your lightest one, and shows how many it covers before you tap. **Not me — whole day** clears one day at a time. Then run the data check again: "Forge has" counts the ones you marked "Not me" as accounted for.
+
 ## If something doesn't start
 
 **The history import or notifications never start** (Settings → Withings shows *Last problem: `backfill_enqueue`*, or the webhook never logs a weigh-in). The functions hand work to a Cloud Tasks queue, which needs the project's default service account to be allowed to add tasks. New Google Cloud projects sometimes don't grant this automatically:
 
 1. **console.cloud.google.com** → project **forge-web-f2351** → ☰ → **IAM & Admin → IAM**.
 2. Find **Default compute service account** (`…-compute@developer.gserviceaccount.com`) → the pencil ✏️ → **Add another role** → **Cloud Tasks Enqueuer** → **Add another role** → **Service Account User** → **Save**.
-3. Forge → Settings → Withings → **Disconnect** → **Connect Withings** again (restarts the import).
+3. Forge → Settings → Withings → **Re-import history** (no need to disconnect).
 
 **"Couldn't reach Forge's server functions"**: the functions aren't deployed yet (step 10), or the deploy failed. Run step 10 again and send me the last 20 lines.
 

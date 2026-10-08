@@ -1,6 +1,7 @@
 // One body metric in detail (Body → tap a tile): latest value, this period vs. the previous one, a chart
 // over 7/30/90/365 days or everything (with the previous period dashed), training sets per week underneath
 // for muscle, and the explainer sheet ("What is this?") from data/metrics.json.
+import { myBodyMeasures } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
 import { esc, $, $$, sheet, todayKey } from '../ui.js';
 import { addDays, daysBetween } from '../weight/smoothing.js';
@@ -48,7 +49,7 @@ export function renderMetric(el, key) {
   const def = metricDef(key);
   if (!def) { location.replace('#/body'); return; }
   const u = getUnits();
-  const docs = state.body_measures;
+  const docs = myBodyMeasures();
   const h = heightM(docs, state.profile);
   const daily = dailySeries(metricSeries(docs, key, { height: h }));
   const disp = (v) => (def.kind === 'mass' ? weightToDisplay(v, u) : v);

@@ -136,6 +136,16 @@
       "caveats": "Probably not on the free API. Still free to view in the Withings app. Not a diagnosis.",
       "in_forge": "Shown if returned; otherwise a monthly manual entry."
     },
+    "vo2max": {
+      "name": "VO₂max",
+      "unit": "ml/kg/min",
+      "what": "An estimate of the most oxygen your body can use per minute per kilogram: a summary of cardio fitness.",
+      "how": "Withings estimates it from your heart rate and activity (watch) or from a scale's cardio measurements, not from a lab test.",
+      "moves": "Regular cardio, especially harder intervals, raises it over weeks; losing fat raises it too, because it's per kilogram.",
+      "ranges": "Depends a lot on age and sex; roughly 35–45 is average for adult men, higher is fitter.",
+      "caveats": "An estimate. Watch the trend rather than single readings.",
+      "in_forge": "Shown if Withings returns it."
+    },
     "nerve_health_score": {
       "name": "Nerve Health Score",
       "unit": "score",

@@ -18,7 +18,8 @@ import { defineSecret, defineString } from 'firebase-functions/params';
 import { makeClient, WithingsError } from './src/withings-api.js';
 import { startAuth, handleCallback } from './src/oauth.js';
 import { handleWebhook } from './src/webhook.js';
-import { runTask } from './src/tasks.js';
+import { runTask, reimport } from './src/tasks.js';
+import { randomBytes } from 'node:crypto';
 import { getAccessToken, NotConnected } from './src/tokens.js';
 import { incrementalSync } from './src/sync.js';
 import { runDataCheck, saveReport } from './src/datacheck.js';
@@ -117,6 +118,16 @@ export const withingsSyncNow = onCall({ secrets: [CLIENT_SECRET], timeoutSeconds
       await ref.set({ last_manual_sync_at: null }, { merge: true }).catch(() => {}); // a failed sync doesn't use up the 10 minutes
       throw e;
     }
+  });
+});
+
+export const withingsReimport = onCall({ secrets: [] }, async (req) => {
+  const uid = needUid(req);
+  return friendly(async () => {
+    const r = await reimport({ db: db(), enqueue, uid, runId: randomBytes(6).toString('hex') });
+    if (!r.started && r.reason === 'running') throw new HttpsError('failed-precondition', 'A history import is already running. Give it a few minutes.');
+    if (!r.started) throw new HttpsError('failed-precondition', 'Withings isn’t connected.');
+    return r;
   });
 });
 

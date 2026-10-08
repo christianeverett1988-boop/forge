@@ -5,11 +5,13 @@
 //   - incremental sync (catches anything a missed notification would have brought)
 //   - 90-day reconcile (groups deleted in the Withings app)
 //   - resume a backfill that stopped (no progress for 6 hours)
+//   - delete expired one-time OAuth states
+// Each step runs on its own, so one failure doesn't skip the rest.
 import { randomBytes } from 'node:crypto';
 import { P } from './paths.js';
 import { getAccessToken, NotConnected } from './tokens.js';
 import { incrementalSync, reconcile90 } from './sync.js';
-import { requestBackfill, backfillTaskId, enqueueOnce } from './tasks.js';
+import { backfillTaskId, enqueueOnce } from './tasks.js';
 import { log } from './log.js';
 
 export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = () => Date.now() }) {
@@ -36,27 +38,43 @@ export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = ()
     const devices = (dev.devices || []).map((d) => ({ type: d.type || null, model: d.model || null, model_id: d.model_id ?? null, last_session: d.last_session_date ? new Date(d.last_session_date * 1000).toISOString() : null }));
     await statusRef.set({ devices }, { merge: true });
   } catch { /* the device list is informational */ }
-  const s = await incrementalSync({ db, api, uid, token, now, reason: 'maintenance' });
-  out.synced = s.created + s.updated;
-  const r = await reconcile90({ db, api, uid, token, now });
-  out.removed = r.removed;
-  await statusRef.set({ last_maintenance_at: new Date(now()).toISOString(), last_reconcile: { at: new Date(now()).toISOString(), removed: r.removed, restored: r.restored || 0, aborted: !!r.aborted, suspicious: r.suspicious || 0 } }, { merge: true });
-
-  const st = (await statusRef.get()).data() || {};
-  const bf = st.backfill || {};
-  const stale = !bf.done && !bf.error && (!bf.updated_at || now() - Date.parse(bf.updated_at) > 6 * 3600 * 1000);
-  if (stale) {
-    // Continue where it stopped (same offset) under a fresh run id.
+  // Each step on its own: one failing (a Withings hiccup in the reconcile, say) never skips the others.
+  const step = async (name, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      out.ok = false;
+      out[`${name}_error`] = String(e.status || e.code || 'x');
+      await statusRef.set({ last_error_code: `${name}_${e.status || e.code || 'x'}` }, { merge: true }).catch(() => {});
+    }
+  };
+  await step('sync', async () => {
+    const s = await incrementalSync({ db, api, uid, token, now, reason: 'maintenance' });
+    out.synced = s.created + s.updated;
+  });
+  await step('reconcile', async () => {
+    const r = await reconcile90({ db, api, uid, token, now });
+    out.removed = r.removed;
+    await statusRef.set({ last_reconcile: { at: new Date(now()).toISOString(), removed: r.removed, restored: r.restored || 0, aborted: !!r.aborted, suspicious: r.suspicious || 0 } }, { mergeFields: ['last_reconcile'] });
+  });
+  await step('backfill', async () => {
+    const st = (await statusRef.get()).data() || {};
+    const bf = st.backfill || {};
+    const stale = !bf.done && !bf.error && bf.end && (!bf.updated_at || now() - Date.parse(bf.updated_at) > 6 * 3600 * 1000);
+    if (!stale) return;
+    // Continue where it stopped (same year, offset and pinned end) under a fresh run id.
     const runId = randomBytes(6).toString('hex');
     await statusRef.set({ backfill: { run_id: runId } }, { merge: true });
-    await enqueueOnce(enqueue, { kind: 'backfill', uid, runId, page: bf.pages || 0, offset: bf.offset || 0 }, backfillTaskId(uid, runId, bf.pages || 0));
+    await enqueueOnce(enqueue, { kind: 'backfill', uid, runId, end: bf.end, year: bf.year, offset: bf.offset || 0, page: bf.page || 0 }, backfillTaskId(uid, runId, bf.page || 0));
     out.backfill_resumed = true;
-  }
+  });
+  await statusRef.set({ last_maintenance_at: new Date(now()).toISOString() }, { merge: true });
   return out;
 }
 
 /** Every connected account (one, here, but done properly): one user's trouble never stops the others. */
 export async function maintainAll(deps) {
+  await expireStates(deps.db, deps.now).catch(() => {}); // abandoned Connect taps, whoever made them
   const users = await deps.db.collection(P.wusers()).get();
   const results = [];
   for (const d of users.docs) {
@@ -111,4 +129,14 @@ async function deleteAll(db, snap) {
     await b.commit();
   }
   return snap.docs.length;
+}
+
+/** Delete one-time OAuth states older than their 10-minute life (abandoned Connect taps). */
+export async function expireStates(db, now = () => Date.now()) {
+  const old = await db.collection('oauth_states').where('expires_at', '<', now()).limit(400).get();
+  if (!old.docs.length) return 0;
+  const b = db.batch();
+  old.docs.forEach((d) => b.delete(db.doc(d.ref.path)));
+  await b.commit();
+  return old.docs.length;
 }

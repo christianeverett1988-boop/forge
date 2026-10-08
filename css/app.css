@@ -457,3 +457,20 @@ body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
 .verdict.warn { border: 1px solid #ffb02066; }
 .bc-tile.stale b { color: var(--muted); }
 .bc-tile.stale small { color: #ffb020; }
+
+/* v0.4.1: .card sets a column flex direction, which stacked the › chevron under the text in nav cards. */
+.card.row { flex-direction: row; align-items: center; }
+/* "Is this you?" review queue */
+.review-day { display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 8px; }
+.bulk input.short { width: 6em; }
+label.btn.file { cursor: pointer; align-self: flex-start; }
+table.dc-years { width: 100%; border-collapse: collapse; margin: 6px 0; font-variant-numeric: tabular-nums; }
+table.dc-years th, table.dc-years td { text-align: right; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+table.dc-years th:first-child, table.dc-years td:first-child { text-align: left; }
+table.dc-years tr.dc-lost td { color: #ff4d3a; }
+ul.dc-years li { padding: 4px 0; }
+.stats b small { display: block; font-size: 13px; font-weight: 500; line-height: 1.3; }
+.review-day .list li { padding: 8px 12px; gap: 8px; }
+.review-day .list li > .row { flex-wrap: nowrap; flex: none; }
+.review-day .list li .btn.small { padding: 6px 10px; min-height: 0; }
+details > summary { cursor: pointer; color: var(--muted); }
