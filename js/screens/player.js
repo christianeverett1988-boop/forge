@@ -245,7 +245,8 @@ function drawSet(el) {
 
   // Demo figure
   const fig = $('[data-fig]', el);
-  if (fig) mountFigure(fig, ex, { isPaused: () => paused() || !!restInfo() });
+  // Tempo days (the progression's slow-lowering step) slow the demo down to match.
+  if (fig) mountFigure(fig, ex, { isPaused: () => paused() || !!restInfo(), slow: !!(it.target && it.target.mode === 'tempo') });
   $('[data-demo]', el).onclick = () => openHowTo(ex.id);
 
   // Clock (pause-aware)

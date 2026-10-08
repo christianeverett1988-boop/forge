@@ -1,30 +1,56 @@
-// Motion templates for the silhouette demo (js/ui/figure.js).
-// Side view, facing right. Joint angles in degrees: 0 = pointing down, 90 = forward (right), 180 = up.
-// root 'ground': the ankle is planted at `at` and the chain goes up (shin → thigh → torso → arms).
-// root 'hang':   the hands hold a bar at `at` and the chain goes down (forearm → upper arm → torso → legs).
-// `a` is the start pose, `b` the hardest point (muscles fully lit). `phases` is one rep:
-//   [to, ms, easing] moves toward pose a or b; ['hold', ms] pauses. Default tempo ≈ lower 2 s, pause, lift 1 s.
+// Motion templates for the silhouette demos (drawn by js/ui/figure.js, solved by js/ui/rig.js).
+//
+// Each template has:
+//   cam    3/4 camera: yaw (degrees from side-on toward the front), pitch (looking down), scale (px per
+//          metre in a 200×210 box), x (screen x of world x = 0), ground (screen y of the floor).
+//   rig    how the skeleton is placed (see solve() in rig.js): root, balance, legs, arms, feet, hands, grip.
+//   a, b   start pose and hardest point. Every number blends from a to b.
+//   lag    per parameter: > 0 trails the movement, < 0 leads it (fraction of each phase).
+//   first  'down' if the rep starts by lowering (squat), 'up' if it starts by lifting (curl, pull-up).
+//   tempo  seconds { ecc: lowering, pause: bottom, con: lifting, top: top }; `slow` is used on tempo days.
+//   layers back-to-front draw order (segments and props).
 //
 // v0.3.0 ships three samples so the look can be approved; v0.3.1 adds the full library.
 
+const LIMBS_F = ['thighF', 'shinF', 'footF', 'upperF', 'foreF', 'handF'];
+
 export const TEMPLATES = {
   squat_barbell: {
+    cam: { yaw: 12, pitch: 7, scale: 100, x: 108, ground: 200 },
     prop: 'barbell',
-    a: { root: 'ground', at: [92, 198], shin: 180, thigh: 180, torso: 180, upper: -25, fore: 160 },
-    b: { root: 'ground', at: [92, 198], shin: 145, thigh: 265, torso: 138, upper: -5, fore: 175 },
-    phases: [['b', 2000, 'inOut'], ['hold', 250], ['a', 1000, 'out'], ['hold', 500]],
+    rig: { root: 'pelvis', balance: 'bar', legs: 'ik', feet: { x: 0, z: 0.16, kneesOut: 0.45 }, arms: 'ik-bar', grip: 0.3 },
+    a: { py: 0.935, trunk: 7, head: 0 },
+    b: { py: 0.5, trunk: 43, head: -22 },
+    lag: { py: 0, trunk: -0.12, head: 0.2 },
+    first: 'down',
+    tempo: { ecc: 2, pause: 0.4, con: 1.2, top: 0.9 },
+    slow: { ecc: 3.5, pause: 1, con: 1.2, top: 0.9 },
+    // The near plate sits over the traps; the near arm is drawn over it so the grip reads.
+    layers: ['shadow', 'plateF', 'bar', ...LIMBS_F, 'pelvis', 'torso', 'plateN', 'neck', 'head', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN'],
   },
   pullup: {
-    prop: 'bar',
-    a: { root: 'hang', at: [104, 30], fore: 2, upper: 0, torso: 2, thigh: 35, shin: -55, foot: 60 },
-    b: { root: 'hang', at: [104, 30], fore: 20, upper: 235, torso: -6, thigh: 40, shin: -40, foot: 60 },
-    phases: [['b', 1000, 'out'], ['hold', 350], ['a', 2000, 'inOut'], ['hold', 450]],
+    cam: { yaw: 26, pitch: 6, scale: 80, x: 108, ground: 206 },
+    prop: 'pullbar',
+    rig: { root: 'chest', legs: 'fk', arms: 'ik-fixed', hands: { x: 0, y: 2.15 }, grip: 0.33 },
+    a: { px: -0.045, py: 1.595, trunk: -3, head: 0, hipN: 8, kneeN: 10, hipF: 3, kneeF: 24, footN: 28, footF: 34 },
+    b: { px: -0.12, py: 2.065, trunk: -17, head: -8, hipN: 24, kneeN: 22, hipF: 16, kneeF: 38, footN: 22, footF: 30 },
+    lag: { px: 0.05, trunk: 0.1, head: 0.25, hipN: 0.2, kneeN: 0.3, hipF: 0.24, kneeF: 0.34, footN: 0.3, footF: 0.35 },
+    first: 'up',
+    tempo: { con: 1.1, top: 0.5, ecc: 2, pause: 0.6 },
+    slow: { con: 1.1, top: 0.8, ecc: 3.5, pause: 1 },
+    layers: ['shadow', 'posts', ...LIMBS_F.filter((n) => n !== 'handF'), 'pelvis', 'torso', 'neck', 'head', 'bar', 'handF', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN', 'barCap'],
   },
   curl_dumbbell: {
-    prop: 'dumbbell',
-    a: { root: 'ground', at: [90, 198], shin: 180, thigh: 180, torso: 180, upper: 6, fore: 8 },
-    b: { root: 'ground', at: [90, 198], shin: 180, thigh: 180, torso: 182, upper: 14, fore: 158 },
-    phases: [['b', 1000, 'out'], ['hold', 300], ['a', 2000, 'inOut'], ['hold', 450]],
+    cam: { yaw: 18, pitch: 7, scale: 102, x: 92, ground: 200 },
+    prop: 'dumbbells',
+    rig: { root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.12, kneesOut: 0.2 }, arms: 'fk' },
+    a: { px: 0.0, py: 0.93, trunk: 2, head: 0, shN: 3, elN: 6, shF: 3, elF: 6, wrist: 4, abd: 7 },
+    b: { px: 0.0, py: 0.93, trunk: 0, head: -2, shN: 12, elN: 136, shF: 10, elF: 130, wrist: -14, abd: 7 },
+    lag: { shN: 0.15, shF: 0.2, elF: 0.08, wrist: 0.2, trunk: 0.3 },
+    first: 'up',
+    tempo: { con: 1.1, top: 0.4, ecc: 2.2, pause: 0.5 },
+    slow: { con: 1.1, top: 0.6, ecc: 3.5, pause: 1 },
+    layers: ['shadow', 'thighF', 'shinF', 'footF', 'upperF', 'foreF', 'dbF', 'handF', 'pelvis', 'torso', 'neck', 'head', 'thighN', 'shinN', 'footN', 'upperN', 'foreN', 'dbNback', 'handN', 'dbNfront'],
   },
 };
 

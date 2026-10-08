@@ -1,7 +1,7 @@
 import { test, eq, assert } from './harness.js';
 import { elapsedMs, pauseFields, resumeFields, awayGapMs, removeAwayFields, isPaused, AWAY_THRESHOLD_MS } from '../js/workouts/clock.js';
 import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet, exerciseComplete, sessionStats, versusLast, REST, exercisePRs, replacePRs } from '../js/workouts/session-core.js';
-import { litSegments, hasFigure } from '../js/ui/figure.js';
+import { muscleGlow, hasFigure } from '../js/ui/figure.js';
 import { coverage } from '../js/ui/poses.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
 
@@ -134,14 +134,16 @@ test('vs last time: weight up, reps at same weight, bodyweight and timed', () =>
 
 test('figure: muscles light the right segments (primary strong, secondary faint)', () => {
   const squat = EXERCISES.find((e) => e.id === 'bb_back_squat');
-  const lit = litSegments(squat);
-  eq(lit.thigh, 1);
-  eq(lit.glute, 1);
-  const curl = litSegments(EXERCISES.find((e) => e.id === 'db_curl'));
-  eq(curl.upper, 1);
-  assert(curl.fore > 0 && curl.fore < 1, 'forearms are secondary');
-  eq(litSegments({ primary: ['lats'], secondary: ['biceps'] }).torso, 1);
-  eq(litSegments({ primary: ['lats'], secondary: ['biceps'] }).upper, 0.45);
+  const g = muscleGlow(squat);
+  eq(g.quads, 1);
+  eq(g.glutes, 1);
+  eq(g.hamstrings, 0.45);
+  const curl = muscleGlow(EXERCISES.find((e) => e.id === 'db_curl'));
+  eq(curl.biceps, 1);
+  eq(curl.forearms, 0.45);
+  // Lats light the lats, not the whole torso.
+  const pull = muscleGlow({ primary: ['lats'], secondary: ['biceps'] });
+  eq(Object.keys(pull).sort().join(), 'biceps,lats');
 });
 
 test('figure: the three v0.3.0 samples are mapped and reported', () => {
