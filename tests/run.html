@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge tests</title>
+<style>body{font:14px/1.5 ui-monospace,Menlo,monospace;background:#0d0f12;color:#e6e6e6;padding:16px;white-space:pre-wrap}</style>
+<body>Running…
+<script type="module">
+  import { runAll } from './harness.js';
+  import './units.test.js';
+  import './targets.test.js';
+  import './smoothing.test.js';
+  import './workouts.test.js';
+  import './csv.test.js';
+  const lines = [];
+  const { fail } = await runAll((l) => lines.push(l));
+  document.body.textContent = lines.join('\n');
+  document.body.style.color = fail ? '#ff5d6c' : '#6ee7a8';
+</script>

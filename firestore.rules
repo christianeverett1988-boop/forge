@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// Each user can only read and write their own data under users/{their uid}/{collection}/{id}.
+// - Only the collections the app uses are allowed (one level deep; workout sets live inside the workout doc).
+// - Every record carries the standard fields; created_at and user_id can't change after creation.
+// - Basic type checks per collection.
+// - users/{uid}/private/... holds server-only secrets (Withings tokens, Shortcut token hash) and is
+//   closed to the app entirely: only Cloud Functions (which bypass rules) can touch it.
+// No collection-group rules exist, so collection-group queries are denied.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function allowedCollection(col) {
+      return col in ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises'];
+    }
+
+    function hasStandardFields(uid, id) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'user_id', 'created_at', 'updated_at', 'source', 'deleted'])
+        && d.id == id
+        && d.user_id == uid
+        && d.created_at is string
+        && d.updated_at is string
+        && d.source is string
+        && d.deleted is bool
+        && (!('deleted_at' in d) || d.deleted_at is string);
+    }
+
+    function validFor(col, id) {
+      let d = request.resource.data;
+      return (col != 'profile' || (id == 'main' && d.goal is string && d.weightKg is number && d.heightCm is number))
+        && (col != 'settings' || id == 'main')
+        && (col != 'weights' || (d.kg is number && d.kg > 0 && d.kg < 500 && d.day is string))
+        && (col != 'locations' || (d.name is string && d.equipment is list && d.weight_inventory is map))
+        && (col != 'workouts' || (d.location_id is string && d.exercises is list && d.started_at is string && d.status is string))
+        && (col != 'cardio_sessions' || (d.activity is string && d.duration_min is number && d.started_at is string))
+        && (col != 'programs' || (d.template is string && d.started_at is string))
+        && (col != 'exercises' || (d.name is string && d.pattern is string && d.equipment is list));
+    }
+
+    match /users/{uid}/{col}/{id} {
+      allow read, delete: if isOwner(uid) && allowedCollection(col);
+      allow create: if isOwner(uid) && allowedCollection(col) && hasStandardFields(uid, id) && validFor(col, id);
+      allow update: if isOwner(uid) && allowedCollection(col) && hasStandardFields(uid, id) && validFor(col, id)
+        && request.resource.data.created_at == resource.data.created_at
+        && request.resource.data.user_id == resource.data.user_id;
+    }
+
+    // Explicitly closed (anything not matched above is denied by default too).
+    match /users/{uid}/private/{rest=**} {
+      allow read, write: if false;
+    }
+  }
+}
