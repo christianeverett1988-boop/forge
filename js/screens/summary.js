@@ -1,8 +1,8 @@
 // Workout-complete summary: confetti, "Workout #N", count-up stats (time without pauses, sets, volume, PRs),
 // PRs with old → new, "vs last time" per exercise, and the muscles you worked.
-// (XP, level bar, streak and the share image arrive in v0.3.2.)
+// Then XP with the level bar (and a level-up burst), the weekly streak, new badges, and a Share image.
 import { state } from '../state.js';
-import { esc, $ } from '../ui.js';
+import { esc, $, toast } from '../ui.js';
 import { unit } from '../workouts/plan.js';
 import { buildIndex } from '../workouts/history.js';
 import { exerciseById } from '../workouts/library.js';
@@ -15,6 +15,9 @@ import { confetti } from '../ui/fx.js';
 import { sfx, coach } from '../ui/sound.js';
 import { fmtClock } from '../timer.js';
 import { finishedCopy } from '../workouts/live.js';
+import { workoutAwards } from '../workouts/awards.js';
+import { levelUp } from '../ui/fx.js';
+import { renderShareCard, shareImage } from '../ui/sharecard.js';
 
 const fmtDuration = (ms) => {
   const m = Math.round(ms / 60000);
@@ -58,6 +61,10 @@ export function renderSummary(el, id) {
   const topMus = Object.entries(mus).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxMus = topMus.length ? topMus[0][1] : 1;
 
+  // XP, level, streak and badges, derived from history with this workout counted as done.
+  const goal = (state.profile && state.profile.trainingDays) || 3;
+  const aw = workoutAwards([...state.workouts.filter((x) => x.id !== w.id), { ...w, status: 'done' }], state.cardio || [], goal, w.id);
+
   el.innerHTML = `
     <section class="summary">
       <p class="label tcenter">${new Date(w.started_at).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</p>
@@ -70,6 +77,16 @@ export function renderSummary(el, id) {
         <div><span>Volume</span><b><span data-c="vol">${st.volume.toLocaleString()}</span> <small>${u}</small></b></div>
         <div class="${prs.length ? 'gold' : ''}"><span>Records</span><b>🏆 <span data-c="prs">${prs.length}</span></b></div>
       </div>
+
+      ${aw ? `
+      <div class="card sum-xp">
+        <div class="row between center"><p class="label">XP earned</p><b>+<span data-c="xp">${aw.xp.total}</span></b></div>
+        <div class="aw-bar" role="progressbar" aria-label="Level progress"><i data-xpbar style="--p:${(aw.levelUp ? aw.after.progress : aw.after.progress).toFixed(3)}"></i></div>
+        <p class="small muted"><b class="lvl-name">Level ${aw.after.level} · ${esc(aw.after.name)}</b>${aw.after.next != null ? ` · ${(aw.after.next - aw.after.xp).toLocaleString()} XP to ${esc(aw.after.nextName)}` : ''}</p>
+        <p class="small">${aw.streak.current ? `🔥 ${aw.streak.current}-week streak` : '🔥 Streak starts when you hit your planned days this week'} · ${aw.streak.thisWeek.done} of ${aw.streak.thisWeek.goal} days this week</p>
+        ${aw.badges.length ? `<div class="sum-badges">${aw.badges.map((b) => `<span>🏅 ${esc(b.name)}</span>`).join('')}</div>` : ''}
+        <a class="small" href="#/awards">See all awards ›</a>
+      </div>` : ''}
 
       ${topMus.length ? `
       <div class="card">
@@ -94,8 +111,8 @@ export function renderSummary(el, id) {
           </li>`).join('')}
       </ul>
 
+      <button class="btn ghost" data-share>Share image</button>
       <a class="btn big" href="#/today">Done</a>
-      <p class="small muted tcenter">XP, levels, streaks and a shareable card arrive in v0.3.2.</p>
     </section>`;
 
   // Celebrate once per workout.
@@ -113,8 +130,53 @@ export function renderSummary(el, id) {
     const time = $('[data-c="time"]', el);
     if (time && !reducedMotion()) countUp(time, durationMs / 1000, { delay: 400, dur: 1000, format: (v) => (durationMs >= 3600000 ? fmtDuration(v * 1000) : fmtClock(v)) });
     el.querySelectorAll('.mus-bar i').forEach((i) => i.classList.add('grow-in'));
+    if (aw) {
+      countUp($('[data-c="xp"]', el), aw.xp.total, { delay: 700, dur: 900 });
+      const bar = $('[data-xpbar]', el);
+      if (bar && !reducedMotion()) {
+        // Fill from where you were; on a level-up fill to the end, burst, then start the new level.
+        bar.style.transition = 'none';
+        bar.style.setProperty('--p', aw.before.progress.toFixed(3));
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          bar.style.transition = '';
+          bar.style.setProperty('--p', aw.levelUp ? '1' : aw.after.progress.toFixed(3));
+        }));
+        if (aw.levelUp) {
+          setTimeout(() => {
+            levelUp(aw.after).then(() => {
+              bar.style.transition = 'none';
+              bar.style.setProperty('--p', '0');
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                bar.style.transition = '';
+                bar.style.setProperty('--p', aw.after.progress.toFixed(3));
+              }));
+            });
+          }, 1300);
+        }
+      } else if (aw.levelUp) levelUp(aw.after);
+    }
   } else {
     el.querySelectorAll('.mus-bar i').forEach((i) => i.classList.add('grown'));
   }
+
+  // Share image: drawn ahead of time so the tap can open the share sheet straight away (iPhone needs the
+  // share call to come directly from the tap).
+  let blob = null;
+  const card = {
+    number, date: new Date(w.started_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }), label: w.label || '',
+    time: fmtDuration(durationMs), sets: st.sets, volume: st.volume.toLocaleString(), unit: u,
+    prs: prs.map((p) => p.label || ''), muscles: Object.fromEntries(Object.entries(mus).map(([m, v]) => [m, 0.25 + 0.75 * (v / maxMus)])),
+    level: aw ? aw.after : { level: 1, name: 'Spark' }, streak: aw ? aw.streak.current : 0, xp: aw ? aw.xp.total : 0,
+  };
+  setTimeout(() => renderShareCard(card).then((b) => (blob = b)).catch(() => {}), 1200);
+  $('[data-share]', el).onclick = async () => {
+    try {
+      const b = blob || (await renderShareCard(card));
+      const how = await shareImage(b, `forge-workout-${number}.png`);
+      if (how === 'downloaded') toast('Image saved');
+    } catch (e) {
+      if (e && e.name !== 'AbortError') toast('Couldn’t share the image');
+    }
+  };
 }
 

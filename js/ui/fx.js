@@ -267,3 +267,25 @@ export function prExplosion(pr, { origin } = {}) {
     setTimeout(close, 2200);
   }));
 }
+
+/** Level-up: a gold card with the new level and name, a burst and the PR chime. Queued after PR cards. */
+export function levelUp({ level, name }) {
+  return enqueue(() => new Promise((resolve) => {
+    sfx.pr();
+    const layer = document.createElement('div');
+    layer.className = 'lvl-up';
+    layer.setAttribute('role', 'status');
+    layer.innerHTML = `<div class="lvl-card"><small>LEVEL UP</small><b>${esc(String(level))}</b><span>${esc(name)}</span></div>`;
+    document.body.appendChild(layer);
+    const card = layer.firstChild;
+    if (!reducedMotion()) {
+      card.animate([{ transform: 'scale(1.5)', opacity: 0 }, { transform: 'scale(.97)', opacity: 1, offset: 0.6 }, { transform: 'scale(1)', opacity: 1 }], { duration: 360, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      aura(innerWidth / 2, innerHeight / 2, { gold: true, size: 360, scale: 2.2, dur: 700 });
+      burst(innerWidth / 2, innerHeight / 2, { count: 80, colors: [COLORS.gold, COLORS.volt, COLORS.white], speed: 10, life: 60 });
+    }
+    setTimeout(() => {
+      card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' });
+      setTimeout(() => { layer.remove(); resolve(); }, 260);
+    }, 1800);
+  }));
+}
