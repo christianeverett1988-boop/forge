@@ -58,7 +58,7 @@ export function currentRecovery(now = Date.now()) {
 }
 
 /** Plan for today (not saved). dayType overrides the program's choice. */
-export function planToday({ dayType, locationId } = {}) {
+export function planToday({ dayType, locationId, forced, avoidIds } = {}) {
   const location = locationId ? state.locations.find((l) => l.id === locationId) : activeLocation();
   const program = activeProgram();
   if (!location || !state.profile) return null;
@@ -82,6 +82,8 @@ export function planToday({ dayType, locationId } = {}) {
       doneCount: inProgram.length,
       lastDayType: h.done[0] ? h.done[0].day_type : null,
       settings: state.settings || {},
+      forced: forced || {},
+      avoidIds: avoidIds || [],
     }),
   };
 }
@@ -94,6 +96,7 @@ export function startWorkout(plan) {
     exercise_id: it.exercise_id,
     role: it.role,
     superset: it.superset,
+    ...(it.rest_sec ? { rest_sec: it.rest_sec } : {}),
     note: it.target.note || '',
     warning: it.warning || null,
     next_step_id: it.target.nextStepId || null,

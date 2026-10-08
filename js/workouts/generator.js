@@ -111,6 +111,7 @@ export function pickExercise(slot, all, ctx) {
         if (slot.role === 'accessory' && since <= 3) s -= 15; // rotate accessories
       }
       if (ctx.favorites.has(e.id)) s += 15;
+      if (ctx.avoidSoft && ctx.avoidSoft.has(e.id)) s -= 80; // Switch: anything else first
       s -= Math.max(0, (e.level || 1) - ctx.userLevel) * 6; // harder than your level costs points; easier doesn't
       if (s > bestScore || (s === bestScore && e.id < best.id)) {
         bestScore = s;
@@ -141,6 +142,9 @@ export function generateWorkout(opts) {
     programKey = 'smart', program = null, location, profile, unit = 'lb', exercises,
     historyFor = () => [], daysSince = () => null, recovery = {}, doneCount = 0, lastDayType = null,
     settings = {}, now = Date.now(),
+    // Preview edits (Train): forced = { pickedId: replacementId } (⋯ → Replace);
+    // avoidIds = exercises to steer away from when there's another option (Switch).
+    forced = {}, avoidIds = [],
   } = opts;
   const experience = profile.experience || 'beginner';
   const notes = [];
@@ -204,13 +208,16 @@ export function generateWorkout(opts) {
     maxLevel: experience === 'advanced' ? 3 : 2, userLevel: LEVEL[experience] || 1,
     prefer: day.prefer || null,
     excluded: new Set(settings.excluded || []), favorites: new Set(settings.favorites || []),
+    avoidSoft: new Set(avoidIds),
   };
 
   const volume = prog.volume || 1;
   const items = [];
   let injuryDropped = false;
   for (const slot of day.slots) {
-    const ex = pickExercise(slot, exercises, ctx);
+    let ex = pickExercise(slot, exercises, ctx);
+    const swapTo = ex && forced[ex.id] ? exercises.find((e) => e.id === forced[ex.id]) : null;
+    if (swapTo && !ctx.used.has(swapTo.id) && canDo(swapTo, available)) ex = swapTo;
     if (!ex) {
       // Say why a slot is empty when it's your injury note (not missing equipment) that ruled it out.
       if (avoid.size) {

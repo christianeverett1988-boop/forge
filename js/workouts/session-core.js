@@ -91,7 +91,8 @@ export function restAfter(queue, exercises, k, ex, { deload = false } = {}) {
   if (s.warmup) {
     sec = REST.warmup;
     label = 'Warm-up rest';
-  } else if (ex && ex.timed) sec = REST.timed;
+  } else if (it.rest_sec) return { sec: it.rest_sec, label: it.superset ? 'Rest (superset)' : 'Rest' }; // set in the preview's ⋯ menu
+  else if (ex && ex.timed) sec = REST.timed;
   else if (it.superset) {
     sec = REST.accessory;
     label = 'Rest (superset)';

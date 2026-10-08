@@ -145,7 +145,7 @@ const mtx = (m) => `matrix(${m.map((x) => (Math.round(x * 1000) / 1000).toString
 /**
  * Mount an animated figure for an exercise into `container`. Returns { stop } or null if the exercise
  * has no template. Options: isPaused() → true holds the frame and lets the loop sleep; slow → tempo days;
- * at → draw one still frame that many seconds into the rep.
+ * at → draw one still frame that many seconds into the rep ('hard': the hardest point, for thumbnails).
  * Stops by itself when the container leaves the page.
  */
 export function mountFigure(container, ex, { isPaused = () => false, slow = false, at: still = null } = {}) {
@@ -551,6 +551,10 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     for (const g of glows) g.node.setAttribute('opacity', (g.weight * kk).toFixed(2));
   }
 
+  if (still === 'hard') {
+    draw(0, tpl.b); // thumbnail: the hardest point, muscles lit
+    return { stop() {} };
+  }
   if (still != null) {
     draw(still); // a still frame `at` seconds into the rep (frame sheets)
     return { stop() {} };

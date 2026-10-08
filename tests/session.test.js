@@ -199,3 +199,14 @@ test('history: exercise records — est. 1RM, heaviest, most reps; holds for tim
   eq(h.hold.value, 60);
   eq(exerciseRecords([], {}).e1rm, null);
 });
+
+test('rest: a rest timer set in the preview wins for working sets, not warm-ups', () => {
+  const e = exs();
+  e[0].rest_sec = 240;
+  const q = buildQueue(e);
+  eq(restAfter(q, e, 0, {}).sec, REST.warmup, 'warm-up keeps its short rest');
+  eq(restAfter(q, e, 1, {}, { deload: true }).sec, 240, 'your choice, even on a deload');
+  e[3].rest_sec = 60; // superset member: no rest mid-round still holds
+  const q2 = buildQueue(e);
+  eq(restAfter(q2, e, 4, {}), null);
+});
