@@ -3,7 +3,7 @@
 // Reduced motion: no animation at all (the CSS only animates under no-preference; scrolling is instant).
 import { state } from '../state.js';
 import { toast } from '../ui.js';
-import { TOUR_STEPS, createTour, shouldStartTour, tourSeenFields } from './steps.js';
+import { TOUR_STEPS, createTour, scrollToClear, shouldStartTour, tourSeenFields } from './steps.js';
 
 let active = null;
 
@@ -73,6 +73,11 @@ export async function startTour({ replay = false } = {}) {
     if (replay && location.hash !== origin) location.hash = origin;
   });
 
+  const probe = document.createElement('div'); // reads --safe-top (an env() value) as pixels
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-top:var(--safe-top)';
+  root.appendChild(probe);
+  const safeTop = () => 12 + (parseFloat(getComputedStyle(probe).paddingTop) || 0);
+
   let raf = 0;
   const place = () => {
     raf = 0;
@@ -81,6 +86,7 @@ export async function startTour({ replay = false } = {}) {
     const step = tour.step;
     const el = step.target ? document.querySelector(step.target) : null;
     card.style.bottom = '';
+    spot.classList.toggle('empty', !el); // no outline without a target: a 0×0 box would paint as a dot
     if (!el) {
       // No target (welcome step, or the element isn't on screen): dim everything, just show the card.
       Object.assign(spot.style, { left: '50%', top: '38%', width: '0px', height: '0px' });
@@ -90,12 +96,10 @@ export async function startTour({ replay = false } = {}) {
     const fixed = !!el.closest('.tabbar');
     let r = el.getBoundingClientRect();
     if (!fixed) {
-      // Keep the element above the card: scroll it into view, instantly.
-      const room = innerHeight - card.offsetHeight - 28;
-      let dy = r.bottom + pad - room;
-      if (r.top - dy < 12) dy = r.top - 12;
-      if (r.top < 12 || dy > 0) {
-        scrollBy({ top: Math.max(dy, r.top < 12 ? r.top - 12 : 0), behavior: 'instant' });
+      // Keep the element above the card (measured, so the home indicator inset counts): scroll it, instantly.
+      const dy = scrollToClear(r, card.getBoundingClientRect().top, { pad, minTop: safeTop() });
+      if (dy) {
+        scrollBy({ top: dy, behavior: 'instant' });
         r = el.getBoundingClientRect();
       }
     } else {
@@ -159,5 +163,10 @@ export async function startTour({ replay = false } = {}) {
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('keydown', onKey, true);
   if (main) observer.observe(main, { childList: true, subtree: true });
-  await show();
+  try {
+    await show();
+  } catch (e) {
+    close(); // never leave Today inert behind a failed step
+    throw e;
+  }
 }

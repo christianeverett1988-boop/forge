@@ -273,7 +273,10 @@ const csvRows = () => { try { const v = localStorage.getItem(CSV_KEY); return v 
 
 let csvAcc = null; // csvAccounted() over every weights doc, deleted ones included
 let csvAccFor = ''; // what it was computed from, so the check isn't re-read on every render
+let csvAccUid = null;
 function refreshCsvAccounted(el) {
+  const uid = state.user ? state.user.uid : null;
+  if (uid !== csvAccUid) { csvAccUid = uid; csvAcc = null; csvAccFor = ''; } // another account: start over
   const sig = state.weights.length + ':' + state.weights.filter((x) => x.source === 'withings_csv').length;
   if (sig === csvAccFor) return;
   csvAccFor = sig;

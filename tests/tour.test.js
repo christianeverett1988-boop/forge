@@ -1,7 +1,7 @@
 // The first-run how-to tour: who gets it, once, and Next / Back / Skip / replay. (The overlay itself is DOM
 // and is checked by hand; these are the rules it follows.)
 import { test, eq, assert } from './harness.js';
-import { TOUR_STEPS, createTour, tourFieldsForSave, tourSeenFields, tourPending, shouldStartTour } from '../js/tour/steps.js';
+import { TOUR_STEPS, createTour, scrollToClear, tourFieldsForSave, tourSeenFields, tourPending, shouldStartTour } from '../js/tour/steps.js';
 
 // A tiny model of one account's profile doc and the app around it.
 function account(profile) {
@@ -99,4 +99,14 @@ test('tour: Settings → "Show the how-to tour again" replays it for any account
   eq(old.open(), null);
   const again = createTour(TOUR_STEPS);
   eq(again.count, TOUR_STEPS.length);
+});
+
+test('tour: a low target is scrolled to sit 12px above the card (home indicator counted), never past the top', () => {
+  // 390×844 phone, 34px inset: the card (180px tall) starts at 844 - 34 - 12 - 180 = 618.
+  const cardTop = 618;
+  const dy = scrollToClear({ top: 600, bottom: 656 }, cardTop);
+  eq(656 + 8 - dy, cardTop - 12, 'bottom + pad ends 12px above the card');
+  eq(scrollToClear({ top: 300, bottom: 356 }, cardTop), 0, 'already clear: no scroll');
+  eq(scrollToClear({ top: 5, bottom: 60 }, cardTop, { minTop: 59 }), -54, 'too high: scroll up to the safe top');
+  eq(scrollToClear({ top: 100, bottom: 900 }, cardTop), 88, 'taller than the room: keep its top in view');
 });

@@ -38,7 +38,7 @@ export const TOUR_STEPS = [
   {
     id: 'start', route: 'train', target: '.card.preview [data-start]',
     title: 'Start, then one set at a time',
-    body: 'Tap Start workout and you’ll see one exercise at a time. Tap Done set after each set. Pause when you need a break, Swap if a move doesn’t suit you, and How to shows a demo. “RIR” means reps in reserve: how many more reps you could have done.',
+    body: 'When you tap Start workout you’ll see one exercise at a time. Tap Done set after each set. Pause when you need a break, Swap if a move doesn’t suit you, and How to shows a demo. “RIR” means reps in reserve: how many more reps you could have done.',
   },
   {
     id: 'progress', route: 'weight', target: '.tabbar a[href="#/weight"]',
@@ -63,6 +63,15 @@ export const tourPending = (profile) => !!profile && profile.tour === 'pending';
 
 /** Should the app start the tour now? Once only: not while it's already showing, not once it's been seen. */
 export const shouldStartTour = (profile, active) => !active && tourPending(profile);
+
+/**
+ * How far to scroll (positive = down) so a target sits clear of the tour card: its bottom (plus pad) at least
+ * gap px above cardTop, and its top not above minTop. 0 when it already fits.
+ */
+export function scrollToClear(rect, cardTop, { pad = 8, gap = 12, minTop = 12 } = {}) {
+  const down = Math.max(0, rect.bottom + pad - (cardTop - gap));
+  return Math.min(down, rect.top - minTop); // never scroll its top above minTop; negative = scroll up to it
+}
 
 /**
  * Step through `steps`. onEnd(how) is called once, with 'finished' (Next on the last step) or 'skipped'.

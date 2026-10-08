@@ -36,9 +36,10 @@ export function dedupeDue(st = state) {
 export async function dedupeCsv() {
   if (running || !dedupeDue()) return 0;
   running = true;
+  let dup = [];
   try {
     const db = await import('../db.js');
-    const dup = planCsvDedupe(await db.readAll('weights')).filter((w) => !sent.has(w.id));
+    dup = planCsvDedupe(await db.readAll('weights')).filter((w) => !sent.has(w.id));
     if (!dup.length) return 0;
     dup.forEach((w) => sent.add(w.id));
     await db.supersedeWeights(dup.map((w) => w.id));
@@ -47,6 +48,8 @@ export async function dedupeCsv() {
     return dup.length;
   } catch (e) {
     console.error(e);
+    dup.forEach((w) => sent.delete(w.id)); // the write failed: let the next pass try again
+    lastSig = '';
     return 0;
   } finally {
     running = false;
