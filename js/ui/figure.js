@@ -111,6 +111,7 @@ export function mountFigure(container, ex, { isPaused = () => false } = {}) {
   const delt = el('circle', { r: 8, fill: 'transparent' }, svg);
   const hand = el('circle', { r: 5, fill: NEAR }, svg);
   const props = el('g', {}, svg);
+  props.innerHTML = PROP_SVG[tpl.prop] || ''; // built once; only its transform changes per frame
   container.innerHTML = '';
   container.appendChild(svg);
 
@@ -142,14 +143,12 @@ export function mountFigure(container, ex, { isPaused = () => false } = {}) {
     delt.setAttribute('fill', glow(lit.delt, k));
     hand.setAttribute('cx', j.hand[0]);
     hand.setAttribute('cy', j.hand[1]);
-    props.innerHTML = propSVG(tpl.prop, j);
+    const at = propAnchor(tpl.prop, j);
+    if (at) props.setAttribute('transform', `translate(${at[0].toFixed(1)},${at[1].toFixed(1)})`);
   }
 
   // One rep loop through the template's phases.
   const total = tpl.phases.reduce((s, ph) => s + ph[1], 0);
-  let paused = false;
-  let pausedAt = 0;
-  let offset = 0;
   const start = performance.now();
   function poseAt(ms) {
     let t = ((ms % total) + total) % total;
@@ -174,19 +173,13 @@ export function mountFigure(container, ex, { isPaused = () => false } = {}) {
     return { stop() {}, setPaused() {} };
   }
 
+  // Paused or resting: hold the current frame and let the loop sleep. Every way out of a pause or a rest
+  // re-renders the screen, which mounts a fresh figure.
   let stopped = false;
+  draw(tpl.a, 0);
   onFrame((now) => {
-    if (stopped || !svg.isConnected) return false;
-    const wantPause = isPaused();
-    if (wantPause && !paused) {
-      paused = true;
-      pausedAt = now;
-    } else if (!wantPause && paused) {
-      paused = false;
-      offset += now - pausedAt;
-    }
-    if (paused) return true;
-    const p = poseAt(now - start - offset);
+    if (stopped || !svg.isConnected || isPaused()) return false;
+    const p = poseAt(now - start);
     draw(blend(tpl.a, tpl.b, p), p);
     return true;
   });
@@ -195,19 +188,15 @@ export function mountFigure(container, ex, { isPaused = () => false } = {}) {
   };
 }
 
-function propSVG(prop, j) {
-  if (prop === 'barbell') {
-    const [x, y] = j.shoulder;
-    return `<line x1="${x - 36}" y1="${y + 3}" x2="${x + 36}" y2="${y + 3}" stroke="#9aa4b0" stroke-width="4" stroke-linecap="round"/>
-      <rect x="${x - 46}" y="${y - 15}" width="9" height="36" rx="3" fill="#6b7480"/><rect x="${x + 37}" y="${y - 15}" width="9" height="36" rx="3" fill="#6b7480"/>`;
-  }
-  if (prop === 'dumbbell') {
-    const [x, y] = j.hand;
-    return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><rect x="-13" y="-3" width="26" height="6" rx="3" fill="#9aa4b0"/><rect x="-17" y="-8" width="8" height="16" rx="3" fill="#6b7480"/><rect x="9" y="-8" width="8" height="16" rx="3" fill="#6b7480"/></g>`;
-  }
-  if (prop === 'bar') {
-    const y = j.hand[1] - 3;
-    return `<line x1="14" y1="${y}" x2="186" y2="${y}" stroke="#9aa4b0" stroke-width="5" stroke-linecap="round"/>`;
-  }
-  return '';
+// Props are drawn once around (0,0) and moved with a transform each frame.
+const PROP_SVG = {
+  barbell: '<line x1="-36" y1="3" x2="36" y2="3" stroke="#9aa4b0" stroke-width="4" stroke-linecap="round"/><rect x="-46" y="-15" width="9" height="36" rx="3" fill="#6b7480"/><rect x="37" y="-15" width="9" height="36" rx="3" fill="#6b7480"/>',
+  dumbbell: '<rect x="-13" y="-3" width="26" height="6" rx="3" fill="#9aa4b0"/><rect x="-17" y="-8" width="8" height="16" rx="3" fill="#6b7480"/><rect x="9" y="-8" width="8" height="16" rx="3" fill="#6b7480"/>',
+  bar: '<line x1="14" y1="0" x2="186" y2="0" stroke="#9aa4b0" stroke-width="5" stroke-linecap="round"/>',
+};
+function propAnchor(prop, j) {
+  if (prop === 'barbell') return j.shoulder;
+  if (prop === 'dumbbell') return j.hand;
+  if (prop === 'bar') return [0, j.hand[1] - 3];
+  return null;
 }

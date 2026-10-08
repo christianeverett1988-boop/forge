@@ -178,3 +178,4 @@ body.playing .topbar { display: none; }
   .mus-bar i.grow-in { animation: none; width: var(--w); }
   .pr-trophy { animation: none; }
 }
+.ov-complete .ov-big { font-size: clamp(34px, 9vw, 44px); line-height: 1.1; }

@@ -18,6 +18,33 @@ function overlay(cls, html) {
   return el;
 }
 
+/**
+ * After the very last set: a chance to take it back before the workout is saved.
+ * onUndo() puts that set back; Finish saves and opens the summary.
+ */
+export function openComplete(onUndo) {
+  const w = live.w;
+  if (!w) return;
+  const u = unit();
+  const st = sessionStats(w.exercises, (kg) => toUnit(kg, u));
+  const el = overlay('ov-complete', `
+    <div class="ov-card">
+      <p class="label">All sets done</p>
+      <b class="ov-big">Workout complete</b>
+      <p class="muted small">${st.sets} set${st.sets === 1 ? '' : 's'} · ${fmtClock(elapsed() / 1000)}</p>
+      <button class="btn big" data-finish>Finish</button>
+      <button class="btn ghost" data-undo>Undo last set</button>
+    </div>`);
+  $('[data-finish]', el).onclick = () => {
+    el.remove();
+    saveAndSummarize();
+  };
+  $('[data-undo]', el).onclick = () => {
+    el.remove();
+    onUndo();
+  };
+}
+
 export const closeOverlays = () => document.querySelectorAll('.ov').forEach((o) => o.remove());
 
 /** Pause the workout and show the Paused overlay. rerender() is called after Resume. */

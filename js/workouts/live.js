@@ -5,9 +5,10 @@ import { state } from '../state.js';
 import { patch, softDelete } from '../db.js';
 import { historyIndex, unit } from './plan.js';
 import { exerciseById } from './library.js';
-import { toUnit, detectPRs } from './progression.js';
+
 import { elapsedMs, isPaused, pauseFields, resumeFields, awayGapMs, removeAwayFields } from './clock.js';
-import { buildQueue, restAfter, validateSet, exerciseComplete, setLabel } from './session-core.js';
+import { buildQueue, restAfter, validateSet, exerciseComplete, setLabel, exercisePRs, replacePRs } from './session-core.js';
+import { toUnit } from './progression.js';
 import { startRest, stopRest, pauseRest, resumeRest } from '../timer.js';
 
 export const live = { w: null };
@@ -23,9 +24,16 @@ function markSeen() {
 function lastSeen(id) {
   try { return Number(localStorage.getItem(SEEN_KEY(id))) || null; } catch { return null; }
 }
-// Remember when the app was last on screen with a workout open (kill-safe: written as it hides).
+// As the app hides (or is swiped away): save any pending set right now and remember when we were last seen.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') markSeen();
+  if (document.visibilityState === 'hidden') {
+    flush();
+    markSeen();
+  }
+});
+window.addEventListener('pagehide', () => {
+  flush();
+  markSeen();
 });
 setInterval(() => { if (document.visibilityState === 'visible') markSeen(); }, 15000);
 
@@ -48,7 +56,10 @@ export function save(now = false) {
   if (!live.w) return;
   clearTimeout(saveTimer);
   const w = live.w;
-  const go = () => patch('workouts', w.id, { exercises: w.exercises, prs: w.prs || [], notes: w.notes || [], paused_at: w.paused_at || null, paused_ms: w.paused_ms || 0 });
+  const go = () => {
+    saveTimer = null;
+    patch('workouts', w.id, { exercises: w.exercises, prs: w.prs || [], notes: w.notes || [], paused_at: w.paused_at || null, paused_ms: w.paused_ms || 0 });
+  };
   if (now) go();
   else saveTimer = setTimeout(go, 400);
 }
@@ -110,15 +121,10 @@ export function completeSet(i, j, { reps, weightKg, rir } = {}, { startRestTimer
   // PRs (working sets only), with the old best for "185 → 192".
   const fresh = [];
   if (!s.warmup && ex.id) {
-    const u = unit();
-    const sessionSets = it.sets.filter((x) => x.done && !x.warmup).map((x) => ({ weight: x.weight_kg == null ? null : round1(toUnit(x.weight_kg, u)), reps: x.reps }));
-    const prs = detectPRs(ex, sessionSets, historyIndex().historyFor(ex.id));
     w.prs = w.prs || [];
-    for (const p of prs) {
-      if (w.prs.some((q) => q.exercise_id === ex.id && q.type === p.type && q.value >= p.value)) continue;
-      w.prs = w.prs.filter((q) => !(q.exercise_id === ex.id && q.type === p.type));
-      const withUnit = p.type === 'e1rm' || p.type === 'weight' ? ` ${u}` : '';
-      const rec = { exercise_id: ex.id, type: p.type, value: p.value, prev: p.prev ?? null, unit: withUnit.trim() || null, label: `${ex.name}: ${p.label}${withUnit}` };
+    for (const rec of exercisePRs(ex, it, historyIndex().historyFor(ex.id), unit())) {
+      if (w.prs.some((q) => q.exercise_id === ex.id && q.type === rec.type && q.value >= rec.value)) continue;
+      w.prs = w.prs.filter((q) => !(q.exercise_id === ex.id && q.type === rec.type));
       w.prs.push(rec);
       fresh.push(rec);
     }
@@ -166,9 +172,14 @@ export function describeStep(i, j) {
 }
 
 export function undoSet(i, j) {
-  const s = live.w.exercises[i].sets[j];
+  const w = live.w;
+  const it = w.exercises[i];
+  const s = it.sets[j];
   s.done = false;
   s.completed_at = null;
+  // Recompute this exercise's records from the sets still done, so an undone PR set leaves no PR behind.
+  const ex = exerciseById(it.exercise_id);
+  if (ex) w.prs = replacePRs(w.prs, ex.id, exercisePRs(ex, it, historyIndex().historyFor(ex.id), unit()));
   stopRest();
   save();
 }
@@ -180,16 +191,22 @@ export function finishWorkout() {
   stopRest();
   clearTimeout(saveTimer);
   const duration_ms = elapsedMs(w);
-  patch('workouts', w.id, {
+  const fields = {
     exercises: w.exercises, prs: w.prs || [], status: 'done', finished_at: new Date().toISOString(),
     paused_at: null, paused_ms: w.paused_ms || 0, duration_ms,
-  });
+  };
+  patch('workouts', w.id, fields);
   closedIds.add(w.id);
   try { localStorage.removeItem(SEEN_KEY(w.id)); } catch { /* ignore */ }
-  const id = w.id;
+  // Keep the finished copy so the summary can render it before the database snapshot catches up.
+  lastFinished = { ...w, status: 'done', finished_at: fields.finished_at, paused_at: null, duration_ms };
   live.w = null;
-  return id;
+  return w.id;
 }
+
+let lastFinished = null;
+/** The workout as finishWorkout() saved it, if `id` matches (for the summary screen). */
+export const finishedCopy = (id) => (lastFinished && lastFinished.id === id ? lastFinished : null);
 
 export function discardWorkout() {
   const w = live.w;

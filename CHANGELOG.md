@@ -42,9 +42,16 @@
 | Audio Session `ambient` (mix with music, obey silent switch) | Safari 16.4+ | Default web-audio behaviour. |
 | Speech synthesis (voice coach) | All iOS | No spoken cues; the beeps still play. |
 
+**Review fixes (before merge)**
+1. **Undo takes the PR back.** Undoing a set recomputes that exercise's records from the sets still done, so an undone PR set leaves no PR behind (tested).
+2. **Sets save as the app hides.** A pending save is written immediately when the app goes to the background or is swiped away, instead of waiting out the 400 ms debounce.
+3. **The last set no longer auto-finishes.** A "Workout complete" card offers **Finish** or **Undo last set**.
+4. **Summary shows the right numbers straight away.** It renders the finished workout (status done, real duration, correct Workout #N) even before the database snapshot catches up, so the one-time celebration never counts up wrong numbers.
+5. **The animation loop sleeps on the player.** Demos stop drawing while paused or resting, the rest ring runs one task per screen (no more copies stacking up), and demo props are built once instead of every frame.
+
 **CI:** GitHub Actions runs the unit tests and the rules tests on every push and pull request.
 
-**Tests:** 97 unit tests (up from 80): pause-aware clock, away gap, set queue with supersets, rest rules, set labels, validation, session stats, vs-last-time, the tempo escape (30 → 40 escapes; 5 → 30 never does), demo muscle mapping. Rules tests cover the typed pause fields.
+**Tests:** 99 unit tests (up from 80): pause-aware clock, away gap, set queue with supersets, rest rules, set labels, validation, session stats, vs-last-time, the tempo escape (30 → 40 escapes; 5 → 30 never does), demo muscle mapping, undo removing a PR. Rules tests cover the typed pause fields.
 
 **Size:** about 37 KB (gzipped) of new JS + CSS; no new libraries, no new origins in the CSP.
 

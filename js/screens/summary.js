@@ -13,6 +13,7 @@ import { countUp, reducedMotion } from '../ui/motion.js';
 import { confetti } from '../ui/fx.js';
 import { sfx, coach } from '../ui/sound.js';
 import { fmtClock } from '../timer.js';
+import { finishedCopy } from '../workouts/live.js';
 
 const fmtDuration = (ms) => {
   const m = Math.round(ms / 60000);
@@ -20,16 +21,18 @@ const fmtDuration = (ms) => {
 };
 
 export function renderSummary(el, id) {
-  const w = state.workouts.find((x) => x.id === id);
+  // Use the saved copy only once it says done; until the local snapshot lands, use what finishWorkout() saved.
+  const stored = state.workouts.find((x) => x.id === id);
+  const w = stored && stored.status === 'done' ? stored : finishedCopy(id);
   if (!w) {
     el.innerHTML = '<section class="summary"><div class="skeleton h1"></div><div class="skeleton row3"></div><div class="skeleton block"></div></section>';
     return;
   }
   const u = unit();
-  const done = state.workouts.filter((x) => x.status === 'done' && !x.deleted).sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
-  const number = done.findIndex((x) => x.id === w.id) + 1 || done.length;
+  const done = [...state.workouts.filter((x) => x.status === 'done' && !x.deleted && x.id !== w.id), w].sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
+  const number = done.findIndex((x) => x.id === w.id) + 1;
   const st = sessionStats(w.exercises || [], (kg) => toUnit(kg, u));
-  const durationMs = w.duration_ms ?? (Date.parse(w.finished_at || w.started_at) - Date.parse(w.started_at) - (w.paused_ms || 0));
+  const durationMs = Math.max(0, w.duration_ms ?? (Date.parse(w.finished_at || w.started_at) - Date.parse(w.started_at) - (w.paused_ms || 0)));
   const prs = w.prs || [];
 
   // History before this workout, for "vs last time".

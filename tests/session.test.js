@@ -1,6 +1,6 @@
 import { test, eq, assert } from './harness.js';
 import { elapsedMs, pauseFields, resumeFields, awayGapMs, removeAwayFields, isPaused, AWAY_THRESHOLD_MS } from '../js/workouts/clock.js';
-import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet, exerciseComplete, sessionStats, versusLast, REST } from '../js/workouts/session-core.js';
+import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet, exerciseComplete, sessionStats, versusLast, REST, exercisePRs, replacePRs } from '../js/workouts/session-core.js';
 import { litSegments, hasFigure } from '../js/ui/figure.js';
 import { coverage } from '../js/ui/poses.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
@@ -150,4 +150,35 @@ test('figure: the three v0.3.0 samples are mapped and reported', () => {
   const c = coverage(EXERCISES);
   eq(c.mapped.length, 3);
   eq(c.total, EXERCISES.length);
+});
+
+// ---------- PRs survive only while their set is done (undo recomputes) ----------
+test('PRs: undoing the PR set removes the PR; other exercises keep theirs', () => {
+  const ex = EXERCISES.find((e) => e.id === 'db_curl');
+  const history = [{ sets: [{ weight: 20, reps: 10 }] }];
+  const item = { exercise_id: 'db_curl', sets: [
+    { done: true, weight_kg: 20, reps: 12 },
+    { done: true, weight_kg: 20, reps: 9 },
+  ] };
+  const recs = exercisePRs(ex, item, history, 'kg');
+  const rep = recs.find((r) => r.type === 'reps');
+  assert(rep && rep.value === 12 && rep.prev === 10 && rep.weight === 20, 'rep PR with old best and weight');
+  let prs = replacePRs([{ exercise_id: 'pullup', type: 'reps', value: 9 }], ex.id, recs);
+  // Undo the 12-rep set.
+  item.sets[0].done = false;
+  prs = replacePRs(prs, ex.id, exercisePRs(ex, item, history, 'kg'));
+  eq(prs.filter((p) => p.exercise_id === 'db_curl').length, 0);
+  eq(prs.filter((p) => p.exercise_id === 'pullup').length, 1);
+});
+
+test('PRs: undo keeps a PR that another done set still earns', () => {
+  const ex = EXERCISES.find((e) => e.id === 'db_curl');
+  const history = [{ sets: [{ weight: 20, reps: 10 }] }];
+  const item = { exercise_id: 'db_curl', sets: [
+    { done: true, weight_kg: 20, reps: 12 },
+    { done: true, weight_kg: 20, reps: 11 },
+  ] };
+  item.sets[0].done = false;
+  const recs = exercisePRs(ex, item, history, 'kg');
+  eq(recs.find((r) => r.type === 'reps').value, 11);
 });

@@ -15,7 +15,7 @@ import { powerUp, prExplosion, enqueue } from '../ui/fx.js';
 import { onFrame, reducedMotion, viewTransition } from '../ui/motion.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
 import { hapticInput, onHapticTap } from '../ui/haptic.js';
-import { openPaused, openAway, saveAndSummarize, closeOverlays } from './overlays.js';
+import { openPaused, openAway, openComplete, saveAndSummarize, closeOverlays } from './overlays.js';
 import { openHowTo } from './session.js';
 import { COMBOS } from './timer.js';
 
@@ -363,7 +363,15 @@ function doneSet(el, ex, i, j, repsOverride) {
   setTimeout(() => {
     if (!live.w || location.hash !== '#/play') return;
     if (res.lastSetOfWorkout) {
-      enqueue(() => new Promise((r) => setTimeout(r, 200))).then(() => finishFlow());
+      // Let any PR card finish, then confirm: Finish, or take the last set back.
+      enqueue(() => new Promise((r) => setTimeout(r, 200))).then(() => {
+        if (!live.w || location.hash !== '#/play') return;
+        openComplete(() => {
+          undoSet(i, j);
+          draft = null;
+          drawSet(el);
+        });
+      });
       return;
     }
     const q = buildQueue(live.w.exercises);
@@ -495,14 +503,17 @@ function drawRest(el) {
   clearInterval(clockTimer);
   const clock = $('[data-clock]', el);
   clockTimer = setInterval(() => { if (clock.isConnected) clock.textContent = fmtClock(elapsed() / 1000); }, 1000);
-  // Smooth ring
-  onFrame(() => {
-    const info = restInfo();
-    const fg = $('[data-restfg]', el);
-    if (!info || !fg) return false;
-    fg.style.strokeDashoffset = String(283 * (1 - info.left / info.total));
-    return true;
-  });
+  // Smooth ring: one task per ring element. It ends when the ring leaves the page, the rest ends, or the
+  // workout pauses (Resume re-renders, which starts a fresh one).
+  const fg = $('[data-restfg]', el);
+  if (fg) {
+    onFrame(() => {
+      const info = restInfo();
+      if (!info || !fg.isConnected) return false;
+      fg.style.strokeDashoffset = String(283 * (1 - info.left / info.total));
+      return !info.paused && !paused();
+    });
+  }
 }
 
 function paintRest(el) {

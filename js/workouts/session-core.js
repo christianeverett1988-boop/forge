@@ -1,6 +1,8 @@
 // Pure workout-session logic shared by the guided player and the list view:
 // the order sets are done in (supersets alternate), what to rest after a set, and set validation.
 
+import { detectPRs, toUnit } from './progression.js';
+
 export const REST = { main: 150, secondary: 120, accessory: 75, warmup: 45, timed: 60 };
 
 const working = (sets) => sets.map((s, j) => [s, j]).filter(([s]) => !s.warmup);
@@ -148,3 +150,23 @@ export function versusLast(ex, now, prev, unit = 'lb') {
   const d = repsAt(now, tn) - repsAt(prev, tp);
   return { text: d === 0 ? 'Same as last time' : `${d > 0 ? '+' : ''}${d} rep${Math.abs(d) === 1 ? '' : 's'}`, tone: tone(d) };
 }
+
+/**
+ * Records for one exercise in this session, from its done working sets vs earlier history.
+ * Used when a set is completed and again when one is undone, so an undone set can't leave a PR behind.
+ */
+export function exercisePRs(ex, item, history, u) {
+  if (!ex || !ex.id) return [];
+  const sets = item.sets
+    .filter((x) => x.done && !x.warmup)
+    .map((x) => ({ weight: x.weight_kg == null ? null : Math.round(toUnit(x.weight_kg, u) * 10) / 10, reps: x.reps }));
+  return detectPRs(ex, sets, history).map((p) => {
+    const withUnit = p.type === 'e1rm' || p.type === 'weight' ? ` ${u}` : '';
+    const rec = { exercise_id: ex.id, type: p.type, value: p.value, prev: p.prev ?? null, unit: withUnit.trim() || null, label: `${ex.name}: ${p.label}${withUnit}` };
+    if (p.weight != null) rec.weight = p.weight;
+    return rec;
+  });
+}
+
+/** Replace one exercise's records in the workout's list with a recomputed set. */
+export const replacePRs = (prs, exerciseId, recs) => [...(prs || []).filter((q) => q.exercise_id !== exerciseId), ...recs];
