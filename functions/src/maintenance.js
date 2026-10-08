@@ -13,6 +13,7 @@ import { getAccessToken, NotConnected } from './tokens.js';
 import { incrementalSync, reconcile90 } from './sync.js';
 import { backfillTaskId, enqueueOnce } from './tasks.js';
 import { log } from './log.js';
+import { wipeApple } from './health.js';
 
 export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = () => Date.now() }) {
   const out = { uid, ok: true };
@@ -116,6 +117,7 @@ export async function disconnect({ db, api, uid, webhookUrl, deleteData = false,
     for (const col of [P.bodyCol(uid), P.healthCol(uid)]) deleted += await deleteAll(db, await db.collection(col).get());
     deleted += await deleteAll(db, await db.collection(P.weightCol(uid)).where('source', '==', 'withings').get());
     await db.doc(P.status(uid)).delete();
+    await wipeApple({ db, uid }); // the Shortcut token and the Apple Health status go too
   } else {
     await db.doc(P.status(uid)).set({ connected: false, disconnected_at: new Date(now()).toISOString(), subscription_ok: null }, { merge: true });
   }

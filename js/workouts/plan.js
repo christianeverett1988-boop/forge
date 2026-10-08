@@ -7,6 +7,7 @@ import { fatigueAt, recoveryPct } from './recovery.js';
 import { buildIndex } from './history.js';
 import { fromUnit, isStalled, topWeight } from './progression.js';
 import { allExercises, exerciseById } from './library.js';
+import { readinessForGenerator } from '../health/today.js';
 
 export const unit = () => (units() === 'metric' ? 'kg' : 'lb');
 
@@ -84,6 +85,7 @@ export function planToday({ dayType, locationId, forced, avoidIds } = {}) {
       settings: state.settings || {},
       forced: forced || {},
       avoidIds: avoidIds || [],
+      readiness: readinessForGenerator(),
     }),
   };
 }
@@ -112,7 +114,7 @@ export function startWorkout(plan) {
     template: plan.program ? plan.program.template : 'smart',
     day_type: plan.dayType,
     label: plan.label,
-    deload: !!plan.deload,
+    deload: !!plan.deload || !!plan.readinessDeload, // a Readiness-red light day is kept out of progression like a deload
     notes: plan.notes || [],
     status: 'active',
     started_at: new Date().toISOString(),

@@ -17,6 +17,13 @@ function withingsLine() {
   return `Connected${w.model ? ` · ${esc(w.model)}` : ''}`;
 }
 
+function appleLine() {
+  const a = (state.integrations && state.integrations.apple) || {};
+  const n = (state.health_daily || []).length;
+  if (a.connected) return n ? `Connected · ${n} days of data` : 'Connected · waiting for the first data';
+  return n ? `${n} days imported` : 'Not set up';
+}
+
 export function renderSettings(el) {
   const u = getUnits();
   const p = state.profile;
@@ -76,6 +83,11 @@ export function renderSettings(el) {
 
       <a class="card row between center nav-card" href="#/withings" data-withings-card>
         <div><p class="label">Withings</p><p>${withingsLine()}</p></div>
+        <span aria-hidden="true">›</span>
+      </a>
+
+      <a class="card row between center nav-card" href="#/apple" data-apple-card>
+        <div><p class="label">Apple Health</p><p>${appleLine()}</p></div>
         <span aria-hidden="true">›</span>
       </a>
 

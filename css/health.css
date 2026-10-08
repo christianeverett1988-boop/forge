@@ -1,0 +1,88 @@
+/* Apple Health, Readiness and Forge Score (v0.5.0). Big tap targets, safe areas, calm motion. */
+:root { --ready-green: #6ee7a8; --ready-amber: #ffc857; --ready-red: #ff5d6c; }
+
+/* ---------- Readiness card on Today ---------- */
+.ready-card { border-left: 5px solid var(--rc, var(--line)); gap: 10px; }
+.ready-card.green { --rc: var(--ready-green); }
+.ready-card.amber { --rc: var(--ready-amber); }
+.ready-card.red { --rc: var(--ready-red); }
+.ready-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ready-pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; }
+.ready-pill::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 10px var(--rc); }
+.ready-why { font-size: 17px; line-height: 1.35; }
+.ready-do { font-size: 14px; color: var(--muted); }
+.ready-bars { display: flex; gap: 5px; margin-top: 2px; }
+.ready-bars span { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+.ready-bars span i { position: absolute; inset: 0; border-radius: 4px; }
+.ready-bars .ok i { background: var(--ready-green); }
+.ready-bars .bad i { background: var(--ready-red); }
+.ready-bars .meh i { background: var(--ready-amber); }
+.ready-progress { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.ready-progress i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+.ready-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ready-parts li { display: grid; grid-template-columns: 12px 1fr; gap: 8px; align-items: start; font-size: 15px; }
+.ready-parts li::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ready-amber); margin-top: 6px; }
+.ready-parts li.good::before { background: var(--ready-green); }
+.ready-parts li.bad::before { background: var(--ready-red); }
+
+/* ---------- Score card on Today and the Score screen ---------- */
+.score-card { display: grid; grid-template-columns: 84px 1fr auto; gap: 14px; align-items: center; }
+.score-card .chev { font-size: 24px; color: var(--muted); }
+.score-mini { width: 84px; height: 84px; position: relative; }
+.score-mini svg, .score-hero svg { display: block; width: 100%; height: 100%; }
+.score-mini b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.sc-track { fill: none; stroke: var(--surface-2); }
+.sc-arc { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1); stroke-dashoffset: var(--off); }
+.sc-pre .sc-arc { stroke-dashoffset: var(--c); transition: none; }
+.score-hero { position: relative; width: 212px; height: 212px; margin: 4px auto 0; }
+.score-hero .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-hero .num b { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.score-hero .num small { color: var(--muted); font-weight: 600; margin-top: 4px; }
+.score-days { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
+.score-days span { flex: 1; border-radius: 4px 4px 2px 2px; background: var(--surface-2); min-height: 4px; position: relative; }
+.score-days span.has { background: var(--accent); opacity: .85; }
+.score-days span.today { opacity: 1; box-shadow: 0 0 8px rgba(198, 255, 61, .45); }
+.pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.pillar { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-height: 84px; color: inherit; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.pillar:active { background: var(--surface-2); }
+.pillar.off { opacity: .6; cursor: default; }
+.pillar .mini { width: 56px; height: 56px; position: relative; }
+.pillar .mini svg { width: 100%; height: 100%; display: block; }
+.pillar .mini b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 16px; font-weight: 800; }
+.pillar span { display: flex; flex-direction: column; min-width: 0; }
+.pillar span strong { font-size: 16px; }
+.pillar span small { color: var(--muted); font-size: 13px; }
+.pillar[aria-expanded="true"] { border-color: var(--accent); }
+.mover { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; min-height: 56px; }
+.mover .arrow { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 20px; background: var(--surface-2); }
+.mover .arrow.up { color: var(--good); }
+.mover .arrow.down { color: var(--danger); }
+.mover div { display: flex; flex-direction: column; }
+.mover small { color: var(--muted); }
+.comp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.comp-list li { display: grid; gap: 4px; }
+.comp-list .bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.comp-list .bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.comp-list .row { justify-content: space-between; gap: 10px; }
+.comp-list small { color: var(--muted); }
+@media (max-width: 340px) { .pillar-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .sc-arc { transition: none; } }
+
+/* ---------- Settings → Apple Health ---------- */
+.apple-status { display: grid; gap: 4px; }
+.field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.field-chip { display: grid; gap: 2px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; min-height: 56px; }
+.field-chip b { font-size: 15px; }
+.field-chip small { color: var(--muted); font-size: 13px; }
+.field-chip.on { box-shadow: inset 3px 0 0 var(--good); }
+.field-chip.off b { color: var(--muted); }
+.token-box { word-break: break-all; font: 14px/1.4 ui-monospace, Menlo, monospace; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; user-select: all; -webkit-user-select: all; }
+.steps { counter-reset: s; list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.steps > li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; display: grid; place-items: center; }
+.steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 15px; }
+.steps code { font-size: 13px; }
+.bigbtn { min-height: 56px; font-size: 18px; }
+.import-progress { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.import-progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 6px; transition: width .2s linear; }
+@media (prefers-reduced-motion: reduce) { .import-progress i { transition: none; } }

@@ -112,10 +112,20 @@ Each block says **when**. Only ever send me the **non-secret** values marked �
 13. When the import says ✓, open **Data check → Run check**. Type the `weight.csv` row count into the box. Then **Save report** (name: `subscribed`). 📤 Send me a screenshot.
 14. Weigh in normally every morning for 7 days. Each weigh-in should appear on its own within ~5 minutes. The data check shows "Weigh-ins seen n/7" and the median.
 
-### W2 (next PR)
+### W2a (v0.5.0): Apple Health, Readiness, Forge Score
 
-15. Settings → Apple Health → Create Shortcut token → build the Shortcut (steps come with W2) → allow each Health type when iOS asks.
-16. Health app → your picture → **Export All Health Data** → Forge → Import (seeds Readiness with your history).
+Everything here uses the iPhone, Apple Watch and Apple Health you **already have**. Nothing to create or sign up for.
+
+15. **Deploy the new functions** (Mac, on your hotspot if Wi-Fi blocks Google): `npm --prefix functions install`, then `firebase deploy --only functions`. No new secrets, and `firestore.rules` didn't change. Refresh Forge until Settings shows **0.5.0**.
+16. **Seed your history first.** Health app → your picture (top right) → **Export All Health Data** → save `export.zip` to Files. In Forge: **Settings → Apple Health → Choose export.zip**. Forge reads the zip **on your phone** and sends only small daily summaries (the last 120 days); the zip never leaves the phone. Readiness needs 14 days of HRV / resting heart rate / sleep; this gives them on day one.
+17. **Create the Shortcut token.** Settings → Apple Health → **Create Shortcut token** → **Copy token** (it's shown once; make a new one any time, the old one stops working).
+18. **Build the Shortcut** from the steps on that screen (about 10 minutes, once): one *Find Health Samples* per type with *Start Date is after "yesterday 6pm"*, a *Dictionary*, then *Get Contents of URL* → `POST` JSON to `https://us-east1-forge-web-f2351.cloudfunctions.net/healthIngest` with header `Authorization: Bearer <token>`. Run it once and allow each Health type when iOS asks. The **Data check** on the Apple Health screen then lists what arrived (HRV, resting HR, sleep, wrist temperature, steps, …).
+    - If *Wrist Temperature* isn't in Shortcuts on your iOS version, skip it. Forge accepts everything else, and the zip import fills in temperature history.
+    - ECG isn't available to Shortcuts at all (a manual log comes later).
+19. **Run it every morning on its own.** Shortcuts → Automation → **Sleep → Waking Up** → Run Shortcut → *Forge Health* → **Run Immediately**. Optional: a second automation at 9 pm for steps and active energy. If the phone is locked a run can fail; the next one fills the gap (late and duplicate posts merge into the same day).
+20. **Look at Today.** After 14 days of data you get a Green / Amber / Red *Readiness* card with the reason in plain words, and **Progress → Score** shows your Forge Score. How every part is scored: [docs/forge-score.md](forge-score.md).
+
+What the Shortcut sends (for reference): `day` (the wake-up day, `yyyy-MM-dd`) plus any of `hrv_sdnn_ms`, `rhr_bpm`, `resp_rate`, `wrist_temp_c`, `spo2_avg_pct`, `steps`, `active_kcal`, `exercise_min`, `vo2max`, `walking_hr_avg` (a number, or a list of values: Forge averages or adds them for you), `sleep_text` (one line per sleep stage: `Core,start,end`) and `workouts_text` (`type,start,minutes,kcal,heart rate`). Replies: `200`, `401` (wrong or turned-off token), `400` (names the field it couldn't read), `413` (over 256 KB).
 
 ---
 

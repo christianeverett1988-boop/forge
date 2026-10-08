@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0 — Apple Health, Readiness and the Forge Score (W2a) (2026-10-09)
+
+**Cloud Functions changed** (`npm --prefix functions install`, then `firebase deploy --only functions`; four new functions, no new secrets). **`firestore.rules` and `config.js` are unchanged**, so there's nothing to republish.
+
+**Apple Health bridge**
+- **Settings → Apple Health:** *Create Shortcut token* (shown once, with a Copy button), *Make a new token* (the old one stops working at once) and *Turn it off*. Step-by-step Shortcut recipe (window "yesterday 6 pm → now", POST JSON to `healthIngest`), the *Sleep → Waking Up* automation set to Run Immediately, and an optional evening run. Notes on what iPhone can't share (ECG; wrist temperature on some iOS versions). Uses your existing Apple devices and accounts; nothing new to sign up for.
+- **`healthIngest`** (POST, `Authorization: Bearer <token>`): the token is hashed (SHA-256) and looked up; only the hash is stored (`users/{uid}/private/shortcut`, `shortcut_tokens/{hash}`), never returned or logged. The payload is validated field by field and capped at 256 KB (401 / 413 / 400, with no health values in replies or logs). Late and duplicate posts merge into the same `health_daily/{day}`: newer non-empty fields win, nothing is erased by an empty value, and an unchanged post writes nothing. Accepts what Shortcuts really sends: numbers as text, lists of samples (Forge averages or adds them), sleep and workouts as lines of text.
+- **`createShortcutToken`, `revokeShortcutToken`, `importHealthDays`** (signed-in callables). "Delete everything" also removes the token and the Apple status.
+- **Data check:** the Apple Health screen shows the latest day, when the Shortcut and the import last ran, each kind of data (HRV, resting HR, sleep, wrist temperature, breathing, blood oxygen, steps, energy, exercise minutes, cardio fitness, workouts) with how many of the last 28 days have it, and progress toward the 14 days Readiness needs. `users/{uid}/integrations/apple` holds the status (no secrets, no values).
+- **Health export import:** pick `export.zip` (or `export.xml`). Forge streams `export.xml` out of the zip **on the phone** (it never loads the whole zip), turns it into daily summaries for the last 120 days, and sends only those. Steps and energy come from one source per day so iPhone and Watch aren't double counted. Merges with Shortcut days.
+
+**Readiness**
+- A **Green / Amber / Red** card on Today with the top reason in plain words and a *Why?* list. z-scores of HRV, resting HR, sleep, |wrist temperature delta| and breathing rate against your own 28 days (needs 14 days), minus a penalty for yesterday's training load. Until then Today shows how far along it is.
+- **Feeds the workout generator:** Amber takes one set off every accessory; Red makes a short, easy day (kept out of progression like a deload) and suggests mobility or a walk, with **Train as planned anyway** to override.
+
+**Forge Score**
+- **Progress → Score:** a 0–100 score shown as a 7-day average, five pillar rings (Body 25%, Recovery 20%, Sleep 15%, Training 25%, Nutrition 15%), a 14-day strip, *What moved it* (top 3 changes vs last week) and tap-through to the raw inputs behind every part. Nutrition reads "not tracked yet" and its weight is shared among the others. A small score card on Today links to it.
+- Every mapping, weight and source is written down in **`docs/forge-score.md`** and unit-tested.
+
 ## 0.4.4 — weight.csv fixes and a first-run how-to tour (2026-10-08)
 
 Cloud Functions changed (`firebase deploy --only functions`; same steps as 0.4.3, no new secrets). `firestore.rules` and `config.js` are unchanged, so there's nothing to republish.

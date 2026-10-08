@@ -1,6 +1,6 @@
 // Service worker: caches the app so it opens with no signal, and hands off new versions.
 // Bump VERSION here AND in js/version.js on every release.
-const VERSION = '0.4.4';
+const VERSION = '0.5.0';
 const CACHE = `forge-${VERSION}`;
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
 // Demo photos live in their own cache (not versioned, not precached): see js/ui/photos.js.
@@ -14,6 +14,7 @@ const SHELL = [
   './css/app.css',
   './css/motion.css',
   './css/player.css',
+  './css/health.css',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
@@ -40,6 +41,12 @@ const SHELL = [
   './js/workouts/generator.js',
   './js/workouts/progression.js',
   './js/workouts/recovery.js',
+  './js/health/metrics.js',
+  './js/health/readiness.js',
+  './js/health/score.js',
+  './js/health/today.js',
+  './js/health/zip.js',
+  './js/health/apple-export.js',
   './js/timer.js',
   './js/ui/motion.js',
   './js/ui/fx.js',
@@ -54,6 +61,10 @@ const SHELL = [
   './js/ui/photos.js',
   './js/screens/howto.js',
   './js/screens/awards.js',
+  './js/screens/apple.js',
+  './js/screens/score.js',
+  './js/health/status.js',
+  './js/health/ui.js',
   './js/workouts/awards.js',
   './js/ui/sharecard.js',
   './js/ui/rings.js',
