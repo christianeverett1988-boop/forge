@@ -30,7 +30,7 @@ export function renderSettings(el) {
     <section class="stack">
       <h1>Settings</h1>
 
-      <div class="card">
+      <div class="card" data-tour="settings-profile">
         <p class="label">Profile</p>
         <p>${esc(GOALS[p.goal]?.label || '')} · ${esc(p.age)} yrs · ${formatHeight(p.heightCm, u)}${p.targetWeightKg ? ` · goal ${formatWeight(p.targetWeightKg, u, 0)}` : ''}</p>
         <a class="btn ghost" href="#/profile">Edit profile &amp; targets</a>
@@ -88,6 +88,11 @@ export function renderSettings(el) {
         <button class="btn ghost" data-export-body>Export body measurements (CSV)</button>
         <button class="btn danger-ghost" data-delete>Delete everything</button>
         <p class="small muted">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
+      </div>
+
+      <div class="card stack">
+        <p class="label">Help</p>
+        <button class="btn ghost" data-tour-again>Show the how-to tour again</button>
       </div>
 
       <div class="card">
@@ -168,6 +173,7 @@ export function renderSettings(el) {
   };
 
   $('[data-delete]', el).onclick = () => openDeleteEverything();
+  $('[data-tour-again]', el).onclick = () => import('../tour/tour.js').then((m) => m.startTour({ replay: true }));
 }
 
 function openDeleteEverything() {

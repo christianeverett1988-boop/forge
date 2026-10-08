@@ -110,6 +110,15 @@ export function bulkNotMe(items) {
   return commitInBatches(writes.map(([col, id, data]) => (b) => b.update(doc(db, 'users', uid(), col, id), data)));
 }
 
+/**
+ * Tombstone weight.csv imports that Withings now also has (superseded: true keeps them out of the data
+ * check's csv count, because the Withings copy is the one that's counted). Batched.
+ */
+export function supersedeWeights(ids) {
+  const t = now();
+  return commitInBatches(ids.map((id) => (b) => b.update(doc(db, 'users', uid(), 'weights', id), { deleted: true, deleted_at: t, updated_at: t, superseded: true })));
+}
+
 /** Add many new records to a user collection (e.g. a weight.csv import), batched. */
 export function putMany(col, records) {
   readOnly(col);

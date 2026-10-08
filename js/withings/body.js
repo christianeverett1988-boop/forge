@@ -27,7 +27,7 @@ export const metricDef = (key) => BODY_METRICS.find((m) => m.key === key) || nul
 // meastype code → metric key, for the data check's "which codes came back" (mirrors functions/src/meastypes.js).
 export const KEY_OF_TYPE = {
   1: 'weight_kg', 4: 'height_m', 5: 'fat_free_mass_kg', 6: 'fat_ratio_pct', 8: 'fat_mass_kg', 11: 'heart_pulse_bpm', 54: 'spo2_pct',
-  76: 'muscle_mass_kg', 77: 'hydration_kg', 88: 'bone_mass_kg', 91: 'pwv_m_s', 123: 'vo2max', 140: 'vascular_age', 155: 'vascular_age',
+  76: 'muscle_mass_kg', 77: 'hydration_kg', 88: 'bone_mass_kg', 91: 'pwv_m_s', 123: 'vo2max', 155: 'vascular_age',
   167: 'nerve_health_score', 168: 'ecw_kg', 169: 'icw_kg', 170: 'visceral_fat', 196: 'nrs', 226: 'bmr_kcal', 227: 'metabolic_age', 229: 'esc',
 };
 

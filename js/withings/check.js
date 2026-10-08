@@ -16,7 +16,7 @@ export const CHECK_METRICS = [
   { key: 'visceral_fat', label: 'Visceral fat', types: [170] },
   { key: 'bmr', label: 'BMR', types: [226] },
   { key: 'metabolic_age', label: 'Metabolic age', types: [227] },
-  { key: 'vascular_age', label: 'Vascular age', types: [155, 140] },
+  { key: 'vascular_age', label: 'Vascular age', types: [155] },
   { key: 'nerve_health', label: 'Nerve Health Score', types: [167], guided: true },
   { key: 'nerve_scores', label: 'Nerve detail (ESC / NRS)', types: [229, 196], guided: true },
   { key: 'pwv', label: 'Pulse wave velocity', types: [91] },

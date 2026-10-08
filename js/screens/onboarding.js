@@ -1,6 +1,7 @@
 // Onboarding (first run) and "Edit profile & targets" (same screens, prefilled).
 import { state, units as getUnits } from '../state.js';
 import { put, patch, newRecord } from '../db.js';
+import { tourFieldsForSave } from '../tour/steps.js';
 import { esc, $, $$, toast, todayKey } from '../ui.js';
 import {
   GOALS, ACTIVITY_LEVELS, computeTargets, FLOOR_SOURCE, MAX_LOSS_PCT, MAX_LOSS_PCT_OVERRIDE,
@@ -302,6 +303,7 @@ function finish() {
     injuries: draft.injuries,
     pacePct: t.pacePct,
     allowFastPace: draft.allowFastPace,
+    ...tourFieldsForSave(!!state.profile), // a brand-new account gets the how-to tour; editing a profile doesn't
   };
 
   if (state.profile) patch('profile', 'main', profileData);

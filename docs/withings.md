@@ -1,4 +1,4 @@
-# Withings in Forge (v0.4.3, "W1")
+# Withings in Forge (v0.4.4, "W1")
 
 Your Withings Body Comp weigh-ins (weight, fat, muscle, water, bone, standing heart rate, and visceral fat, BMR, metabolic age and vascular age where the free API returns them) arrive in Forge on their own, a few minutes after you step off the scale. Your whole Withings history is imported once. The **data check** shows what the free API really returns for your account and says when it's safe to let Withings+ lapse.
 
@@ -157,6 +157,11 @@ No function is triggered by Firestore writes, so nothing a function writes can s
 **"Is this you?"** Withings marks a measurement as uncertain when it can't tell who stepped on. Forge keeps those out of your trend until you tap **That's me** (or **Not me**, which deletes it from Forge).
 
 ---
+
+### Updating to v0.4.4
+
+21. **Pull and deploy again** (the Cloud Functions changed): `npm --prefix functions install`, then `firebase deploy --only functions`. Refresh Forge until Settings shows **0.4.4**. Nothing else to publish.
+22. **Import weight.csv is safe to use now.** If Withings later brings the same readings in, Forge removes the csv copies and says how many; "Not me" on imported readings no longer breaks the data check.
 
 ### Updating to v0.4.3 (history fix)
 

@@ -163,6 +163,8 @@ async function render() {
   });
   try {
     await routes[route](...routeParts().slice(1));
+    // A brand-new account sees the how-to tour once, on Today, right after onboarding.
+    if (route === 'today' && state.profile.tour === 'pending') import('./tour/tour.js').then((m) => m.maybeStartTour());
   } catch (e) {
     console.error(e);
     main.innerHTML = `<section class="card"><h1>Something broke</h1><p class="muted">${esc(e.message)}</p></section>`;
@@ -189,6 +191,8 @@ function seedAwards() {
 subscribe((patch) => {
   seedAwards();
   const keys = Object.keys(patch);
+  // Withings finished a history import while weight.csv rows are in Forge: drop the duplicate csv copies.
+  if (('weights' in patch || 'integrations' in patch) && allLoaded()) import('./withings/dedupe.js').then((m) => m.dedupeCsv());
   if (keys.length === 1 && keys[0] === 'sync') return renderSync();
   const route = currentRoute();
   const onlyWorkouts = keys.every((k) => k === 'workouts' || k === 'loaded' || k === 'sync');

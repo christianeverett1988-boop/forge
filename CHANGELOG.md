@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.4 — weight.csv fixes and a first-run how-to tour (2026-10-08)
+
+Cloud Functions changed (`firebase deploy --only functions`; same steps as 0.4.3, no new secrets). `firestore.rules` and `config.js` are unchanged, so there's nothing to republish.
+
+**Before you use Import weight.csv (M1, M2)**
+- **No more false "not safe" after Not me:** the data check now counts every weight.csv reading, including ones you marked "Not me" or deleted, as accounted for (like the API's). Marking the family's imported readings no longer turns a safe verdict into "Your weight.csv has 1084 rows; Forge has 989…".
+- **No duplicates if you import first and the Withings history arrives later:** once a history import has finished, any weight.csv reading that Withings now also has (same weight, same minute, whole-hour clock offsets allowed) is removed from weight history, the bulk counts and the data check, and a note says how many. Readings that are only in the export stay. It's the same match the importer uses, and Withings readings you marked "Not me" still cover their csv twin.
+
+**Follow-ups**
+- Import toast says how many rows couldn't be read and were skipped.
+- Withings task payloads are validated: a backfill task without a numeric year or end time (e.g. one queued by v0.4.0) is dropped instead of chaining empty pages.
+- **Sync now** and **Data check** do what the background sync does when Withings refuses the sign-in: one forced refresh, then the "Connect again" banner (they used to just show an error).
+- Type 140 is removed from the vascular age request (the row no longer says "asked 155, 140").
+
+**First-run how-to tour**
+- A brand-new account sees an 8-step tour once, right after onboarding. Each step puts a spotlight on the real button or card (the rest is dimmed) and explains it in a sentence or two: your week's rings, today's workout, logging your weight by hand, picking a location on Train, starting a workout and the guided screen (Done set, Pause, Swap, How to, what RIR means), Progress, and Settings.
+- Big Back / Next buttons at the bottom of the screen (one-handed on iPhone), Skip tour any time, no animation if reduced motion is on.
+- Whether it's been seen is saved in the account's profile (`tour`, `tour_seen_at`), so it doesn't come back on a new phone. Existing accounts don't get it automatically.
+- **Settings → Show the how-to tour again** plays it for anyone.
+- The Withings card on an account that isn't connected says a scale can only link to one Forge account for now and to log weight by hand.
+
 ## 0.4.3 — Withings live fixes (2026-10-08)
 
 Includes everything in 0.4.2. Needs `npm --prefix functions install` and `firebase deploy --only functions` (docs/withings.md → Updating to v0.4.3). Rules and `config.js` are unchanged.
