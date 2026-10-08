@@ -1,6 +1,6 @@
 // Workout-complete summary: confetti, "Workout #N", count-up stats (time without pauses, sets, volume, PRs),
 // PRs with old → new, "vs last time" per exercise, and the muscles you worked.
-// (XP, level bar, streak and the share image arrive in v0.3.2; the muscle heatmap in v0.3.1.)
+// (XP, level bar, streak and the share image arrive in v0.3.2.)
 import { state } from '../state.js';
 import { esc, $ } from '../ui.js';
 import { unit } from '../workouts/plan.js';
@@ -9,6 +9,7 @@ import { exerciseById } from '../workouts/library.js';
 import { toUnit } from '../workouts/progression.js';
 import { sessionStats, versusLast } from '../workouts/session-core.js';
 import { MUSCLE_LABELS } from '../workouts/recovery.js';
+import { bodyMap } from '../ui/bodymap.js';
 import { countUp, reducedMotion } from '../ui/motion.js';
 import { confetti } from '../ui/fx.js';
 import { sfx, coach } from '../ui/sound.js';
@@ -73,10 +74,10 @@ export function renderSummary(el, id) {
       ${topMus.length ? `
       <div class="card">
         <p class="label">Muscles worked</p>
+        ${bodyMap(Object.fromEntries(Object.entries(mus).map(([m, v]) => [m, 0.25 + 0.75 * (v / maxMus)])), { size: 'small' })}
         <div class="mus">
           ${topMus.map(([m, v], n) => `<div class="mus-row"><span>${esc(MUSCLE_LABELS[m] || m)}</span><div class="mus-bar"><i style="--w:${Math.round((v / maxMus) * 100)}%;--d:${n * 60}ms"></i></div><b>${Math.round(v * 10) / 10}</b></div>`).join('')}
         </div>
-        <p class="small muted">Front/back muscle heatmap arrives in v0.3.1.</p>
       </div>` : ''}
 
       <h2>${rows.length} exercise${rows.length === 1 ? '' : 's'}</h2>

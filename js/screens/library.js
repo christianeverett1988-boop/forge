@@ -66,25 +66,19 @@ function toggleSetting(key, id) {
 
 function openDetail(id) {
   const ex = exerciseById(id);
-  openHowTo(id);
-  // Add actions under the how-to content.
-  setTimeout(() => {
-    const body = document.querySelector('dialog.sheet .sheet-body');
-    if (!body) return;
-    const fav = ((state.settings && state.settings.favorites) || []).includes(id);
-    const ex2 = ((state.settings && state.settings.excluded) || []).includes(id);
-    const box = document.createElement('div');
-    box.className = 'stack';
-    box.innerHTML = `
-      <button class="btn ghost" data-fav>${fav ? '★ Favorite (tap to remove)' : '☆ Add to favorites'}</button>
-      <button class="btn ghost" data-ex>${ex2 ? 'Allow in workouts again' : 'Never suggest this'}</button>
-      ${ex.custom ? '<button class="btn danger-ghost" data-del>Delete custom exercise</button>' : ''}`;
-    body.appendChild(box);
-    box.querySelector('[data-fav]').onclick = () => { toggleSetting('favorites', id); document.querySelector('dialog.sheet [data-close]').click(); toast(fav ? 'Removed from favorites' : 'Added to favorites'); };
-    box.querySelector('[data-ex]').onclick = () => { toggleSetting('excluded', id); document.querySelector('dialog.sheet [data-close]').click(); toast(ex2 ? 'It can show up again' : 'Won’t be suggested'); };
-    const del = box.querySelector('[data-del]');
-    if (del) del.onclick = () => { softDelete('exercises', id); document.querySelector('dialog.sheet [data-close]').click(); toast('Deleted'); };
-  }, 0);
+  // Favourite lives in the How-To sheet's action row; the library adds its own controls below.
+  openHowTo(id, {
+    extra: (box, close) => {
+      const never = ((state.settings && state.settings.excluded) || []).includes(id);
+      box.className = 'stack';
+      box.innerHTML = `
+        <button class="btn ghost" data-ex>${never ? 'Allow in workouts again' : 'Never suggest this'}</button>
+        ${ex.custom ? '<button class="btn danger-ghost" data-del>Delete custom exercise</button>' : ''}`;
+      box.querySelector('[data-ex]').onclick = () => { toggleSetting('excluded', id); close(); toast(never ? 'It can show up again' : 'Won’t be suggested'); };
+      const del = box.querySelector('[data-del]');
+      if (del) del.onclick = () => { softDelete('exercises', id); close(); toast('Deleted'); };
+    },
+  });
 }
 
 function openCustomForm() {

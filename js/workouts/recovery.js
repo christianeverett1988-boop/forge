@@ -71,3 +71,27 @@ export function averageRecovery(pct, muscles) {
   if (!muscles.length) return 100;
   return muscles.reduce((s, m) => s + (pct[m] ?? 100), 0) / muscles.length;
 }
+
+/**
+ * Per muscle: when it was last trained and its hard sets in the last 7 days (primary 1, secondary 0.5),
+ * for the Body tab's tap-a-muscle details. exerciseById(id) → exercise with primary/secondary lists.
+ */
+export function muscleStats(workouts, exerciseById, now = Date.now()) {
+  const out = Object.fromEntries(MUSCLES.map((m) => [m, { last: null, weekSets: 0 }]));
+  const weekAgo = now - 7 * 86400000;
+  const done = workouts.filter((w) => !w.deleted && w.status === 'done');
+  for (const { exerciseId, at } of doneSets(done)) {
+    const ex = exerciseById(exerciseId);
+    if (!ex || ex.kind === 'conditioning') continue;
+    const t = Date.parse(at);
+    if (!Number.isFinite(t) || t > now) continue;
+    for (const [list, w] of [[ex.primary || [], 1], [ex.secondary || [], 0.5]]) {
+      for (const m of list) {
+        if (!out[m]) continue;
+        if (!out[m].last || at > out[m].last) out[m].last = at;
+        if (t >= weekAgo) out[m].weekSets += w;
+      }
+    }
+  }
+  return out;
+}

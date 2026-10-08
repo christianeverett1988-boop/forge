@@ -14,6 +14,7 @@ import { coach } from '../ui/sound.js';
 import { powerUp, prExplosion, enqueue } from '../ui/fx.js';
 import { onFrame, reducedMotion, viewTransition } from '../ui/motion.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
+import { photoLoop, hasPhotos } from '../ui/photos.js';
 import { hapticInput, onHapticTap } from '../ui/haptic.js';
 import { openPaused, openAway, openComplete, saveAndSummarize, closeOverlays } from './overlays.js';
 import { openHowTo } from './session.js';
@@ -30,6 +31,45 @@ let unsubRest = null;
 let clockTimer = null;
 let awayChecked = null;
 let counting = false; // the 3-2-1 overlay is up: don't draw underneath it
+let undoLockedUntil = 0; // the bottom Undo ignores taps right after the final Done (the card offers its own)
+const UNDO_LOCK_MS = 650;
+
+const allSetsDone = (w) => w.exercises.some((x) => x.sets.length) && w.exercises.every((x) => x.sets.every((s) => s.done));
+
+/** Queue index of the most recently completed set, or -1. */
+function lastCompletedStep(w, q = buildQueue(w.exercises)) {
+  let best = -1;
+  let at = '';
+  q.forEach((st, n) => {
+    const x = w.exercises[st.i].sets[st.j];
+    if (x.done && (x.completed_at || '') >= at) {
+      best = n;
+      at = x.completed_at || '';
+    }
+  });
+  return best;
+}
+
+/**
+ * Every set is done: show "Workout complete — Finish / Undo last set". Used right after the final Done
+ * and again on reopen, so a kill or reload while the card was up brings the card back (not set 1).
+ */
+function showComplete(el) {
+  const w = live.w;
+  const q = buildQueue(w.exercises);
+  const n = lastCompletedStep(w, q);
+  if (n >= 0) k = n;
+  openComplete(() => {
+    const m = lastCompletedStep(live.w);
+    if (m >= 0) {
+      const st = buildQueue(live.w.exercises)[m];
+      undoSet(st.i, st.j);
+      k = m;
+    }
+    draft = null;
+    drawSet(el);
+  });
+}
 
 // Back from the background (app not killed) after >10 min without pausing? Ask too.
 document.addEventListener('visibilitychange', () => {
@@ -83,6 +123,12 @@ export function renderPlayer(el) {
   if (paused()) {
     drawSet(el);
     openPaused(() => renderPlayer(el));
+    return;
+  }
+  // Reopened (or re-rendered) with every set done: the Workout complete card, not set 1.
+  if (allSetsDone(w)) {
+    drawSet(el);
+    if (!document.querySelector('.ov') || document.querySelector('.ov-complete')) showComplete(el);
     return;
   }
   const r = restInfo();
@@ -205,8 +251,8 @@ function drawSet(el) {
       <div class="pl-segs" role="progressbar" aria-valuemin="0" aria-valuemax="${order.length}" aria-valuenow="${exNo}" aria-label="Exercise ${exNo} of ${order.length}">${segs}</div>
       <p class="pl-count">Exercise ${exNo} of ${order.length}${tag ? ` <span class="tag ss">${tag}</span>` : ''}${s.warmup ? ' <span class="tag wu">Warm-up</span>' : ''}</p>
 
-      <button class="pl-demo ${hasFigure(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
-        ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
+      <button class="pl-demo ${hasFigure(ex.id) || hasPhotos(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
+        ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : hasPhotos(ex.id) ? photoLoop(ex.id, ex.name) : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
         <span class="pl-howto">How-To</span>
       </button>
       ${boxing ? '<p class="pl-combo" data-combo aria-live="polite"></p>' : ''}
@@ -245,7 +291,8 @@ function drawSet(el) {
 
   // Demo figure
   const fig = $('[data-fig]', el);
-  if (fig) mountFigure(fig, ex, { isPaused: () => paused() || !!restInfo() });
+  // Tempo days (the progression's slow-lowering step) slow the demo down to match.
+  if (fig) mountFigure(fig, ex, { isPaused: () => paused() || !!restInfo(), slow: !!(it.target && it.target.mode === 'tempo') });
   $('[data-demo]', el).onclick = () => openHowTo(ex.id);
 
   // Clock (pause-aware)
@@ -301,6 +348,7 @@ function drawSet(el) {
   $('[data-prev]', el).onclick = () => go(el, k - 1, 'pop');
   $('[data-skip]', el).onclick = () => go(el, k + 1, 'push');
   $('[data-undo]', el).onclick = () => {
+    if (Date.now() < undoLockedUntil) return; // just after the final Done: the card's Undo handles it
     // Reopen the most recently completed set.
     const recent = q
       .map((st, n) => [n, w.exercises[st.i].sets[st.j]])
@@ -338,6 +386,7 @@ function doneSet(el, ex, i, j, repsOverride) {
     toast(res.error);
     return;
   }
+  if (res.lastSetOfWorkout) undoLockedUntil = Date.now() + UNDO_LOCK_MS;
   const w = live.w;
   const totalWorking = w.exercises.reduce((n, x) => n + x.sets.filter((y) => !y.warmup).length, 0) || 1;
   const segment = $(`[data-seg="${i}"] i`, el);
@@ -365,12 +414,8 @@ function doneSet(el, ex, i, j, repsOverride) {
     if (res.lastSetOfWorkout) {
       // Let any PR card finish, then confirm: Finish, or take the last set back.
       enqueue(() => new Promise((r) => setTimeout(r, 200))).then(() => {
-        if (!live.w || location.hash !== '#/play') return;
-        openComplete(() => {
-          undoSet(i, j);
-          draft = null;
-          drawSet(el);
-        });
+        if (!live.w || location.hash !== '#/play' || !allSetsDone(live.w)) return;
+        showComplete(el);
       });
       return;
     }

@@ -7,6 +7,8 @@ import './smoothing.test.js';
 import './workouts.test.js';
 import './csv.test.js';
 import './session.test.js';
+import './figure.test.js';
+import './bodymap.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

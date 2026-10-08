@@ -1,5 +1,7 @@
 // Train hub: pick a location, see today's plan, start or resume, recovery, program, tools.
 import { state } from '../state.js';
+import { cachePhotos } from '../ui/photos.js';
+import { bodyMap, exerciseValues } from '../ui/bodymap.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import {
   activeLocation, setActiveLocation, activeProgram, startProgram, activeWorkout, planToday, startWorkout,
@@ -85,10 +87,12 @@ export function renderTrain(el) {
           </select>
         </label>
         ${plan.notes.map((n) => `<p class="notice info small">${esc(n)}</p>`).join('')}
+        ${bodyMap(planValues(plan), { size: 'small' })}
         <ol class="plan-list">
           ${plan.exercises.map((it) => {
             const ex = exerciseById(it.exercise_id);
-            return `<li>
+            return `<li class="with-map">
+              ${bodyMap(exerciseValues(ex), { size: 'mini', caption: false })}
               <div><b>${esc(ex.name)}</b>${it.superset ? ` <span class="pill">Superset ${it.superset}</span>` : ''}
               <small class="muted">${esc(targetText(it.target, u, ex))}${it.warmups.length ? ` · ${it.warmups.length} warm-up` : ''}</small></div>
             </li>`;
@@ -138,6 +142,7 @@ export function renderTrain(el) {
     start.onclick = () => {
       unlockAudio(); // this tap unlocks sound + voice for the 3-2-1 GO on iPhone
       startWorkout(plan);
+      cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
       dayOverride = null;
       location.hash = playerRoute();
     };
@@ -234,4 +239,19 @@ function openCustomBuilder(existing, draftDays = null) {
     };
     draw();
   });
+}
+
+/** Today's plan → muscle values for the preview map: working sets per muscle (secondary half), scaled to 0..1. */
+function planValues(plan) {
+  const v = {};
+  for (const it of plan.exercises) {
+    const ex = exerciseById(it.exercise_id);
+    if (!ex || ex.kind === 'conditioning') continue;
+    const n = it.target?.sets || 1;
+    for (const m of ex.primary || []) v[m] = (v[m] || 0) + n;
+    for (const m of ex.secondary || []) v[m] = (v[m] || 0) + n * 0.5;
+  }
+  const max = Math.max(1, ...Object.values(v));
+  for (const m of Object.keys(v)) v[m] = 0.25 + 0.75 * (v[m] / max);
+  return v;
 }

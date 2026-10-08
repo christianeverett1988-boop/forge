@@ -5,6 +5,7 @@ import { esc, toast } from './ui.js';
 import { APP_NAME } from '../config.js';
 import { stopRest, restRemaining } from './timer.js';
 import { viewTransition } from './ui/motion.js';
+import { loadPhotoIndex } from './ui/photos.js';
 
 const main = document.getElementById('main');
 const nav = document.getElementById('nav');
@@ -237,6 +238,7 @@ function migrateInventory(rows) {
 }
 
 async function boot() {
+  loadPhotoIndex(); // which exercises have demo photos (none until the photo script has been run)
   document.title = APP_NAME;
   setupServiceWorker();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
