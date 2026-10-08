@@ -77,3 +77,12 @@ I'm not merging yet, though. Please fix these first:
     - on the screenshot step, add "crop anything you don't want to share".
 
 Once 1–6 are in and tested, I'll merge and deploy.
+
+---
+
+## Re-review of 7967719 (Oct 8): approved to merge. Two more for the follow-up PR
+
+1. **My own deletions count as missing weigh-ins.** The verdict and the weight.csv check exclude every deleted record, including ones I deleted myself or marked "Not me". Withings still returns those, so the verdict shows a permanent false blocker (e.g. "Forge has 1082 of 1084"). Count `deleted_by !== 'withings'` tombstones as present (or show them separately and add them into the comparison), and update the functions test that currently asserts the old behaviour. My earlier note asking for "non-deleted only" caused this; sorry.
+2. **"That's me" on a review item with no weight** (an HR-only or PWV-only group) tries to update a `weights/w_*` doc that doesn't exist, and now that failures aren't hidden I'd see "Couldn't save to the cloud: not-found". Only update the weights mirror when the group has a weight.
+
+Put these two first in the follow-up PR off main, then the earlier follow-up list above. One PR against main, not stacked.
