@@ -24,7 +24,7 @@ export function addDays(key, n) {
 }
 
 /** Sources that come straight from a scale (preferred over typed-in numbers on the same day). */
-export const DEVICE_SOURCES = new Set(['withings']);
+export const DEVICE_SOURCES = new Set(['withings', 'withings_csv']); // withings_csv: imported from a Withings export
 
 /**
  * entries: [{ day: 'YYYY-MM-DD', kg, source?, measured_at?, review? }] → one point per day, sorted.

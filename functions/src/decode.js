@@ -52,7 +52,7 @@ export function decodeGroup(g, { device = null, tz = null } = {}) {
     needs_review: g.attrib === 1, // "ambiguous user": not in the trend until you confirm it's you
     category: g.category ?? 1,
     deviceid: g.hash_deviceid || g.deviceid || null,
-    model: (device && device.model) || g.model || null,
+    model: g.model || (device && device.model) || null, // the scale that took this reading, if Withings says
     w_created: g.created ? new Date(Number(g.created) * 1000).toISOString() : null,
     w_modified: g.modified ? new Date(Number(g.modified) * 1000).toISOString() : null,
     metrics,

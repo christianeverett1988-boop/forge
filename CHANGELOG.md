@@ -1,8 +1,54 @@
 # Changelog
 
+## 0.4.3 — Withings live fixes (2026-10-08)
+
+Includes everything in 0.4.2. Needs `npm --prefix functions install` and `firebase deploy --only functions` (docs/withings.md → Updating to v0.4.3). Rules and `config.js` are unchanged.
+
+**History import**
+- **Walks your whole account:** the import used to stop at Jan 7, 2025. It now asks Withings one calendar year at a time, from now back to 2009. It stops only after three empty years at or before 2009, and never goes below 2005. Each run pins its end time, and per-year page counts are set rather than added, so a retried page can't double-count. "Done" and "since …" come from what it actually found.
+- **Re-import history** (Settings → Withings) re-runs the import on your existing connection, with no disconnect. It's idempotent: deletions and "Not me" stay. It refuses while an import is already moving.
+- **History by year** on the Withings screen shows the import's progress.
+- **The data check walks the same yearly windows**, so "Withings has" reflects your whole history. A **By year** table shows Withings vs Forge.
+- **Import weight.csv** from a Withings export, for anything the API doesn't return. Readings Forge already has are skipped: same weight at the same minute, allowing whole-hour time-zone offsets. Re-importing adds nothing, and deleted readings aren't revived. Imported readings count as scale weigh-ins in the trend.
+
+**Last weigh-in**
+- The history import now sets **Last weigh-in**.
+- **Arrived in** says "waiting for your next weigh-in" until a notified weigh-in arrives.
+
+**Family weigh-ins**
+- **"Is this you?"** also lists scale readings more than 15% away from your own weight. Your weight is tracked from today backwards, so a child who weighs in more often than you can't take over the reference. These readings stay out of your trend and Body stats until you decide.
+- **Bulk actions:**
+  - **Not me: everything under ___ lb** suggests a cutoff in the gap and previews the count and date range.
+  - **Not me — whole day** clears one day.
+- "Not me" readings count as accounted for in the data check.
+
+**Fixes and follow-ups**
+- **Data check accounting:**
+  - Weigh-ins you deleted or marked "Not me" count as present in "Forge has".
+  - "That's me" on a reading without a weight no longer tries to update a weigh-in that doesn't exist.
+- **Withings responses:**
+  - Status 522 (Withings timeout) is retried.
+  - An invalid-token answer gets one forced refresh before asking you to reconnect.
+  - A token save that lost a race no longer overwrites the newer token.
+  - Type 140 is no longer requested.
+- **Readings and maintenance:**
+  - Readings are labelled with the model of the scale that took them.
+  - Expired sign-in links are cleaned up nightly.
+  - Each nightly step runs on its own, so one failure doesn't skip the rest.
+- **Verdict:** says "Waiting for N more weigh-ins" when that's all that's left.
+- **Weight history:** shows the time of day.
+- **VO₂max:** shown as a Body metric.
+- **Body CSV:** now includes ESC, NRS and VO₂max.
+- **Nav cards:** the chevron sits beside the text again.
+- **docs/withings.md:**
+  - `npm --prefix functions install` before deploying;
+  - the `~/.npm` permission fix;
+  - what to do when `googleapis.com` times out (use your phone's hotspot);
+  - the re-import steps.
+
 ## 0.4.2 — v0.3.2 follow-ups (2026-10-08)
 
-Merge after 0.4.1. No functions, rules or `config.js` changes; nothing to deploy beyond GitHub Pages.
+No functions, rules or `config.js` changes; nothing to deploy beyond GitHub Pages.
 
 - **Weekly goal XP with cardio:** when logged cardio completes your week after your last workout (lift Mon/Wed, run Fri), that workout now gets the +100. It's still once a week, and a week with only cardio gives none.
 - **Comeback** counts logged cardio as activity, so three weeks of running followed by a lift isn't a "comeback".

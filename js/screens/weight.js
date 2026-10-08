@@ -2,15 +2,28 @@ import { state, units as getUnits } from '../state.js';
 import { put, newRecord, softDelete, tombstone } from '../db.js';
 import { esc, $, $$, sheet, toast, todayKey, formatDay, confirmSheet, haptic } from '../ui.js';
 import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../units.js';
-import { trendChange, weeklyRate, projectGoalDate } from '../weight/smoothing.js';
+import { trendChange, weeklyRate, projectGoalDate, dayKey } from '../weight/smoothing.js';
 import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
+import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
 
-const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
+const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', withings_csv: 'Withings (export)', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
 let showAll = false;
 const HISTORY_LIMIT = 20;
+
+/**
+ * " · 7:42 AM" when the weigh-in has a real time: scale and Apple Health readings, and typed-in weights
+ * logged for today. Typed-in weights for a past day get a placeholder 8 AM, so they show no time.
+ */
+export function timeOf(w) {
+  if (!w.measured_at) return '';
+  const d = new Date(w.measured_at);
+  if (Number.isNaN(d.getTime())) return '';
+  if (w.source === 'manual' && !(w.created_at && dayKey(w.created_at) === w.day)) return '';
+  return ` · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+}
 
 export function openLogWeight() {
   const u = getUnits();
@@ -55,8 +68,10 @@ export function renderWeight(el) {
   const latest = series.length ? series[series.length - 1] : null;
   const entries = [...state.weights].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1));
   // Days whose trend point is a scale reading (earliest Withings weigh-in): typed-in entries those days are shown but not used.
+  const sus = suspectIds(state.weights);
+  const asking = (w) => w.review || sus.has(w.id);
   const trendDays = new Map();
-  for (const w of [...state.weights].filter((x) => x.source === 'withings' && !x.review).sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))) {
+  for (const w of [...state.weights].filter((x) => SCALE_SOURCES.has(x.source) && !asking(x)).sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))) {
     if (!trendDays.has(w.day)) trendDays.set(w.day, w.id);
   }
 
@@ -89,7 +104,7 @@ export function renderWeight(el) {
       <ul class="list">
         ${(showAll ? entries : entries.slice(0, HISTORY_LIMIT)).map((w) => `
           <li>
-            <div><b>${formatWeight(w.kg, u)}</b><small class="muted">${formatDay(w.day, { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(SOURCE_LABELS[w.source] || w.source)}${w.review ? ' · <a href="#/withings">is this you?</a>' : ''}${!w.review && trendDays.has(w.day) && trendDays.get(w.day) !== w.id ? ' · not in trend (earlier scale reading used)' : ''}</small></div>
+            <div><b>${formatWeight(w.kg, u)}</b><small class="muted">${formatDay(w.day, { weekday: 'short', month: 'short', day: 'numeric' })}${timeOf(w)} · ${esc(SOURCE_LABELS[w.source] || w.source)}${asking(w) ? ' · <a href="#/withings">is this you?</a>' : ''}${!asking(w) && trendDays.has(w.day) && trendDays.get(w.day) !== w.id ? ' · not in trend (earlier scale reading used)' : ''}</small></div>
             <button class="icon-btn" data-del="${esc(w.id)}" data-src="${esc(w.source || '')}" aria-label="Delete this weigh-in">🗑</button>
           </li>`).join('')}
       </ul>

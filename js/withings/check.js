@@ -84,7 +84,7 @@ export const median = (xs) => {
  * Withings+ ends; ⛔ metrics are listed as decisions, not blockers (they stay free in the Withings app).
  *   csvRows: optional row count you typed from the Withings export, to compare with the backfill.
  */
-export function verdict(report, { csvRows = null, minWeighIns = 7, maxMedianS = 300 } = {}) {
+export function verdict(report, { csvRows = null, csvImported = 0, minWeighIns = 7, maxMedianS = 300 } = {}) {
   if (!report) return { safe: false, blockers: ['Run the data check first.'], decisions: [] };
   const rows = classify(report);
   const blockers = [];
@@ -98,8 +98,9 @@ export function verdict(report, { csvRows = null, minWeighIns = 7, maxMedianS = 
   if (Number.isFinite(wW) && Number.isFinite(wF) && wF < wW) {
     blockers.push(`Forge has ${wF} of the ${wW} weigh-ins Withings returned.`);
   }
-  if (csvRows != null && Number.isFinite(wF) && wF + 2 < csvRows) {
-    blockers.push(`Your weight.csv has ${csvRows} rows; Forge has ${wF} weigh-ins. Check for manual entries before cancelling.`);
+  const have = (Number.isFinite(wF) ? wF : 0) + (csvImported || 0);
+  if (csvRows != null && Number.isFinite(wF) && have + 2 < csvRows) {
+    blockers.push(`Your weight.csv has ${csvRows} rows; Forge has ${have} weigh-ins${csvImported ? ` (${csvImported} from the weight.csv import)` : ''}. Import weight.csv on the Withings screen, or check for manual entries before cancelling.`);
   }
   if (report.truncated) blockers.push('The check stopped early (very long history). Run it again.');
   const sub = report.subscription || {};
@@ -107,7 +108,8 @@ export function verdict(report, { csvRows = null, minWeighIns = 7, maxMedianS = 
   else if (!sub.key_ok) blockers.push('The notification address is out of date. Disconnect and connect again.');
   const lat = report.latencies_s || [];
   const med = median(lat);
-  if (lat.length < minWeighIns) blockers.push(`Webhook proof: ${lat.length} of ${minWeighIns} weigh-ins arrived on their own so far.`);
+  const waiting = lat.length < minWeighIns ? minWeighIns - lat.length : 0;
+  if (waiting) blockers.push(`Webhook proof: ${lat.length} of ${minWeighIns} weigh-ins arrived on their own so far.`);
   else if (med > maxMedianS) blockers.push(`Weigh-ins take ${Math.round(med / 60)} min to arrive (median); want ≤ ${Math.round(maxMedianS / 60)} min.`);
   const decisions = rows.filter((r) => r.state === 'not_on_api').map((r) => r.label);
   const minutes = med == null ? null : Math.max(1, Math.round(med / 60));
@@ -116,7 +118,10 @@ export function verdict(report, { csvRows = null, minWeighIns = 7, maxMedianS = 
     blockers,
     decisions,
     median_s: med,
-    text: blockers.length
+    waiting,
+    text: blockers.length === 1 && waiting
+      ? `Waiting for ${waiting} more weigh-in${waiting === 1 ? '' : 's'}. Everything else checks out; step on the scale on ${waiting === 1 ? 'one more day' : `${waiting} more days`}.`
+      : blockers.length
       ? `Not yet: ${blockers.length} thing${blockers.length === 1 ? '' : 's'} to fix first.`
       : `Safe to cancel: every metric your scale produces that the free API provides is flowing, and weigh-ins arrive in about ${minutes} min (median of ${lat.length}).`,
   };
@@ -132,4 +137,24 @@ export function compare(a, b) {
     const changed = x.state !== y.state || (x.count || 0) !== (y.count || 0);
     return { key: m.key, label: m.label, before: x.state, after: y.state, before_count: x.count || 0, after_count: y.count || 0, changed, lost: x.state === 'received' && y.state !== 'received' };
   });
+}
+
+/** Per-year weigh-ins, Withings vs Forge, newest year first: [{ year, withings, forge }] (from a data check). */
+export function yearRows(report) {
+  const w = (report && report.years_withings) || {};
+  const f = (report && report.years_forge) || {};
+  const years = [...new Set([...Object.keys(w), ...Object.keys(f)])].sort().reverse();
+  return years.map((y) => ({ year: Number(y), withings: w[y] ? w[y].weighins || 0 : 0, forge: f[y] || 0 }))
+    .filter((r) => r.withings || r.forge);
+}
+
+/** The history import's progress per year (backfill.years → [{ year, groups, weighins }], newest first). */
+export function backfillYears(bf) {
+  const years = (bf && bf.years) || {};
+  return Object.entries(years).map(([y, pages]) => {
+    let groups = 0;
+    let weighins = 0;
+    for (const p of Object.values(pages || {})) { groups += (p && p.g) || 0; weighins += (p && p.w) || 0; }
+    return { year: Number(y), groups, weighins };
+  }).sort((a, b) => b.year - a.year);
 }

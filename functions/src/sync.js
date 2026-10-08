@@ -126,37 +126,96 @@ export async function incrementalSync({ db, api, uid, token, now = () => Date.no
     statusPatch.latencies_s = [...(status.latencies_s || []), latest].slice(-7);
   }
   const anyWeight = totals.groups.filter((g) => (g.measures || []).some((m) => m.type === 1));
-  if (anyWeight.length) statusPatch.last_weigh_in_at = iso(Math.max(...anyWeight.map((g) => Number(g.date) * 1000)));
+  if (anyWeight.length) statusPatch.last_weigh_in_at = iso(Math.max(status.last_weigh_in_at ? Date.parse(status.last_weigh_in_at) : 0, ...anyWeight.map((g) => Number(g.date) * 1000)));
   await db.doc(P.status(uid)).set(statusPatch, { merge: true });
   return { ...totals, pages, cursor, groups: undefined };
 }
 
-/** One backfill page (whole history, oldest first by Withings' offset). Returns { more, offset, groups }. */
-export async function backfillPage({ db, api, uid, token, offset = 0, now = () => Date.now() }) {
+// ---------- full-history backfill: one calendar year at a time ----------
+// One open-ended request (startdate=0 → now) came back with only the last ~21 months of a 16-year account,
+// with no error and no "more". So the history is walked in explicit windows: calendar years (UTC), newest
+// first, each with a real startdate/enddate and offset paging inside it, all under an enddate pinned when
+// the run starts. The walk stops once it is older than OLDEST_EXPECTED and EMPTY_YEARS_TO_STOP years in a
+// row came back empty, and never goes before HARD_FLOOR_YEAR (Withings' first scales).
+export const OLDEST_EXPECTED_YEAR = 2009;
+export const EMPTY_YEARS_TO_STOP = 3;
+export const HARD_FLOOR_YEAR = 2005;
+
+/** [startdate, enddate) in epoch seconds for calendar year `y`, clipped to the run's pinned end. */
+export function yearWindow(y, end) {
+  const start = Date.UTC(y, 0, 1) / 1000;
+  const stop = Math.min(Date.UTC(y + 1, 0, 1) / 1000, end);
+  return { start, end: stop };
+}
+
+const sumYear = (yr) => Object.values(yr || {}).reduce((a, p) => ({ g: a.g + (p.g || 0), w: a.w + (p.w || 0) }), { g: 0, w: 0 });
+
+/** After finishing year `y`: is the walk done? (Pure; uses the per-year counts so retries can't skew it.) */
+export function walkDone(years, y) {
+  if (y - 1 < HARD_FLOOR_YEAR) return true;
+  if (y > OLDEST_EXPECTED_YEAR) return false;
+  let empty = 0;
+  for (let k = y; k < y + EMPTY_YEARS_TO_STOP; k++) {
+    if (years[k] && sumYear(years[k]).g === 0) empty++;
+    else break;
+  }
+  return empty >= EMPTY_YEARS_TO_STOP;
+}
+
+/** Per-year totals { year: { groups, weighins } } from the stored page counts. */
+export function yearTotals(years) {
+  return Object.fromEntries(Object.entries(years || {}).map(([y, pages]) => { const t = sumYear(pages); return [y, { groups: t.g, weighins: t.w }]; }));
+}
+
+const hasWeight = (g) => (g.measures || []).some((m) => m.type === 1);
+
+/**
+ * One backfill page: year `year`, `offset` inside it, under the run's pinned `end` (epoch s).
+ * Every count is SET per (year, page) rather than added, so a retried page can't inflate anything.
+ * Returns { groups, more, offset, nextYear, done }.
+ */
+export async function backfillPage({ db, api, uid, token, year, end, offset = 0, page = 0, now = () => Date.now() }) {
   const statusSnap = await db.doc(P.status(uid)).get();
   const status = statusSnap.exists ? statusSnap.data() : {};
-  const body = await getmeasSafe(api, token, { startdate: 0, enddate: Math.floor(now() / 1000) + 3600, offset: offset || undefined });
+  const w = yearWindow(year, end);
+  const body = w.start < w.end
+    ? await getmeasSafe(api, token, { startdate: w.start, enddate: w.end, offset: offset || undefined })
+    : { measuregrps: [], more: 0 };
   const groups = body.measuregrps || [];
-  const r = await applyGroups(db, uid, groups, { device: status.model ? { model: status.model } : null, tz: body.timezone, now: now() });
+  await applyGroups(db, uid, groups, { tz: body.timezone, now: now() });
   const prev = status.backfill || {};
+  const years = { ...(prev.years || {}) };
+  years[year] = { ...(years[year] || {}), [`p${offset || 0}`]: { g: groups.length, w: groups.filter(hasWeight).length } };
+  const more = !!body.more && groups.length > 0;
+  const nextOffset = more ? Number(body.offset) : null;
+  const yearDone = !more;
+  const done = yearDone && walkDone(years, year);
   const dates = groups.map((g) => Number(g.date) * 1000);
+  const weighDates = groups.filter(hasWeight).map((g) => Number(g.date) * 1000);
   const from = Math.min(prev.from ? Date.parse(prev.from) : Infinity, ...dates);
   const to = Math.max(prev.to ? Date.parse(prev.to) : 0, ...dates);
-  const more = !!body.more;
-  await db.doc(P.status(uid)).set({
+  const totals = Object.values(yearTotals(years)).reduce((a, t) => ({ g: a.g + t.groups, w: a.w + t.weighins }), { g: 0, w: 0 });
+  const patch = {
     backfill: {
       ...prev,
-      done: !more,
-      groups: (prev.groups || 0) + r.created + r.updated + r.unchanged + r.tombstoned,
-      pages: (prev.pages || 0) + 1,
-      offset: more ? body.offset : null,
+      years,
+      groups: totals.g,
+      weighins: totals.w,
+      year: yearDone ? year - 1 : year,
+      offset: nextOffset,
+      page: page + 1,
+      done,
       from: Number.isFinite(from) ? iso(from) : prev.from || null,
       to: to > 0 ? iso(to) : prev.to || null,
       updated_at: iso(now()),
-      ...(more ? {} : { finished_at: iso(now()) }),
+      ...(done ? { finished_at: iso(now()) } : {}),
     },
-  }, { merge: true });
-  return { more, offset: more ? Number(body.offset) : null, groups: groups.length };
+  };
+  // "Last weigh-in" on the Withings card: the newest weigh-in seen anywhere (sync or backfill).
+  const lastSeen = Math.max(status.last_weigh_in_at ? Date.parse(status.last_weigh_in_at) : 0, ...weighDates);
+  if (lastSeen > 0) patch.last_weigh_in_at = iso(lastSeen);
+  await db.doc(P.status(uid)).set(patch, { mergeFields: ['backfill', ...(lastSeen > 0 ? ['last_weigh_in_at'] : [])] });
+  return { groups: groups.length, more, offset: nextOffset, nextYear: yearDone ? year - 1 : year, done };
 }
 
 /**

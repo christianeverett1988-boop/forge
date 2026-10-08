@@ -5,8 +5,7 @@
 import { P } from './paths.js';
 import { ALL_TYPES, decodeValue } from './meastypes.js';
 import { WithingsError } from './withings-api.js';
-
-const MAX_PAGES = 60;
+import { yearWindow, walkDone, yearTotals } from './sync.js';
 
 function addGroup(acc, g) {
   for (const m of g.measures || []) {
@@ -21,17 +20,45 @@ function addGroup(acc, g) {
   }
 }
 
-async function allPages(api, token, types) {
+/**
+ * Walk the whole account the same way the backfill does: calendar years newest first, real
+ * startdate/enddate, offset paging inside each year, stopping after the same empty-years rule. Counts
+ * every group, per measure type and per year (weigh-ins = groups with meastype 1).
+ */
+export async function walkHistory(api, token, { now = () => Date.now(), maxPages = 400 } = {}) {
   const acc = {};
-  let offset;
-  let pages = 0;
+  const years = {};
   let groups = 0;
-  do {
-    const body = await api.getmeas(token, { meastypes: types, startdate: 0, enddate: Math.floor(Date.now() / 1000) + 3600, offset });
-    for (const g of body.measuregrps || []) { addGroup(acc, g); groups++; }
-    offset = body.more ? body.offset : undefined;
-  } while (offset != null && ++pages < MAX_PAGES);
-  return { acc, groups, truncated: offset != null };
+  let pages = 0;
+  let listRejected = false;
+  const end = Math.floor(now() / 1000) + 3600;
+  for (let y = new Date(now()).getUTCFullYear(); ; y--) {
+    const w = yearWindow(y, end);
+    let offset;
+    let n = 0;
+    let wn = 0;
+    do {
+      let body;
+      try {
+        body = await api.getmeas(token, { meastypes: listRejected ? undefined : ALL_TYPES, startdate: w.start, enddate: w.end, offset });
+      } catch (e) {
+        if (!(e instanceof WithingsError) || e.transient || e.invalidToken || listRejected) throw e;
+        listRejected = true; // Withings refused our type list: ask for every type instead
+        body = await api.getmeas(token, { startdate: w.start, enddate: w.end, offset });
+      }
+      for (const g of body.measuregrps || []) {
+        addGroup(acc, g);
+        groups++;
+        n++;
+        if ((g.measures || []).some((m) => m.type === 1)) wn++;
+      }
+      offset = body.more && (body.measuregrps || []).length ? body.offset : undefined;
+      if (++pages >= maxPages) return { acc, groups, years, truncated: true, listRejected };
+    } while (offset != null);
+    years[y] = { p0: { g: n, w: wn } };
+    if (walkDone(years, y)) break;
+  }
+  return { acc, groups, years, truncated: false, listRejected };
 }
 
 /** Run the check. Returns the report (also saved on the status doc as data_check). */
@@ -45,24 +72,12 @@ export async function runDataCheck({ db, api, uid, token, webhookUrl, now = () =
     report.devices_error = String(e.status || 'x');
   }
 
-  // All types in one go; if Withings rejects the list (an unknown type such as 140), ask one type at a time.
-  let acc = {};
-  try {
-    const r = await allPages(api, token, ALL_TYPES);
-    acc = r.acc; report.groups = r.groups; report.truncated = r.truncated;
-  } catch (e) {
-    if (!(e instanceof WithingsError) || e.transient || e.invalidToken) throw e;
-    for (const t of ALL_TYPES) {
-      try {
-        const r = await allPages(api, token, [t]);
-        if (r.acc[t]) acc[t] = r.acc[t];
-        report.truncated = report.truncated || r.truncated;
-      } catch (e2) {
-        if (e2 instanceof WithingsError && (e2.transient || e2.invalidToken)) throw e2;
-        report.rejected.push(t);
-      }
-    }
-  }
+  const walk = await walkHistory(api, token, { now });
+  const acc = walk.acc;
+  report.groups = walk.groups;
+  report.truncated = walk.truncated;
+  report.types_list_rejected = walk.listRejected;
+  report.years_withings = yearTotals(walk.years); // { 2010: { groups, weighins }, … }
   for (const [t, a] of Object.entries(acc)) {
     report.types[t] = { ...a, first: a.first ? new Date(a.first).toISOString() : null, last: a.last ? new Date(a.last).toISOString() : null };
   }
@@ -89,8 +104,15 @@ export async function runDataCheck({ db, api, uid, token, webhookUrl, now = () =
   report.stored_groups = stored.data().count; // every doc, tombstones included (for reference)
   // The number to compare with weight.csv: weigh-in groups. Withings' side is how many groups carried a
   // weight (meastype 1); Forge's side is non-deleted body docs with a weight.
-  const weightDocs = await db.collection(P.bodyCol(uid)).select('deleted', 'metrics.weight_kg').get();
-  report.stored_weight_groups = weightDocs.docs.filter((d) => { const x = d.data(); return !x.deleted && x.metrics && x.metrics.weight_kg != null; }).length;
+  // Weigh-ins you deleted or marked "Not me" are accounted for (Withings still lists them); only ones the
+  // nightly reconcile removed (deleted_by: 'withings') count as missing.
+  const weightDocs = await db.collection(P.bodyCol(uid)).select('deleted', 'deleted_by', 'measured_at', 'metrics.weight_kg').get();
+  const accounted = weightDocs.docs.map((d) => d.data()).filter((x) => x.metrics && x.metrics.weight_kg != null && (!x.deleted || x.deleted_by !== 'withings'));
+  report.stored_weight_groups = accounted.length;
+  report.stored_not_me = accounted.filter((x) => x.deleted).length;
+  const yf = {};
+  for (const x of accounted) { const y = String(x.measured_at || '').slice(0, 4); if (y) yf[y] = (yf[y] || 0) + 1; }
+  report.years_forge = yf; // weigh-ins per year in Forge (UTC year, like the Withings walk)
   report.withings_weight_groups = report.types[1] ? report.types[1].count : 0;
   report.last_reconcile = status.last_reconcile || null;
   report.backfill = status.backfill || null;

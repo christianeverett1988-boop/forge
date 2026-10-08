@@ -8,6 +8,7 @@ export const AUTHORIZE = 'https://account.withings.com/oauth2_user/authorize2';
 // Withings status codes we act on (others are treated as permanent failures).
 export const INVALID_TOKEN = new Set([100, 101, 102, 200, 283, 401, 343]);
 export const RATE_LIMIT = 601;
+export const TIMEOUT = 522; // Withings' own "timeout": try again later
 
 export class WithingsError extends Error {
   /** status: Withings' JSON `status`, or a string for HTTP/network problems ('http_503', 'network'…). */
@@ -18,7 +19,7 @@ export class WithingsError extends Error {
   }
   /** Worth retrying later: rate limit, HTTP 5xx/429, timeouts, network trouble, our own save hiccups. */
   get transient() {
-    return this.status === RATE_LIMIT || ['network', 'save_failed', 'lease_timeout', 'bad_json', 'http_429'].includes(this.status)
+    return this.status === RATE_LIMIT || this.status === TIMEOUT || ['network', 'save_failed', 'lease_timeout', 'bad_json', 'http_429'].includes(this.status)
       || (typeof this.status === 'string' && /^http_5\d\d$/.test(this.status));
   }
   get invalidToken() {

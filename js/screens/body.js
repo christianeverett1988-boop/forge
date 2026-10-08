@@ -1,6 +1,7 @@
 // Body tab: the recovery heatmap (front and back, red / amber / green from the recovery model), fresh-muscle
 // count and days since your last workout. Tap a muscle for its %, when you last trained it and its sets
 // this week. (Strength score and weekly set targets come later.)
+import { myBodyMeasures } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
 import { esc, $$, sheet } from '../ui.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';
@@ -20,7 +21,7 @@ const status = (pct) => (pct < 50 ? 'Needs rest' : pct < 85 ? 'Recovering' : 'Re
 
 // Body composition tiles: every metric the scale sent (plus BMI, FFMI, FMI), latest value and 30-day change.
 function compositionCard() {
-  const docs = state.body_measures || [];
+  const docs = myBodyMeasures();
   const w = state.integrations && state.integrations.withings;
   if (!docs.length) {
     return `<a class="card row between center nav-card" href="#/withings"><div><p class="label">Body composition</p><p class="small">${w && w.connected ? 'Importing your Withings history…' : 'Connect your Withings scale to see fat, muscle, water and more here.'}</p></div><span aria-hidden="true">›</span></a>`;
