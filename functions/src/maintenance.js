@@ -40,7 +40,7 @@ export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = ()
   out.synced = s.created + s.updated;
   const r = await reconcile90({ db, api, uid, token, now });
   out.removed = r.removed;
-  await statusRef.set({ last_maintenance_at: new Date(now()).toISOString(), last_reconcile: { removed: r.removed, aborted: !!r.aborted } }, { merge: true });
+  await statusRef.set({ last_maintenance_at: new Date(now()).toISOString(), last_reconcile: { at: new Date(now()).toISOString(), removed: r.removed, restored: r.restored || 0, aborted: !!r.aborted, suspicious: r.suspicious || 0 } }, { merge: true });
 
   const st = (await statusRef.get()).data() || {};
   const bf = st.backfill || {};

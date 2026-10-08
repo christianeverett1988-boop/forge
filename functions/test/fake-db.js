@@ -65,6 +65,7 @@ export function fakeDb() {
   const query = (colPath, filters = [], lim = null) => ({
     where(field, op, value) { return query(colPath, [...filters, [field, op, value]], lim); },
     limit(n) { return query(colPath, filters, n); },
+    select() { return query(colPath, filters, lim); }, // field masks don't matter in memory
     async get() {
       const depth = colPath.split('/').length + 1;
       let rows = [...docs.entries()]

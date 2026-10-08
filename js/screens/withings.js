@@ -135,6 +135,16 @@ function openDisconnect(el) {
 }
 
 // ---------- data check ----------
+/** The nightly 90-day comparison with Withings (removals from the Withings app, and its safety stop). */
+export function reconcileLine(r) {
+  if (!r) return '<p class="small muted" data-reconcile>Nightly check for weigh-ins deleted in the Withings app: hasn’t run yet (04:00 each night).</p>';
+  const at = r.at ? when(r.at) : 'last night';
+  if (r.aborted) return `<p class="small" data-reconcile>⚠️ Nightly check ${at}: <b>stopped for safety</b>. Withings listed far fewer weigh-ins than Forge has (${r.suspicious || 'many'} would have gone; the limit is 3 or 20% of the last 90 days, whichever is more), so nothing was removed.</p>`;
+  const bits = [`${r.removed || 0} removed`];
+  if (r.restored) bits.push(`${r.restored} restored`);
+  return `<p class="small muted" data-reconcile>Nightly check ${at}: ${bits.join(', ')} (weigh-ins deleted in the Withings app in the last 90 days).</p>`;
+}
+
 let picked = []; // report indexes ticked for Compare (the last two count)
 const CSV_KEY = 'forge.withings.csvRows';
 const csvRows = () => { try { const v = localStorage.getItem(CSV_KEY); return v ? Number(v) : null; } catch { return null; } };
@@ -187,13 +197,16 @@ function renderCheck(el) {
           <div><span>Weigh-ins seen</span><b>${lat.length}/7</b></div>
         </div>
         <p class="small muted">Last notification ${when(report.last_notify_at)} · last arrival ${mins(lat[lat.length - 1])}</p>
+        <p class="small"><b>Weigh-ins</b> (what weight.csv lists)</p>
         <div class="stats">
-          <div><span>Withings has</span><b>${(report.groups ?? 0).toLocaleString()}</b></div>
-          <div><span>Forge has</span><b>${(report.stored_groups ?? 0).toLocaleString()}</b></div>
-          <div><span>Oldest</span><b>${dateOnly(report.backfill && report.backfill.from)}</b></div>
+          <div><span>Withings has</span><b data-ww>${(report.withings_weight_groups ?? 0).toLocaleString()}</b></div>
+          <div><span>Forge has</span><b data-wf>${(report.stored_weight_groups ?? 0).toLocaleString()}</b></div>
+          <div><span>weight.csv</span><b>${csvRows() == null ? '—' : csvRows().toLocaleString()}</b></div>
         </div>
-        <label class="field"><span class="small muted">Rows in your Withings export (weight.csv), to compare</span>
+        <p class="small muted">Oldest ${dateOnly(report.backfill && report.backfill.from)} · all measurement groups: Withings ${(report.groups ?? 0).toLocaleString()}, Forge ${(report.stored_groups ?? 0).toLocaleString()} (includes heart-rate-only and nerve-only readings, and ones you deleted)</p>
+        <label class="field"><span class="small muted">Rows in weight.csv from your Withings export, <b>not counting the header row</b></span>
           <input type="number" inputmode="numeric" name="csv" value="${csvRows() ?? ''}" placeholder="e.g. 1243"></label>
+        ${reconcileLine(report.last_reconcile || (w && w.last_reconcile))}
       </div>
 
       <div class="card">

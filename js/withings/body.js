@@ -91,3 +91,26 @@ export function periodAverage(daily, fromDay, toDay) {
   const xs = daily.filter((p) => p.day >= fromDay && p.day < toDay).map((p) => p.v);
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
 }
+
+const weighIns = (docs) => docs
+  .filter((d) => !d.deleted && !d.needs_review && d.metrics && Number.isFinite(d.metrics.weight_kg))
+  .sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1));
+
+/** Day of the latest weigh-in (newest scale reading with a weight), or null. */
+export function lastWeighInDay(docs) {
+  const w = weighIns(docs)[0];
+  return w ? w.day : null;
+}
+
+/**
+ * How many of your most recent weigh-ins came without body composition (the bioimpedance reading failed:
+ * shoes or socks, wet or very dry feet, not standing still). 0 when the latest one had it.
+ */
+export function compositionGap(docs) {
+  let n = 0;
+  for (const d of weighIns(docs)) {
+    if (Number.isFinite(d.metrics.fat_ratio_pct) || Number.isFinite(d.metrics.fat_mass_kg)) break;
+    n++;
+  }
+  return n;
+}

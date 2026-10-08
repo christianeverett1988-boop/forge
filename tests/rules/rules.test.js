@@ -211,3 +211,18 @@ test('top-level server collections are closed to everyone; private/shortcut too'
   await assertFails(getDoc(doc(alice, 'users/alice/private/shortcut')));
   await assertFails(setDoc(doc(alice, 'users/alice/private/shortcut'), { token_hash: 'x' }));
 });
+
+test('exactly what the sync writes (functions/test fixture): "That\'s me", soft-delete and tombstone all pass', async () => {
+  // tests/rules/fixtures/applygroups.json is generated from functions/src/sync.js applyGroups and checked
+  // against it by a functions test, so this can't drift from the real documents.
+  const docs = JSON.parse(readFileSync(new URL('./fixtures/applygroups.json', import.meta.url), 'utf8'));
+  for (const [path, d] of Object.entries(docs)) await seed(path, d);
+  const alice = as('alice');
+  const t = '2026-10-11T00:00:00.000Z';
+  // The restored, flagged weigh-in: confirm it in both places, like the app does.
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice/body_measures/w_12'), { needs_review: false, reviewed_at: t, updated_at: t }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice/weights/w_12'), { review: false, reviewed_at: t, updated_at: t }));
+  // Delete the other one in both places.
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice/body_measures/w_11'), { deleted: true, deleted_at: t, updated_at: t }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice/weights/w_11'), { deleted: true, deleted_at: t, updated_at: t }));
+});

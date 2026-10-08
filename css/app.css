@@ -455,3 +455,5 @@ body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
 .dc-cmp li.dc-changed { color: #ffb020; }
 .verdict.ok { border: 1px solid #36d17a66; }
 .verdict.warn { border: 1px solid #ffb02066; }
+.bc-tile.stale b { color: var(--muted); }
+.bc-tile.stale small { color: #ffb020; }

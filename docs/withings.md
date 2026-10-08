@@ -20,7 +20,7 @@ Each block says **when**. Only ever send me the **non-secret** values marked �
    - Also save the **PDF report** if the app offers one.
 2. **Screenshot** in the Withings app (latest value and the 1-year chart): visceral fat, vascular age, Nerve Health Score, metabolic age, BMR, and any Withings+ screens you like (Health Improvement Score, weekly breakdown, BodyPath / Body Profile). The CSV doesn't include all of these.
 3. **Withings → Apple Health** as a backup path: Withings app → Profile → ⚙️ → **Apple Health** (or "Health app") → turn on Weight, BMI, Body Fat %, Lean Body Mass and Heart Rate.
-4. Open `weight.csv` from the export and note how many rows it has. 📤 Send me the number (or type it into the data check later).
+4. Open `weight.csv` from the export and note how many rows it has **not counting the header row** (one row per weigh-in). You'll type it into the data check later.
 
 ### Start of W1 (today)
 
@@ -139,7 +139,7 @@ Each block says **when**. Only ever send me the **non-secret** values marked �
 | `withingsSyncNow` | Sync now (callable) | Incremental sync, at most every 10 minutes |
 | `withingsDataCheck` | Run check / Save report (callable) | The probe below |
 | `withingsDisconnect` | Disconnect / Delete everything (callable) | Revokes the notification, deletes tokens; optionally deletes all synced data |
-| `withingsMaintenance` | Daily 04:00 New York (Cloud Scheduler) | Refreshes the token, re-subscribes if Withings dropped the subscription, catches up, notices groups deleted in the Withings app (last 90 days), resumes a stalled import |
+| `withingsMaintenance` | Daily 04:00 New York (Cloud Scheduler) | Refreshes the token, re-subscribes if Withings dropped the subscription, catches up, notices weigh-ins deleted in the Withings app (last 90 days) and restores any it removed that Withings lists again, resumes a stalled import. **Safety stop:** if Withings' answer is empty, or more than **3 weigh-ins or 20% of the last 90 days (whichever is more)** would go, it removes nothing; the data check shows the last run |
 
 No function is triggered by Firestore writes, so nothing a function writes can set off another run.
 
@@ -168,9 +168,9 @@ No function is triggered by Firestore writes, so nothing a function writes can s
 - ✅ **Received**: last value, date, count, and the **Withings meastype codes** that came back (1 = weight, 4 = height, 5 = fat-free mass, 6 = fat %, 8 = fat mass, 11 = heart rate, 76 = muscle, 77 = water, 88 = bone, 170 = visceral fat, 226 = BMR, 227 = metabolic age, 155/140 = vascular age, 167 = Nerve Health Score…), so you can match each row with the Withings app.
 - ⛔ **Not on the free API**: your scale measures it, but the free API sent nothing. Still free to view in the Withings app.
 - ➖ **Not measured by your scale**: Body Comp has no segmental data, ECG, SpO₂ or water split.
-- ⏳ **Not measured yet**: the Nerve Health Score needs a guided measurement.
+- ⏳ **Not measured yet**: only when the scale model is unknown and the metric needs a guided measurement (the Nerve Health Score). For Body Comp, a metric the scale measures that the API doesn't return is ⛔. Body Comp records pulse wave velocity and the nerve scores.
 
-The verdict at the bottom says **Safe to cancel** only when: the core body metrics are flowing, the history import is complete (and matches your CSV count if you typed it), Withings notifications point at Forge with the right key, and at least 7 weigh-ins arrived on their own with a median ≤ 5 minutes.
+The verdict at the bottom says **Safe to cancel** only when: the core body metrics are flowing, the history import is complete (Forge has every **weigh-in** Withings returned, and matches your weight.csv row count if you typed it; heart-rate-only and nerve-only readings aren't weigh-ins, so they're not compared), Withings notifications point at Forge with the right key, and at least 7 weigh-ins arrived on their own with a median ≤ 5 minutes.
 
 ---
 

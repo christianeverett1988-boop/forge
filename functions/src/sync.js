@@ -48,7 +48,9 @@ export async function applyGroups(db, uid, groups, { device = null, tz = null, n
         else {
           // Keep your "that's me / not me" decision across later edits in Withings.
           const reviewed = prev && prev.reviewed_at ? { needs_review: prev.needs_review, reviewed_at: prev.reviewed_at } : {};
-          tx.set(bodyRefs[k], { ...standard(uid, id, nowIso, prev), ...b, ...reviewed, deleted_by: null, deleted_at: null });
+          // A full set (no merge): restoring a reconcile-deleted doc drops deleted_at/deleted_by entirely. The rules
+          // only accept those fields as strings when present, so never write them as null.
+          tx.set(bodyRefs[k], { ...standard(uid, id, nowIso, prev), ...b, ...reviewed });
           if (prev) res.updated++;
           else { res.created++; res.newIds.push(id); }
         }
@@ -59,7 +61,7 @@ export async function applyGroups(db, uid, groups, { device = null, tz = null, n
         if (!w || (wprev && wprev.deleted === true && wprev.deleted_by !== 'withings')) return; // never un-delete yours
         if (wprev && !wprev.deleted && wprev.w_modified === b.w_modified && wprev.kg === w.kg && wprev.day === w.day) return;
         const keepReview = wprev && wprev.reviewed_at ? { review: wprev.review, reviewed_at: wprev.reviewed_at } : {};
-        tx.set(weightRefs[k], { ...standard(uid, id, nowIso, wprev), ...w, w_modified: b.w_modified, ...keepReview, deleted_by: null, deleted_at: null });
+        tx.set(weightRefs[k], { ...standard(uid, id, nowIso, wprev), ...w, w_modified: b.w_modified, ...keepReview });
       });
       Object.assign(out, {
         created: out.created + res.created, updated: out.updated + res.updated, unchanged: out.unchanged + res.unchanged,
@@ -112,16 +114,19 @@ export async function incrementalSync({ db, api, uid, token, now = () => Date.no
 
   // Only move the cursor once every page is in; otherwise the next sync starts from the old one (overlap is harmless).
   if (offset == null) await db.doc(P.priv(uid)).update({ cursor });
-  // Latency: received-to-stored time of weigh-ins that are new and less than 6 hours old.
+  // Webhook proof: only syncs started by a Withings notification count, and only new weigh-ins (a group with
+  // meastype 1) less than 6 hours old. A Sync now / maintenance catch-up is not "arrived on its own".
   const t = now();
-  const fresh = totals.groups.map((g) => Math.round((t - Number(g.date) * 1000) / 1000)).filter((s) => s >= 0 && s < 6 * 3600);
+  const weighIns = reason === 'notify' ? totals.groups.filter((g) => (g.measures || []).some((m) => m.type === 1)) : [];
+  const fresh = weighIns.map((g) => Math.round((t - Number(g.date) * 1000) / 1000)).filter((s) => s >= 0 && s < 6 * 3600);
   const statusPatch = { last_sync_at: iso(t), last_sync_reason: reason };
   if (fresh.length) {
     const latest = Math.min(...fresh);
     statusPatch.last_latency_s = latest;
     statusPatch.latencies_s = [...(status.latencies_s || []), latest].slice(-7);
-    statusPatch.last_weigh_in_at = iso(Math.max(...totals.groups.map((g) => Number(g.date) * 1000)));
   }
+  const anyWeight = totals.groups.filter((g) => (g.measures || []).some((m) => m.type === 1));
+  if (anyWeight.length) statusPatch.last_weigh_in_at = iso(Math.max(...anyWeight.map((g) => Number(g.date) * 1000)));
   await db.doc(P.status(uid)).set(statusPatch, { merge: true });
   return { ...totals, pages, cursor, groups: undefined };
 }
@@ -156,7 +161,13 @@ export async function backfillPage({ db, api, uid, token, offset = 0, now = () =
 
 /**
  * Groups deleted in the Withings app don't send a notification. Compare the last 90 days (minus a day at
- * each edge) and tombstone Forge's copies that Withings no longer has. Only runs on a complete answer.
+ * each edge) of weigh-in groups (meastype 1):
+ *   - Forge's copies Withings no longer has are marked deleted_by: 'withings';
+ *   - any copy the reconcile removed earlier that Withings lists again is restored (a lastupdate sync
+ *     wouldn't re-send an unchanged group, so this is what makes removals reversible);
+ *   - SAFETY STOP: if Withings' answer is empty, or more than max(3, 20% of Forge's weigh-ins in the window)
+ *     would be removed, nothing is removed (deleting in the Withings app is one or two at a time).
+ * Docs YOU deleted are never touched. Returns { removed, restored, aborted, suspicious }.
  */
 export async function reconcile90({ db, api, uid, token, now = () => Date.now() }) {
   const end = Math.floor(now() / 1000);
@@ -173,14 +184,13 @@ export async function reconcile90({ db, api, uid, token, now = () => Date.now() 
   const lo = iso((start + 86400) * 1000);
   const hi = iso((end - 86400) * 1000);
   const snap = await db.collection(P.bodyCol(uid)).where('measured_at', '>=', lo).where('measured_at', '<=', hi).get();
+  const t = iso(now());
+  const restored = await restoreBack(db, uid, snap.docs.filter((d) => { const x = d.data(); return x.deleted === true && x.deleted_by === 'withings' && ids.has(d.id); }), t);
   const candidates = snap.docs.filter((d) => { const x = d.data(); return x.source === 'withings' && !x.deleted && x.metrics && x.metrics.weight_kg != null; });
   const gone = candidates.filter((d) => !ids.has(d.id));
-  // Safety: an empty or much shorter answer (a Withings change, a plan change, an outage that still says
-  // "ok") must not wipe your history. Deleting in the Withings app is one or two at a time.
   if (gone.length && (ids.size === 0 || gone.length > Math.max(3, Math.ceil(candidates.length * 0.2)))) {
-    return { removed: 0, aborted: true, suspicious: gone.length };
+    return { removed: 0, restored, aborted: true, suspicious: gone.length };
   }
-  const t = iso(now());
   for (let i = 0; i < gone.length; i += 200) {
     const batch = db.batch();
     for (const d of gone.slice(i, i + 200)) {
@@ -190,5 +200,23 @@ export async function reconcile90({ db, api, uid, token, now = () => Date.now() 
     }
     await batch.commit();
   }
-  return { removed: gone.length };
+  return { removed: gone.length, restored };
+}
+
+/** Undo the reconcile's own removals (body doc and its weight), dropping deleted/deleted_at/deleted_by. */
+async function restoreBack(db, uid, docs, t) {
+  const clean = (x) => {
+    const { deleted_at, deleted_by, ...rest } = x; // eslint-disable-line no-unused-vars
+    return { ...rest, deleted: false, updated_at: t };
+  };
+  for (let i = 0; i < docs.length; i += 200) {
+    const batch = db.batch();
+    for (const d of docs.slice(i, i + 200)) {
+      batch.set(db.doc(P.body(uid, d.id)), clean(d.data()));
+      const w = await db.doc(P.weight(uid, d.id)).get();
+      if (w.exists && w.data().deleted === true && w.data().deleted_by === 'withings') batch.set(db.doc(P.weight(uid, d.id)), clean(w.data()));
+    }
+    await batch.commit();
+  }
+  return docs.length;
 }

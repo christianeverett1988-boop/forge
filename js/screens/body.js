@@ -7,7 +7,7 @@ import { currentRecovery, historyIndex } from '../workouts/plan.js';
 import { exerciseById } from '../workouts/library.js';
 import { MUSCLE_LABELS, muscleStats } from '../workouts/recovery.js';
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
-import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM } from '../withings/body.js';
+import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
 
 const SHOW = ['chest', 'front_delts', 'side_delts', 'rear_delts', 'lats', 'upper_back', 'traps', 'biceps', 'triceps', 'forearms', 'abs', 'obliques', 'lower_back', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
 
@@ -27,16 +27,23 @@ function compositionCard() {
   }
   const u = getUnits();
   const h = heightM(docs, state.profile);
+  const latestDay = lastWeighInDay(docs);
+  const gap = compositionGap(docs);
+  const asOf = (day) => new Date(`${day}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', ...(day.slice(0, 4) !== latestDay.slice(0, 4) ? { year: 'numeric' } : {}) });
   const tiles = BODY_METRICS.map((m) => {
     const pts = dailySeries(metricSeries(docs, m.key, { height: h })).map((p) => ({ ...p, at: p.at }));
     const lc = latestAndChange(pts, 30);
     if (!lc) return '';
     const ch = lc.change;
-    return `<a class="bc-tile" href="#/metric/${m.key}"><span>${m.label}</span><b>${fmtMetric(m.key, lc.last.v, u)}</b><small class="muted">${ch == null ? '&nbsp;' : `${ch > 0 ? '▲' : ch < 0 ? '▼' : '•'} ${fmtMetric(m.key, Math.abs(ch), u, { unit: false })} · 30d`}</small></a>`;
+    // Older than your latest weigh-in (e.g. the scale couldn't read body composition since): say so.
+    const stale = latestDay && lc.last.day < latestDay;
+    const sub = stale ? `as of ${asOf(lc.last.day)}` : ch == null ? '&nbsp;' : `${ch > 0 ? '▲' : ch < 0 ? '▼' : '•'} ${fmtMetric(m.key, Math.abs(ch), u, { unit: false })} · 30d`;
+    return `<a class="bc-tile${stale ? ' stale' : ''}" href="#/metric/${m.key}"><span>${m.label}</span><b>${fmtMetric(m.key, lc.last.v, u)}</b><small class="muted">${sub}</small></a>`;
   }).join('');
   const last = [...docs].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))[0];
   return `<div class="card">
     <div class="row between"><p class="label">Body composition</p><span class="small muted">${last ? new Date(last.measured_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span></div>
+    ${gap ? `<p class="notice info small" data-bc-gap>Your last ${gap === 1 ? 'weigh-in' : `${gap} weigh-ins`} had no body composition. Stand barefoot with dry feet on the electrodes and keep still until the scale finishes.</p>` : ''}
     <div class="bc-grid">${tiles}</div>
     <p class="small muted">From your scale. Tap any number for its chart and what it means.</p>
   </div>`;

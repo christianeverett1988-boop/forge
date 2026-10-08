@@ -2,7 +2,7 @@
 // body-metric formatting and series, exports. (Server logic is tested in functions/test.)
 import { test, eq, assert, near } from './harness.js';
 import { classify, verdict, compare, CHECK_METRICS, median } from '../js/withings/check.js';
-import { fmtMetric, metricSeries, dailySeries, latestAndChange, heightM, periodAverage, KEY_OF_TYPE } from '../js/withings/body.js';
+import { fmtMetric, metricSeries, dailySeries, latestAndChange, heightM, periodAverage, KEY_OF_TYPE, lastWeighInDay, compositionGap } from '../js/withings/body.js';
 import { bodyRows } from '../js/export-body.js';
 
 const T = (count, last, value, extra = {}) => ({ count, first: '2024-01-05T12:00:00Z', last, last_value: value, positions: [], attrib: { 0: count }, ...extra });
@@ -14,7 +14,7 @@ const bodyCompReport = (over = {}) => ({
     77: T(880, '2026-10-10T11:00:00Z', 45.1), 88: T(880, '2026-10-10T11:00:00Z', 3.19),
   },
   rejected: [140],
-  groups: 905, stored_groups: 905,
+  groups: 960, stored_groups: 962, withings_weight_groups: 900, stored_weight_groups: 900,
   backfill: { done: true, from: '2024-01-05T12:00:00Z' },
   subscription: { present: true, key_ok: true },
   latencies_s: [40, 70, 55, 120, 61, 90, 48],
@@ -32,7 +32,7 @@ test('data check: every A.1 metric gets a row; received rows show which meastype
   eq(by.muscle_mass.codes.join(), '76');
 });
 
-test('data check: Body Comp → visceral fat/BMR/vascular age missing = ⛔ not on the free API; segmental/ECG/SpO₂ = ➖; nerve score = ⏳', () => {
+test('data check: Body Comp → visceral fat/BMR/vascular age/PWV/nerve scores missing = ⛔ not on the free API; segmental/ECG/SpO₂ = ➖', () => {
   const by = Object.fromEntries(classify(bodyCompReport()).map((r) => [r.key, r]));
   eq(by.visceral_fat.state, 'not_on_api');
   eq(by.bmr.state, 'not_on_api');
@@ -42,7 +42,12 @@ test('data check: Body Comp → visceral fat/BMR/vascular age missing = ⛔ not 
   eq(by.ecg.state, 'not_on_model');
   eq(by.spo2.state, 'not_on_model');
   eq(by.water_split.state, 'not_on_model');
-  eq(by.nerve_health.state, 'not_yet');
+  eq(by.pwv.state, 'not_on_api', 'Body Comp records PWV');
+  eq(by.nerve_health.state, 'not_on_api', 'your scale measures it: ⛔, not ⏳');
+  eq(by.nerve_scores.state, 'not_on_api');
+  assert(/guided measurement/.test(by.nerve_health.note));
+  const unknown = Object.fromEntries(classify({ ...bodyCompReport(), model: null }).map((r) => [r.key, r]));
+  eq(unknown.nerve_health.state, 'not_yet', 'model unknown: maybe never measured');
 });
 
 test('data check: segmental codes with positions are reported when they arrive; unknown model → not on API', () => {
@@ -65,10 +70,13 @@ test('verdict: safe only with core metrics, finished backfill, subscription and 
   assert(verdict(bodyCompReport({ latencies_s: [40, 50] })).blockers.some((b) => /2 of 7/.test(b)));
   assert(verdict(bodyCompReport({ latencies_s: [900, 800, 700, 650, 640, 630, 620] })).blockers.some((b) => /min to arrive/.test(b)));
   assert(verdict(bodyCompReport({ backfill: { done: false } })).blockers.some((b) => /backfill/.test(b)));
-  assert(verdict(bodyCompReport({ stored_groups: 800 })).blockers.some((b) => /800 of the 905/.test(b)));
+  assert(verdict(bodyCompReport({ stored_weight_groups: 800 })).blockers.some((b) => /800 of the 900 weigh-ins/.test(b)));
+  eq(verdict(bodyCompReport({ stored_groups: 3, groups: 999 })).safe, true, 'all-groups counts (HR-only, tombstones) are not compared');
+  eq(verdict(bodyCompReport(), { csvRows: 901 }).safe, true, 'weight.csv rows vs Forge weigh-ins, within 2');
+  assert(ok.decisions.includes('Pulse wave velocity') && ok.decisions.includes('Nerve Health Score'), 'decide before cancelling');
   assert(verdict(bodyCompReport({ subscription: { present: false } })).blockers.some((b) => /notify/.test(b)));
   assert(verdict(bodyCompReport({ subscription: { present: true, key_ok: false } })).blockers.some((b) => /out of date/.test(b)));
-  assert(verdict(bodyCompReport(), { csvRows: 1200 }).blockers.some((b) => /1200 rows/.test(b)));
+  assert(verdict(bodyCompReport(), { csvRows: 1200 }).blockers.some((b) => /weight.csv has 1200 rows; Forge has 900 weigh-ins/.test(b)));
   const noFat = bodyCompReport();
   delete noFat.types[6];
   assert(verdict(noFat).blockers.some((b) => /Body fat %/.test(b)));
@@ -141,4 +149,20 @@ test('export: one CSV row per measurement group, a column per metric, deleted on
   eq(rows[0].needs_review, 'yes');
   eq(rows[1].fat_ratio_pct, 21);
   eq(rows[1].muscle_mass_kg, '');
+});
+
+test('body tiles: the latest weigh-in day, and how many recent weigh-ins came without body composition', () => {
+  const comp = { weight_kg: 82, fat_ratio_pct: 21, fat_mass_kg: 17.2 };
+  const docs = [
+    doc('w_1', '2026-09-01T11:00:00Z', comp),
+    doc('w_2', '2026-10-05T11:00:00Z', { weight_kg: 81.6 }),
+    doc('w_3', '2026-10-07T11:00:00Z', { weight_kg: 81.4 }),
+    doc('w_4', '2026-10-08T11:00:00Z', { heart_pulse_bpm: 62 }), // HR-only: not a weigh-in
+    doc('w_5', '2026-10-09T11:00:00Z', { weight_kg: 60 }, { needs_review: true }),
+  ];
+  eq(lastWeighInDay(docs), '2026-10-07');
+  eq(compositionGap(docs), 2);
+  eq(compositionGap([...docs, doc('w_6', '2026-10-10T11:00:00Z', comp)]), 0);
+  const fat = latestAndChange(metricSeries(docs, 'fat_ratio_pct'));
+  assert(fat.last.day < lastWeighInDay(docs), 'so the fat tile says "as of Sep 1"');
 });

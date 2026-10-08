@@ -135,7 +135,7 @@ test('incremental sync: pages with lastupdate (cursor − 5 s), saves the cursor
     { updatetime: sec(T0), more: 0, measuregrps: [group(2, T0 - 120_000)] },
   ];
   const api = fakeApi({ getmeas: () => pages.shift() });
-  const r = await incrementalSync({ db, api, uid: UID, token: 'AT', now: () => T0 });
+  const r = await incrementalSync({ db, api, uid: UID, token: 'AT', now: () => T0, reason: 'notify' });
   assert.equal(r.created, 2);
   assert.equal(api.calls[0][2].lastupdate, sec(T0) - 3600 - 5);
   assert.equal(api.calls[1][2].offset, 1);
@@ -516,7 +516,7 @@ test('a measurement the reconcile removed comes back if Withings sends it again;
   mark(P.body(UID, 'w_2'), null); mark(P.weight(UID, 'w_2'), null);
   await applyGroups(db, UID, [group(1, T0), group(2, T0)], { now: T0 + 5 });
   assert.equal(db.dump(P.body(UID, 'w_1')).deleted, false);
-  assert.equal(db.dump(P.body(UID, 'w_1')).deleted_by, null);
+  assert.equal('deleted_by' in db.dump(P.body(UID, 'w_1')), false, 'tombstone fields dropped, never null');
   assert.equal(db.dump(P.weight(UID, 'w_1')).deleted, false);
   assert.equal(db.dump(P.body(UID, 'w_2')).deleted, true);
   assert.equal(db.dump(P.weight(UID, 'w_2')).deleted, true);
@@ -575,4 +575,102 @@ test('reconnecting with a different Withings account drops the old link', async 
   await handleCallback({ state, code: 'c' }, { db, api, enqueue: fakeQueue().enqueue, redirectUri: 'r', webhookUrl: 'w', appUrl: 'a/', now: () => T0 });
   assert.equal(db.dump(P.wuser(WUSER)), undefined);
   assert.equal(db.dump(P.wuser('777')).uid, UID);
+});
+
+// ---------- W1 review fixes (v0.4.0 review) ----------
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+
+const FIXTURE = new URL('../../tests/rules/fixtures/applygroups.json', import.meta.url);
+const hasNullDeleteFields = (d) => d.deleted_at === null || d.deleted_by === null;
+
+/** Exactly what the sync writes: a new weigh-in, and one restored after a reconcile removal. */
+async function syncedDocs() {
+  const db = fakeDb();
+  await applyGroups(db, 'alice', [group(11, T0), group(12, T0, 80, { attrib: 1 })], { now: T0 });
+  db.put(P.body('alice', 'w_12'), { ...db.dump(P.body('alice', 'w_12')), deleted: true, deleted_at: 'x', deleted_by: 'withings' });
+  db.put(P.weight('alice', 'w_12'), { ...db.dump(P.weight('alice', 'w_12')), deleted: true, deleted_at: 'x', deleted_by: 'withings' });
+  await applyGroups(db, 'alice', [group(12, T0, 80, { attrib: 1, modified: sec(T0) + 60 })], { now: T0 + 1000 });
+  return {
+    'users/alice/body_measures/w_11': db.dump(P.body('alice', 'w_11')),
+    'users/alice/weights/w_11': db.dump(P.weight('alice', 'w_11')),
+    'users/alice/body_measures/w_12': db.dump(P.body('alice', 'w_12')),
+    'users/alice/weights/w_12': db.dump(P.weight('alice', 'w_12')),
+  };
+}
+
+test('sync never writes deleted_at / deleted_by as null (the rules only accept strings); restores drop them', async () => {
+  const docs = await syncedDocs();
+  for (const [path, d] of Object.entries(docs)) {
+    assert.equal(hasNullDeleteFields(d), false, path);
+    assert.equal(d.deleted, false, path);
+  }
+  assert.equal('deleted_by' in docs['users/alice/body_measures/w_12'], false, 'restored doc has no deleted_by');
+});
+
+test('the rules-test fixture is exactly what the sync writes (regenerate: UPDATE_FIXTURES=1 npm test)', async () => {
+  const docs = await syncedDocs();
+  if (process.env.UPDATE_FIXTURES) {
+    mkdirSync(new URL('../../tests/rules/fixtures/', import.meta.url), { recursive: true });
+    writeFileSync(FIXTURE, `${JSON.stringify(docs, null, 2)}\n`);
+  }
+  assert.deepEqual(JSON.parse(readFileSync(FIXTURE, 'utf8')), JSON.parse(JSON.stringify(docs)));
+});
+
+test('webhook proof: only notification syncs of weigh-ins count; Sync now and HR-only readings do not', async () => {
+  const run = async (reason, groups) => {
+    const db = fakeDb();
+    connected(db);
+    const api = fakeApi({ getmeas: { updatetime: sec(T0), more: 0, measuregrps: groups } });
+    await incrementalSync({ db, api, uid: UID, token: 'AT', now: () => T0, reason });
+    return db.dump(P.status(UID));
+  };
+  const manual = await run('manual', [group(31, T0 - 60_000)]);
+  assert.equal(manual.latencies_s, undefined, 'Sync now a minute later is not "arrived on its own"');
+  assert.ok(manual.last_weigh_in_at, 'but the weigh-in time is still recorded');
+  assert.equal((await run('maintenance', [group(32, T0 - 60_000)])).latencies_s, undefined);
+  const hrOnly = { ...group(33, T0 - 60_000), measures: [{ type: 11, value: 64, unit: 0 }] };
+  assert.equal((await run('notify', [hrOnly])).latencies_s, undefined, 'a heart-rate-only reading is not a weigh-in');
+  assert.deepEqual((await run('notify', [group(34, T0 - 90_000)])).latencies_s, [90]);
+});
+
+test('reconcile restores its own removals when Withings lists the weigh-in again; never yours', async () => {
+  const db = fakeDb();
+  const day = 86400_000;
+  const groups = Array.from({ length: 10 }, (_, i) => group(700 + i, T0 - (5 + i) * day));
+  await applyGroups(db, UID, groups, { now: T0 });
+  const missing = groups.filter((g) => g.grpid !== 700);
+  const r1 = await reconcile90({ db, api: fakeApi({ getmeas: { more: 0, measuregrps: missing } }), uid: UID, token: 'AT', now: () => T0 });
+  assert.equal(r1.removed, 1);
+  assert.equal(db.dump(P.body(UID, 'w_700')).deleted_by, 'withings');
+  // You delete another one yourself.
+  db.put(P.body(UID, 'w_701'), { ...db.dump(P.body(UID, 'w_701')), deleted: true, deleted_at: 'y' });
+  db.put(P.weight(UID, 'w_701'), { ...db.dump(P.weight(UID, 'w_701')), deleted: true, deleted_at: 'y' });
+  // Withings lists 700 again (it was a hiccup) and, of course, still lists 701.
+  const r2 = await reconcile90({ db, api: fakeApi({ getmeas: { more: 0, measuregrps: groups } }), uid: UID, token: 'AT', now: () => T0 + 1000 });
+  assert.equal(r2.restored, 1);
+  const b = db.dump(P.body(UID, 'w_700'));
+  const w = db.dump(P.weight(UID, 'w_700'));
+  assert.equal(b.deleted, false);
+  assert.equal(w.deleted, false);
+  assert.equal('deleted_by' in b || 'deleted_at' in b || 'deleted_by' in w, false, 'tombstone fields removed, not nulled');
+  assert.equal(db.dump(P.body(UID, 'w_701')).deleted, true, 'yours stays deleted');
+});
+
+test('data check: weigh-in counts on both sides (weight.csv compares with these), report replaced whole', async () => {
+  const db = fakeDb();
+  connected(db);
+  const hrOnly = { ...group(41, T0 - 3 * 86400_000), measures: [{ type: 11, value: 60, unit: 0 }] };
+  await applyGroups(db, UID, [group(40, T0), hrOnly, group(42, T0 - 86400_000)], { now: T0 });
+  db.put(P.body(UID, 'w_42'), { ...db.dump(P.body(UID, 'w_42')), deleted: true, deleted_at: 'z' });
+  db.put(P.status(UID), { ...db.dump(P.status(UID)), data_check: { types: { 170: { count: 9 } } }, last_reconcile: { removed: 0, aborted: true, suspicious: 40 } });
+  const api = fakeApi({
+    getmeas: { more: 0, measuregrps: [group(40, T0), hrOnly, group(42, T0 - 86400_000)] },
+    notifyList: { profiles: [] },
+  });
+  const r = await runDataCheck({ db, api, uid: UID, token: 'AT', webhookUrl: 'w', now: () => T0 });
+  assert.equal(r.withings_weight_groups, 2);
+  assert.equal(r.stored_weight_groups, 1, 'HR-only and deleted docs are not weigh-ins');
+  assert.equal(r.stored_groups, 3);
+  assert.equal(r.last_reconcile.aborted, true);
+  assert.equal(db.dump(P.status(UID)).data_check.types[170], undefined, 'no stale types from an older report');
 });

@@ -26,10 +26,11 @@ export const CHECK_METRICS = [
   { key: 'ecg', label: 'ECG', types: [130, 135, 136, 137, 138] },
 ];
 
-// What each scale model measures (from Withings' product pages, as summarised in the addendum). Body Comp:
-// no segmental data, no ECG, no SpO₂; US scales report vascular age rather than raw PWV.
+// What each scale model measures. Body Comp: no segmental data, no ECG, no SpO₂, no water split. It does
+// record pulse wave velocity (vascular age is computed from it) and the nerve scores (Christian's own
+// Withings export shows both).
 export const MODEL_MEASURES = {
-  'body comp': ['weight', 'height', 'fat_ratio', 'fat_mass', 'fat_free_mass', 'muscle_mass', 'hydration', 'bone_mass', 'heart_pulse', 'visceral_fat', 'bmr', 'metabolic_age', 'vascular_age', 'nerve_health', 'nerve_scores'],
+  'body comp': ['weight', 'height', 'fat_ratio', 'fat_mass', 'fat_free_mass', 'muscle_mass', 'hydration', 'bone_mass', 'heart_pulse', 'visceral_fat', 'bmr', 'metabolic_age', 'vascular_age', 'pwv', 'nerve_health', 'nerve_scores'],
 };
 const modelKey = (model) => {
   const m = String(model || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -57,8 +58,10 @@ export function classify(report) {
     const rej = codes.filter((t) => rejected.has(t));
     const note = rej.length ? `Withings rejected type ${rej.join(', ')}` : '';
     if (caps && !caps.has(m.key)) return { key: m.key, label: m.label, state: 'not_on_model', codes, note };
+    // Your scale measures it and the API sent nothing: that's ⛔, guided measurement or not.
+    if (caps) return { key: m.key, label: m.label, state: 'not_on_api', codes, note: note || `Your scale measures this, but the free API sent nothing. Still free to view in the Withings app.${m.guided ? ' (If you’ve never done the guided measurement, do one and run the check again.)' : ''}` };
     if (m.guided) return { key: m.key, label: m.label, state: 'not_yet', codes, note: note || 'Needs a guided measurement on the scale. If you’ve done one and it still isn’t here, it isn’t on the free API.' };
-    return { key: m.key, label: m.label, state: 'not_on_api', codes, note: note || (caps ? 'Your scale measures this, but the free API sent nothing. Still free to view in the Withings app.' : 'Nothing returned (scale model unknown).') };
+    return { key: m.key, label: m.label, state: 'not_on_api', codes, note: note || 'Nothing returned (scale model unknown).' };
   });
 }
 
@@ -89,11 +92,14 @@ export function verdict(report, { csvRows = null, minWeighIns = 7, maxMedianS = 
   const missingCore = core.filter((r) => r.state !== 'received' && r.state !== 'not_on_model');
   if (missingCore.length) blockers.push(`Not received: ${missingCore.map((r) => r.label).join(', ')}.`);
   if (!report.backfill || !report.backfill.done) blockers.push('The history backfill hasn’t finished.');
-  if (Number.isFinite(report.groups) && Number.isFinite(report.stored_groups) && report.stored_groups < report.groups) {
-    blockers.push(`Forge has ${report.stored_groups} of the ${report.groups} measurement groups Withings returned.`);
+  // Weigh-ins are what weight.csv lists (one row per weigh-in), so compare weigh-in groups, not every group.
+  const wW = report.withings_weight_groups;
+  const wF = report.stored_weight_groups;
+  if (Number.isFinite(wW) && Number.isFinite(wF) && wF < wW) {
+    blockers.push(`Forge has ${wF} of the ${wW} weigh-ins Withings returned.`);
   }
-  if (csvRows != null && Number.isFinite(report.stored_groups) && report.stored_groups + 2 < csvRows) {
-    blockers.push(`Your Withings export has ${csvRows} rows; Forge has ${report.stored_groups}. Check for manual entries before cancelling.`);
+  if (csvRows != null && Number.isFinite(wF) && wF + 2 < csvRows) {
+    blockers.push(`Your weight.csv has ${csvRows} rows; Forge has ${wF} weigh-ins. Check for manual entries before cancelling.`);
   }
   if (report.truncated) blockers.push('The check stopped early (very long history). Run it again.');
   const sub = report.subscription || {};

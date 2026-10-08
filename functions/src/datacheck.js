@@ -86,14 +86,20 @@ export async function runDataCheck({ db, api, uid, token, webhookUrl, now = () =
   // Forge's side: how many groups are stored (count, oldest) and the webhook latency history.
   const status = (await db.doc(P.status(uid)).get()).data() || {};
   const stored = await db.collection(P.bodyCol(uid)).count().get();
-  report.stored_groups = stored.data().count;
+  report.stored_groups = stored.data().count; // every doc, tombstones included (for reference)
+  // The number to compare with weight.csv: weigh-in groups. Withings' side is how many groups carried a
+  // weight (meastype 1); Forge's side is non-deleted body docs with a weight.
+  const weightDocs = await db.collection(P.bodyCol(uid)).select('deleted', 'metrics.weight_kg').get();
+  report.stored_weight_groups = weightDocs.docs.filter((d) => { const x = d.data(); return !x.deleted && x.metrics && x.metrics.weight_kg != null; }).length;
+  report.withings_weight_groups = report.types[1] ? report.types[1].count : 0;
+  report.last_reconcile = status.last_reconcile || null;
   report.backfill = status.backfill || null;
   report.latencies_s = status.latencies_s || [];
   report.last_notify_at = status.last_notify_at || null;
   report.last_sync_at = status.last_sync_at || null;
   report.model = status.model || (report.devices[0] && report.devices[0].model) || null;
 
-  await db.doc(P.status(uid)).set({ data_check: report }, { merge: true });
+  await db.doc(P.status(uid)).set({ data_check: report }, { mergeFields: ['data_check'] }); // replace the old report whole
   return report;
 }
 

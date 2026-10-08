@@ -18,7 +18,7 @@ Until then the app works as before, and Settings → Withings explains what's mi
 - **Everything from Body Comp:** weight, body fat %, fat mass, fat-free mass, muscle, water, bone and standing heart rate, plus visceral fat, BMR, metabolic age, vascular age and nerve scores if the free API returns them. Raw values are kept too, so new types can be decoded later.
 - **Trend rule:** when the scale weighs you more than once a day, the trend uses the **earliest** reading. Typed-in weights on a scale day stay in your history but don't move the trend.
 - **"Is this you?":** weigh-ins Withings couldn't match to you stay out of the trend until you tap **That's me** (or **Not me**).
-- **Deleting sticks:** deleting a Withings weigh-in or measurement in Forge is permanent. The sync never brings it back. Deletions you make in the Withings app (last 90 days) reach Forge within a day; if Withings ever answers with far fewer measurements than Forge has, nothing is deleted.
+- **Deleting sticks:** deleting a Withings weigh-in or measurement in Forge is permanent. The sync never brings it back. Deletions you make in the Withings app (last 90 days) reach Forge within a day. If Withings ever answers with far fewer weigh-ins than Forge has (more than 3, or 20% of the last 90 days), nothing is deleted, and anything removed comes back if Withings lists it again.
 - **Disconnect** (optionally deleting the synced data). **Delete everything** now also removes the Withings sign-in and synced data.
 
 **Data check** (Settings → Withings → Data check)
@@ -33,7 +33,7 @@ Until then the app works as before, and Settings → Withings explains what's mi
 - **Verdict:** a plain **"Safe to cancel Withings+?"** with the specific blockers.
 
 **Body tab**
-- **Body composition** tiles: latest value and 30-day change for every metric the scale sends, plus BMI, FFMI and FMI.
+- **Body composition** tiles: latest value and 30-day change for every metric the scale sends, plus BMI, FFMI and FMI. A tile older than your latest weigh-in says **as of <date>**, and if your last weigh-ins had no body composition, a note says how to get a reading (barefoot, dry feet on the electrodes).
 - **Tap a tile** for its chart: 7/30/90/365 days or all, a 7-day line, the previous period dashed, and "this period vs previous".
 - **Muscle** is charted over your **training sets per week**.
 - **What is this?** opens an explainer for each metric: what it is, how the scale estimates it, what moves it, typical ranges with sources, accuracy and what to do in Forge. It's our own text, in `data/metrics.json`.
@@ -53,9 +53,9 @@ Until then the app works as before, and Settings → Withings explains what's mi
   - `oauth_states`, `withings_users` and `shortcut_tokens` are closed to everyone.
 - **CSP:** one new origin in `connect-src`: `https://us-east1-forge-web-f2351.cloudfunctions.net`. The Connect button works under it, which is tested.
 - **Tests:**
-  - 154 unit tests (+11: data-check classification and verdict, compare, body formatting and series, CSV, the earliest-weigh-in rule, the level pace);
-  - 35 functions tests (decoding, idempotent writes, tombstones, webhook replies, one backfill run per request and a bounded chain, token rotation and lease, OAuth state, data check, maintenance, the reconcile's safety stop, disconnect, log filtering) plus a wiring check of every function in CI;
-  - 6 new rules tests.
+  - 155 unit tests (+12: data-check classification and verdict, compare, body formatting and series, CSV, the earliest-weigh-in rule, the level pace);
+  - 40 functions tests (decoding, idempotent writes, tombstones, webhook replies, one backfill run per request and a bounded chain, token rotation and lease, OAuth state, data check, maintenance, the reconcile's safety stop, disconnect, log filtering) plus a wiring check of every function in CI;
+  - 7 new rules tests, one seeded with exactly what the sync writes (a fixture the functions tests keep in step).
 
 ## 0.3.2 — XP, levels, badges, Today rings, share image (2026-10-08)
 

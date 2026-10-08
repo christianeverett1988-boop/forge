@@ -85,10 +85,10 @@ export function reviewBodyMeasure(id, isMe) {
   const t = now();
   if (isMe) {
     updateDoc(doc(db, 'users', uid(), 'body_measures', id), { needs_review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
-    updateDoc(doc(db, 'users', uid(), 'weights', id), { review: false, reviewed_at: t, updated_at: t }).catch(() => {});
+    updateDoc(doc(db, 'users', uid(), 'weights', id), { review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
   } else {
     tombstone('body_measures', id);
-    updateDoc(doc(db, 'users', uid(), 'weights', id), { deleted: true, deleted_at: t, updated_at: t }).catch(() => {});
+    updateDoc(doc(db, 'users', uid(), 'weights', id), { deleted: true, deleted_at: t, updated_at: t }).catch(reportWriteError);
   }
 }
 
