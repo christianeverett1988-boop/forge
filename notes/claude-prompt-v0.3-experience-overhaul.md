@@ -57,22 +57,30 @@ Make it the default, and keep today's list logger as a "List view" toggle.
 - The paused state survives an app kill. Store `paused_at` and `paused_ms` on the workout, and update rules and tests if needed.
 - If I come back after more than 10 minutes away while not paused, ask: "You were away 14 min. Count it or remove it?"
 
-### 3. How-to demo on every exercise (Fitbod, BetterMen, Peloton)
-- **Source:** free-exercise-db (Unlicense, already credited). It has a start photo and an end photo for each exercise. Forge links 174 fedb ids, and 172 have images. Map more of our exercises by exact name.
+### 3. How-to demo on every exercise (Fitbod, BetterMen, Lyfta, Peloton)
+**Primary demo: an animated silhouette figure, drawn in code.** This was my idea. Lyfta's looping 3D model with muscles lighting up is the bar, but we can't license 3D or video, so draw it ourselves.
+- **Figure:** a clean, solid silhouette in SVG (not a stick figure): a head plus torso, upper arm, forearm, thigh and shin segments as rounded shapes on a jointed skeleton (about 14 joints). Use a neutral dark-grey body with a subtle rim light in the Forge accent. No faces, no realistic people.
+- **Motion templates, not 300 hand animations.** Define keyframe poses (joint angles) per movement pattern: squat, hinge, lunge/split squat, horizontal push, vertical push, horizontal pull, vertical pull, curl, triceps extension, lateral/front raise, fly, calf raise, plank/core holds, crunch/leg raise, carry, jump/plyo, plus the calisthenics family (push-up variants, dip, pull-up/chin-up, pistol, L-sit, hollow hold, burpee). Each exercise maps to a template plus parameters: stance, grip width, torso angle, range of motion, side or front camera, and a **prop** (barbell, dumbbells, kettlebell, cable handle, band, bench, pull-up bar, machine seat). Interpolate the poses with easing.
+- **Tempo:** the loop follows the rep phases (lower about 2 s, brief pause, lift about 1 s), synced to the exercise's tempo when it has one.
+- **Muscles light up** (Lyfta-style): tint the working segments with the accent at the hardest point of each rep, primary muscles strong and secondary faint, matching the muscle map in section 4.
+- **Cost:** pure code and data, offline by default, no downloads, tiny. One small renderer (`js/ui/figure.js`) plus a pose/template table. Keep it inside the JS budget, or justify going over.
+- **Coverage report:** list which exercises map to a template. Anything unmapped falls back to photos (below), never a blank.
+- Show me 3 silhouette examples in your plan reply (frame-by-frame for a squat, a pull-up and a dumbbell curl) before building them all.
+
+**Secondary: real start/end photos** from free-exercise-db (Unlicense, already credited), shown as a "Photos" toggle inside the How-To sheet and as the fallback for unmapped exercises.
+- Forge links 174 fedb ids, and 172 have images. Map more of our exercises by exact name.
 - **Assets:** a one-time script I run resizes them (about 480 px wide, ~25 KB each) into `media/ex/<id>/`, and I commit the output. Don't hotlink.
-- **Looping demo:** crossfade the two frames with a slight scale, about 1.6 s per cycle.
-- **Offline:**
-  - cache today's demos when a workout starts;
-  - otherwise cache a demo the first time I view it (cache-first);
-  - add a Settings button "Download all demos (≈ N MB)".
-  - Don't precache everything in the app shell.
-- **Fallback:** if an exercise has no photo, show the animated muscle map with the cues, never a blank.
-- **How-To sheet:** opened from a big **How-To** button (tapping the name isn't discoverable). It shows:
-  - the demo;
-  - **Instructions | Target** tabs;
-  - cues;
-  - my history and PRs for that exercise;
-  - an optional "Watch on YouTube" **link-out** to a search. No embed, so `frame-src` stays `'none'`.
+- **Loop:** crossfade the two frames with a slight scale, about 1.6 s per cycle.
+- **Offline:** cache today's photos when a workout starts, otherwise cache-first on first view, plus a Settings button "Download all demo photos (≈ N MB)". Don't precache them in the app shell.
+
+**How-To sheet:** opened from a big **How-To** button (tapping the name isn't discoverable). Layout like Lyfta's exercise detail:
+- the looping silhouette demo across the top half (Figure | Photos toggle);
+- a row of actions under it: Favourite, **Watch on YouTube** (link-out to a search, no embed, so `frame-src` stays `'none'`), Share;
+- **Instructions | Target** tabs (Target shows the front/back muscle map);
+- cues;
+- my history and PRs for that exercise.
+
+The player shows the silhouette small by default on each exercise screen, and tapping it opens the sheet.
 
 ### 4. Muscle map everywhere (Fitbod, BetterMen, Muscle Booster)
 - **Source:** `react-native-body-highlighter` v3.2.0 (MIT, by Hicham ELABBASSI). The path data is plain arrays in `dist/assets/bodyFront.js` and `bodyBack.js` (~50 KB; viewBox front `0 0 724 1448`, back `724 0 724 1448`).
@@ -163,6 +171,13 @@ When I tap **Done set**, the app should feel like I just charged up, with a Forg
   - Lighthouse Performance, Accessibility and Best Practices all at least 90.
 - **Wake lock:** keep the screen awake during workouts (it works in installed web apps on iOS 18.4+).
 
+## What real app footage shows
+I studied clips of these apps in use. Copy the information, then beat them on motion:
+- **Fitbod workout summary:** dark UI with white text, a magenta accent and gold trophies. At the top is a **swipeable carousel of muscle-map figures** with pagination dots. Then the workout name, the duration, and a 3-stat row: **Calories · Volume · Records (with a trophy icon)**. Below that is "13 Exercises", grouped (Warm-up first). Each row has a thumbnail, the name and the set log ("10 reps × 25 lb"), with a **green ✓ badge** on the thumbnail. **Trophy rows sit inline** under an exercise when it set a record ("Volume 3,000 lb", "Est. 1RM 35.5 lb"). It's all static, with no confetti or motion. Match this content in section 8, and our animation is the edge.
+- **Lyfta exercise detail:** a looping 3D demo across the top half where the **working muscles glow red during each rep**, an action row (Favourites, YouTube, Share, How to), then "Target muscles" front/back figures. Completing an exercise pops a **green ✓ with a little scale bounce** onto its muscle map. Detail screens push in from the right.
+- **Lyfta library filter:** a bottom sheet with round equipment icons (Cable, Dumbbell…). Selecting one gives it an accent ring, and the button updates live ("**Show 56 results**"). The sheet slides away to a grid of exercise cards. Add this to Forge's exercise library (filter by equipment, muscle and my current location profile). It's Next unless it's cheap.
+- **Hevy onboarding:** Units (lb/kg, mi/km, in/cm) → Apple Health → routine preview → a big ✓ "Get Started". Ours has no paywall or account upsell, so keep it that short.
+
 ## Next (v0.3.x)
 - A strength score (overall plus Push/Pull/Legs from e1RM, with benchmark lifts).
 - Weekly set-target hexagons.
@@ -174,7 +189,7 @@ When I tap **Done set**, the app should feel like I just charged up, with a Forg
 
 ## Later
 - Real haptics, a lock-screen rest timer (Hevy Live Activity) and an Apple Watch player (Fitbod, Peloton, Strong). These come with the native wrapper.
-- Real video demos.
+- Real video demos (if a free, licensed source turns up).
 - Buddy mode.
 
 ## Forge vs the apps
@@ -183,7 +198,7 @@ When I tap **Done set**, the app should feel like I just charged up, with a Forg
 | Guided one-at-a-time player | List + per-exercise view | ✅ | ❌ list only | ✅ |
 | Pause / resume | ? | ✅ | ❌ | ✅ |
 | Full-screen rest + skip + next preview | Rest timer | ✅ | Small bar | ✅ |
-| How-to demo | ✅ video | ✅ video | Text only | ✅ offline loop |
+| How-to demo | ✅ video | ✅ video | Text only | ✅ animated silhouette with muscles lighting up, plus photos |
 | Muscles-worked map | ✅ | ✅ program art | ❌ | ✅ everywhere |
 | Recovery heatmap | ✅ | ❌ | % bars | ✅ |
 | Warm-ups, supersets, circuits | ✅ | Sets only | ✅ (no circuits) | ✅ |
