@@ -1,6 +1,6 @@
 // Service worker: caches the app so it opens with no signal, and hands off new versions.
 // Bump VERSION here AND in js/version.js on every release.
-const VERSION = '0.3.2';
+const VERSION = '0.4.0';
 const CACHE = `forge-${VERSION}`;
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
 // Demo photos live in their own cache (not versioned, not precached): see js/ui/photos.js.
@@ -63,6 +63,15 @@ const SHELL = [
   './js/workouts/clock.js',
   './js/workouts/session-core.js',
   './js/workouts/preview.js',
+  './js/functions.js',
+  './js/export-body.js',
+  './js/withings/check.js',
+  './js/withings/body.js',
+  './js/screens/withings.js',
+  './js/screens/metric.js',
+  './js/ui/linechart.js',
+  './data/metrics.json',
+  './withings-connected.html',
   './js/workouts/live.js',
   './js/screens/auth.js',
   './js/screens/onboarding.js',
@@ -150,6 +159,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // The page Withings sends you back to after connecting is its own page, not the app.
+  if (req.mode === 'navigate' && url.pathname.endsWith('/withings-connected.html')) {
+    event.respondWith(fetch(req).catch(() => caches.match('./withings-connected.html')));
+    return;
+  }
   if (req.mode === 'navigate') {
     event.respondWith(caches.match('./index.html').then((r) => r || fetch(req)));
     return;

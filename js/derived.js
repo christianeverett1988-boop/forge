@@ -4,7 +4,7 @@ import { dailyWeights, smooth } from './weight/smoothing.js';
 import { computeTargets } from './nutrition/targets.js';
 
 export function weightSeries() {
-  return smooth(dailyWeights(state.weights.map((w) => ({ day: w.day, kg: w.kg }))));
+  return smooth(dailyWeights(state.weights.map((w) => ({ day: w.day, kg: w.kg, source: w.source, measured_at: w.measured_at, review: w.review }))));
 }
 
 /** Latest trend weight, falling back to the weight entered in onboarding. */

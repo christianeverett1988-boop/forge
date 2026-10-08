@@ -1,12 +1,13 @@
 // Body tab: the recovery heatmap (front and back, red / amber / green from the recovery model), fresh-muscle
 // count and days since your last workout. Tap a muscle for its %, when you last trained it and its sets
 // this week. (Strength score and weekly set targets come later.)
-import { state } from '../state.js';
+import { state, units as getUnits } from '../state.js';
 import { esc, $$, sheet } from '../ui.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';
 import { exerciseById } from '../workouts/library.js';
 import { MUSCLE_LABELS, muscleStats } from '../workouts/recovery.js';
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
+import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
 
 const SHOW = ['chest', 'front_delts', 'side_delts', 'rear_delts', 'lats', 'upper_back', 'traps', 'biceps', 'triceps', 'forearms', 'abs', 'obliques', 'lower_back', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
 
@@ -16,6 +17,37 @@ const ago = (iso) => {
   return d <= 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`;
 };
 const status = (pct) => (pct < 50 ? 'Needs rest' : pct < 85 ? 'Recovering' : 'Ready');
+
+// Body composition tiles: every metric the scale sent (plus BMI, FFMI, FMI), latest value and 30-day change.
+function compositionCard() {
+  const docs = state.body_measures || [];
+  const w = state.integrations && state.integrations.withings;
+  if (!docs.length) {
+    return `<a class="card row between center nav-card" href="#/withings"><div><p class="label">Body composition</p><p class="small">${w && w.connected ? 'Importing your Withings history…' : 'Connect your Withings scale to see fat, muscle, water and more here.'}</p></div><span aria-hidden="true">›</span></a>`;
+  }
+  const u = getUnits();
+  const h = heightM(docs, state.profile);
+  const latestDay = lastWeighInDay(docs);
+  const gap = compositionGap(docs);
+  const asOf = (day) => new Date(`${day}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', ...(day.slice(0, 4) !== latestDay.slice(0, 4) ? { year: 'numeric' } : {}) });
+  const tiles = BODY_METRICS.map((m) => {
+    const pts = dailySeries(metricSeries(docs, m.key, { height: h })).map((p) => ({ ...p, at: p.at }));
+    const lc = latestAndChange(pts, 30);
+    if (!lc) return '';
+    const ch = lc.change;
+    // Older than your latest weigh-in (e.g. the scale couldn't read body composition since): say so.
+    const stale = latestDay && lc.last.day < latestDay;
+    const sub = stale ? `as of ${asOf(lc.last.day)}` : ch == null ? '&nbsp;' : `${ch > 0 ? '▲' : ch < 0 ? '▼' : '•'} ${fmtMetric(m.key, Math.abs(ch), u, { unit: false })} · 30d`;
+    return `<a class="bc-tile${stale ? ' stale' : ''}" href="#/metric/${m.key}"><span>${m.label}</span><b>${fmtMetric(m.key, lc.last.v, u)}</b><small class="muted">${sub}</small></a>`;
+  }).join('');
+  const last = [...docs].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))[0];
+  return `<div class="card">
+    <div class="row between"><p class="label">Body composition</p><span class="small muted">${last ? new Date(last.measured_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span></div>
+    ${gap ? `<p class="notice info small" data-bc-gap>Your last ${gap === 1 ? 'weigh-in' : `${gap} weigh-ins`} had no body composition. Stand barefoot with dry feet on the electrodes and keep still until the scale finishes.</p>` : ''}
+    <div class="bc-grid">${tiles}</div>
+    <p class="small muted">From your scale. Tap any number for its chart and what it means.</p>
+  </div>`;
+}
 
 export function renderBody(el) {
   const rec = currentRecovery();
@@ -30,6 +62,7 @@ export function renderBody(el) {
         <div><b>${fresh}</b><span>fresh muscle groups</span></div>
         <div><b>${days == null ? '—' : days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>
       </div>
+      ${compositionCard()}
       <div class="card">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>
         ${bodyMap(rec, { mode: 'recovery', tappable: true })}

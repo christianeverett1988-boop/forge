@@ -1,5 +1,5 @@
 import { state, units as getUnits } from '../state.js';
-import { put, newRecord, softDelete } from '../db.js';
+import { put, newRecord, softDelete, tombstone } from '../db.js';
 import { esc, $, $$, sheet, toast, todayKey, formatDay, confirmSheet, haptic } from '../ui.js';
 import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../units.js';
 import { trendChange, weeklyRate, projectGoalDate } from '../weight/smoothing.js';
@@ -54,6 +54,11 @@ export function renderWeight(el) {
   const rate = weeklyRate(series);
   const latest = series.length ? series[series.length - 1] : null;
   const entries = [...state.weights].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1));
+  // Days whose trend point is a scale reading (earliest Withings weigh-in): typed-in entries those days are shown but not used.
+  const trendDays = new Map();
+  for (const w of [...state.weights].filter((x) => x.source === 'withings' && !x.review).sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))) {
+    if (!trendDays.has(w.day)) trendDays.set(w.day, w.id);
+  }
 
   el.innerHTML = `
     <section class="stack">
@@ -84,8 +89,8 @@ export function renderWeight(el) {
       <ul class="list">
         ${(showAll ? entries : entries.slice(0, HISTORY_LIMIT)).map((w) => `
           <li>
-            <div><b>${formatWeight(w.kg, u)}</b><small class="muted">${formatDay(w.day, { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(SOURCE_LABELS[w.source] || w.source)}</small></div>
-            <button class="icon-btn" data-del="${esc(w.id)}" aria-label="Delete this weigh-in">🗑</button>
+            <div><b>${formatWeight(w.kg, u)}</b><small class="muted">${formatDay(w.day, { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(SOURCE_LABELS[w.source] || w.source)}${w.review ? ' · <a href="#/withings">is this you?</a>' : ''}${!w.review && trendDays.has(w.day) && trendDays.get(w.day) !== w.id ? ' · not in trend (earlier scale reading used)' : ''}</small></div>
+            <button class="icon-btn" data-del="${esc(w.id)}" data-src="${esc(w.source || '')}" aria-label="Delete this weigh-in">🗑</button>
           </li>`).join('')}
       </ul>
       ${!showAll && entries.length > HISTORY_LIMIT ? `<button class="btn ghost" data-all>Show all ${entries.length}</button>` : ''}` : ''}
@@ -103,8 +108,15 @@ export function renderWeight(el) {
   );
   $$('[data-del]', el).forEach((b) =>
     b.addEventListener('click', async () => {
-      const ok = await confirmSheet({ title: 'Delete weigh-in?', message: 'This removes it from your history on all devices.', confirmLabel: 'Delete', danger: true });
-      if (ok) softDelete('weights', b.dataset.del);
+      const fromScale = b.dataset.src === 'withings';
+      const ok = await confirmSheet({
+        title: 'Delete weigh-in?',
+        message: fromScale ? 'This removes it from Forge on all devices. It stays in the Withings app, and Forge won’t bring it back.' : 'This removes it from your history on all devices.',
+        confirmLabel: 'Delete', danger: true,
+      });
+      if (!ok) return;
+      softDelete('weights', b.dataset.del);
+      if (fromScale && state.body_measures.some((d) => d.id === b.dataset.del)) tombstone('body_measures', b.dataset.del);
     })
   );
 }

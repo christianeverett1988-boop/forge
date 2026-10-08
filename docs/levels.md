@@ -16,20 +16,20 @@ Warm-ups earn nothing, and a finished workout with no working sets earns nothing
 
 ## Levels
 
-XP needed for level *n* is **250 × (n − 1)^1.6** (`xpForLevel` in `js/workouts/awards.js`). At three typical sessions a week (before badges): level 2 with your first workout, level 10 after about 7 weeks, level 20 after about 22 weeks, Unbreakable after about 44 weeks.
+XP needed for level *n* is **250 × (n − 1)^1.6 + 3 × (n − 1)³** (`xpForLevel` in `js/workouts/awards.js`). The first part keeps early levels quick; the cubic part slows the top. At three typical sessions a week (about 1,240 XP with the weekly bonus, before badges): level 2 with your first workout, level 5 in about 2 weeks, level 10 in about 8½ weeks, level 20 in about 39 weeks, Unbreakable in about **2 years** (103 weeks).
 
 | # | Name | XP | # | Name | XP | # | Name | XP |
 |---|------|---:|---|------|---:|---|------|---:|
-| 1 | Spark | 0 | 11 | Hammer Strike | 9,953 | 21 | Forge Master | 30,171 |
-| 2 | Kindling | 250 | 12 | Anvil | 11,592 | 22 | Ironclad | 32,621 |
-| 3 | Ember | 758 | 13 | Red Heat | 13,324 | 23 | Titanium | 35,141 |
-| 4 | Coal Bed | 1,450 | 14 | White Heat | 15,144 | 24 | Tungsten | 37,732 |
-| 5 | Bellows | 2,297 | 15 | Quench | 17,051 | 25 | Meteorite | 40,390 |
-| 6 | Raw Ore | 3,283 | 16 | Tempered | 19,041 | 26 | Molten Core | 43,117 |
-| 7 | Smelter | 4,395 | 17 | Carbon Steel | 21,112 | 27 | Star Forge | 45,909 |
-| 8 | Pig Iron | 5,625 | 18 | Spring Steel | 23,263 | 28 | Supernova | 48,767 |
-| 9 | Cast Iron | 6,964 | 19 | Damascus | 25,490 | 29 | Adamant | 51,688 |
-| 10 | Wrought Iron | 8,409 | 20 | Blade Smith | 27,794 | 30 | Unbreakable | 54,673 |
+| 1 | Spark | 0 | 11 | Hammer Strike | 12,953 | 21 | Forge Master | 54,171 |
+| 2 | Kindling | 253 | 12 | Anvil | 15,585 | 22 | Ironclad | 60,404 |
+| 3 | Ember | 782 | 13 | Red Heat | 18,508 | 23 | Titanium | 67,085 |
+| 4 | Coal Bed | 1,531 | 14 | White Heat | 21,735 | 24 | Tungsten | 74,233 |
+| 5 | Bellows | 2,489 | 15 | Quench | 25,283 | 25 | Meteorite | 81,862 |
+| 6 | Raw Ore | 3,658 | 16 | Tempered | 29,166 | 26 | Molten Core | 89,992 |
+| 7 | Smelter | 5,043 | 17 | Carbon Steel | 33,400 | 27 | Star Forge | 98,637 |
+| 8 | Pig Iron | 6,654 | 18 | Spring Steel | 38,002 | 28 | Supernova | 107,816 |
+| 9 | Cast Iron | 8,500 | 19 | Damascus | 42,986 | 29 | Adamant | 117,544 |
+| 10 | Wrought Iron | 10,596 | 20 | Blade Smith | 48,371 | 30 | Unbreakable | 127,840 |
 
 Arc: **fire** (1–5) → **ore and iron** (6–10) → **working the metal** (11–16) → **steel** (17–21) → **beyond steel** (22–26) → **legend** (27–30).
 

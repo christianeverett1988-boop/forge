@@ -1,0 +1,15 @@
+// Firestore paths, in one place. Server-only docs live under users/{uid}/private and in three top-level
+// collections the rules close to every client.
+export const P = {
+  user: (uid) => `users/${uid}`,
+  priv: (uid) => `users/${uid}/private/withings`,
+  status: (uid) => `users/${uid}/integrations/withings`,
+  body: (uid, id) => `users/${uid}/body_measures/${id}`,
+  bodyCol: (uid) => `users/${uid}/body_measures`,
+  weight: (uid, id) => `users/${uid}/weights/${id}`,
+  weightCol: (uid) => `users/${uid}/weights`,
+  healthCol: (uid) => `users/${uid}/health_daily`,
+  state: (s) => `oauth_states/${s}`,
+  wuser: (withingsUserId) => `withings_users/${withingsUserId}`,
+  wusers: () => 'withings_users',
+};

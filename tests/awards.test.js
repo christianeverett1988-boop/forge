@@ -93,10 +93,15 @@ test('levels: 30 unique names, thresholds rise, level 2 after one typical workou
   eq(new Set(LEVELS).size, 30);
   for (let l = 2; l <= 30; l++) assert(xpForLevel(l) > xpForLevel(l - 1), `level ${l}`);
   eq(levelFor(0).name, 'Spark');
-  eq(xpForLevel(2), 250);
-  eq(xpForLevel(11), Math.round(250 * Math.pow(10, 1.6)));
-  eq(levelFor(249).level, 1);
-  eq(levelFor(250).level, 2);
+  eq(xpForLevel(2), 253);
+  eq(xpForLevel(11), Math.round(250 * Math.pow(10, 1.6) + 3000));
+  eq(levelFor(252).level, 1);
+  eq(levelFor(253).level, 2);
+  // Pace at a typical ~1,240 XP a week (3 workouts + weekly goal): early levels quick, the top ~2 years.
+  const weeks = (l) => xpForLevel(l) / 1240;
+  assert(weeks(5) < 3, 'level 5 within 3 weeks');
+  assert(weeks(10) < 10, 'level 10 within 10 weeks');
+  assert(weeks(30) > 95 && weeks(30) < 110, `Unbreakable at ~2 years (${weeks(30).toFixed(0)} weeks)`);
   const top = levelFor(10_000_000);
   eq(top.name, 'Unbreakable');
   eq(top.next, null);

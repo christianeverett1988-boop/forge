@@ -51,8 +51,11 @@ export const LEVELS = [
   'Forge Master', 'Ironclad', 'Titanium', 'Tungsten', 'Meteorite', 'Molten Core', 'Star Forge', 'Supernova', 'Adamant', 'Unbreakable',
 ];
 
-/** XP needed to reach a level (level 1 = 0): 250 × (level − 1)^1.6. */
-export const xpForLevel = (level) => (level <= 1 ? 0 : Math.round(250 * Math.pow(level - 1, 1.6)));
+/**
+ * XP needed to reach a level (level 1 = 0): 250 × (n − 1)^1.6 + 3 × (n − 1)³. The first term keeps early
+ * levels quick; the cubic slows the top so Unbreakable takes about two years at three workouts a week.
+ */
+export const xpForLevel = (level) => (level <= 1 ? 0 : Math.round(250 * Math.pow(level - 1, 1.6) + 3 * Math.pow(level - 1, 3)));
 
 export function levelFor(xp) {
   let level = 1;

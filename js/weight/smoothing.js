@@ -23,19 +23,34 @@ export function addDays(key, n) {
   return new Date(t).toISOString().slice(0, 10);
 }
 
-/** entries: [{ day: 'YYYY-MM-DD', kg }]. Averages same-day weigh-ins, sorts by day. */
+/** Sources that come straight from a scale (preferred over typed-in numbers on the same day). */
+export const DEVICE_SOURCES = new Set(['withings']);
+
+/**
+ * entries: [{ day: 'YYYY-MM-DD', kg, source?, measured_at?, review? }] → one point per day, sorted.
+ *   - A day with a scale weigh-in uses the EARLIEST scale weigh-in that day (morning, before food and
+ *     training). Typed-in entries that day stay in your history but don't move the trend.
+ *   - A day with only typed-in entries averages them.
+ *   - Weigh-ins Withings couldn't match to you (review: true) are left out until you confirm them.
+ * Each point says which it used: device: true/false.
+ */
 export function dailyWeights(entries) {
   const byDay = new Map();
   for (const e of entries) {
-    if (!e || !e.day || !Number.isFinite(e.kg)) continue;
-    const cur = byDay.get(e.day) || { sum: 0, n: 0 };
-    cur.sum += e.kg;
-    cur.n += 1;
+    if (!e || !e.day || !Number.isFinite(e.kg) || e.review === true) continue;
+    const cur = byDay.get(e.day) || { sum: 0, n: 0, device: null };
+    if (DEVICE_SOURCES.has(e.source)) {
+      const at = e.measured_at || '';
+      if (!cur.device || at < cur.device.at) cur.device = { kg: e.kg, at };
+    } else {
+      cur.sum += e.kg;
+      cur.n += 1;
+    }
     byDay.set(e.day, cur);
   }
   return [...byDay.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([day, { sum, n }]) => ({ day, kg: sum / n }));
+    .map(([day, c]) => (c.device ? { day, kg: c.device.kg, device: true } : { day, kg: c.sum / c.n, device: false }));
 }
 
 /** Adds `trend` to each daily point. Gaps of several days get proportionally more weight. */
@@ -52,7 +67,7 @@ export function smooth(daily, alpha = ALPHA) {
       trend = trend + a * (p.kg - trend);
     }
     prevDay = p.day;
-    out.push({ day: p.day, kg: p.kg, trend });
+    out.push({ day: p.day, kg: p.kg, trend, ...(p.device != null ? { device: p.device } : {}) });
   }
   return out;
 }

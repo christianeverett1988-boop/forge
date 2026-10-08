@@ -6,6 +6,10 @@ rules_version = '2';
 // - Basic type checks per collection.
 // - users/{uid}/private/... holds server-only secrets (Withings tokens, Shortcut token hash) and is
 //   closed to the app entirely: only Cloud Functions (which bypass rules) can touch it.
+// - body_measures, health_daily and integrations are written only by Cloud Functions. You can read them;
+//   on body_measures and health_daily you can also delete a record by marking it deleted (a tombstone the
+//   sync respects forever) and confirm or reject a flagged weigh-in. Nothing else.
+// - oauth_states, withings_users and shortcut_tokens (top level) are server-only.
 // No collection-group rules exist, so collection-group queries are denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -45,16 +49,46 @@ service cloud.firestore {
         && (col != 'exercises' || (d.name is string && d.pattern is string && d.equipment is list));
     }
 
+    function serverOwned(col) {
+      return col in ['body_measures', 'health_daily', 'integrations'];
+    }
+
+    // Tombstone / review changes only: deleted can go false → true (never back), deleted_at and
+    // reviewed_at are strings, needs_review a bool, and no other field may change.
+    function tombstoneOrReview() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['deleted', 'deleted_at', 'updated_at', 'needs_review', 'reviewed_at'])
+        && d.deleted is bool
+        && (d.deleted == true || resource.data.deleted == false)
+        && (!('deleted_at' in d) || d.deleted_at is string)
+        && (!('reviewed_at' in d) || d.reviewed_at is string)
+        && (!('needs_review' in d) || d.needs_review is bool)
+        && d.updated_at is string;
+    }
+
     match /users/{uid}/{col}/{id} {
       allow read, delete: if isOwner(uid) && allowedCollection(col);
       allow create: if isOwner(uid) && allowedCollection(col) && hasStandardFields(uid, id) && validFor(col, id);
       allow update: if isOwner(uid) && allowedCollection(col) && hasStandardFields(uid, id) && validFor(col, id)
         && request.resource.data.created_at == resource.data.created_at
         && request.resource.data.user_id == resource.data.user_id;
+
+      // Written by Cloud Functions only (see the header).
+      allow read: if isOwner(uid) && serverOwned(col);
+      allow update: if isOwner(uid) && col in ['body_measures', 'health_daily'] && tombstoneOrReview();
     }
 
     // Explicitly closed (anything not matched above is denied by default too).
     match /users/{uid}/private/{rest=**} {
+      allow read, write: if false;
+    }
+    match /oauth_states/{rest=**} {
+      allow read, write: if false;
+    }
+    match /withings_users/{rest=**} {
+      allow read, write: if false;
+    }
+    match /shortcut_tokens/{rest=**} {
       allow read, write: if false;
     }
   }

@@ -1,0 +1,176 @@
+{
+  "users/alice/body_measures/w_11": {
+    "id": "w_11",
+    "user_id": "alice",
+    "created_at": "2026-10-10T11:00:00.000Z",
+    "updated_at": "2026-10-10T11:00:00.000Z",
+    "source": "withings",
+    "deleted": false,
+    "grpid": 11,
+    "measured_at": "2026-10-10T11:00:00.000Z",
+    "day": "2026-10-10",
+    "tz": "America/New_York",
+    "attrib": 0,
+    "needs_review": false,
+    "category": 1,
+    "deviceid": null,
+    "model": null,
+    "w_created": "2026-10-10T11:00:05.000Z",
+    "w_modified": "2026-10-10T11:00:05.000Z",
+    "metrics": {
+      "weight_kg": 82.3,
+      "fat_ratio_pct": 21.4,
+      "fat_mass_kg": 17.612,
+      "fat_free_mass_kg": 64.688,
+      "muscle_mass_kg": 61.5,
+      "hydration_kg": 45.1,
+      "bone_mass_kg": 3.188,
+      "heart_pulse_bpm": 64
+    },
+    "segments": {},
+    "raw": [
+      {
+        "type": 1,
+        "value": 82300,
+        "unit": -3
+      },
+      {
+        "type": 6,
+        "value": 2140,
+        "unit": -2
+      },
+      {
+        "type": 8,
+        "value": 17612,
+        "unit": -3
+      },
+      {
+        "type": 5,
+        "value": 64688,
+        "unit": -3
+      },
+      {
+        "type": 76,
+        "value": 61500,
+        "unit": -3
+      },
+      {
+        "type": 77,
+        "value": 45100,
+        "unit": -3
+      },
+      {
+        "type": 88,
+        "value": 3188,
+        "unit": -3
+      },
+      {
+        "type": 11,
+        "value": 64,
+        "unit": 0
+      }
+    ],
+    "raw_hash": "ef830f5ad2cf51ac0ceaafed0e1cfb62"
+  },
+  "users/alice/weights/w_11": {
+    "id": "w_11",
+    "user_id": "alice",
+    "created_at": "2026-10-10T11:00:00.000Z",
+    "updated_at": "2026-10-10T11:00:00.000Z",
+    "source": "withings",
+    "deleted": false,
+    "kg": 82.3,
+    "day": "2026-10-10",
+    "measured_at": "2026-10-10T11:00:00.000Z",
+    "grpid": 11,
+    "review": false,
+    "w_modified": "2026-10-10T11:00:05.000Z"
+  },
+  "users/alice/body_measures/w_12": {
+    "id": "w_12",
+    "user_id": "alice",
+    "created_at": "2026-10-10T11:00:00.000Z",
+    "updated_at": "2026-10-10T11:00:01.000Z",
+    "source": "withings",
+    "deleted": false,
+    "grpid": 12,
+    "measured_at": "2026-10-10T11:00:00.000Z",
+    "day": "2026-10-10",
+    "tz": "America/New_York",
+    "attrib": 1,
+    "needs_review": true,
+    "category": 1,
+    "deviceid": null,
+    "model": null,
+    "w_created": "2026-10-10T11:00:05.000Z",
+    "w_modified": "2026-10-10T11:01:00.000Z",
+    "metrics": {
+      "weight_kg": 80,
+      "fat_ratio_pct": 21.4,
+      "fat_mass_kg": 17.612,
+      "fat_free_mass_kg": 64.688,
+      "muscle_mass_kg": 61.5,
+      "hydration_kg": 45.1,
+      "bone_mass_kg": 3.188,
+      "heart_pulse_bpm": 64
+    },
+    "segments": {},
+    "raw": [
+      {
+        "type": 1,
+        "value": 80000,
+        "unit": -3
+      },
+      {
+        "type": 6,
+        "value": 2140,
+        "unit": -2
+      },
+      {
+        "type": 8,
+        "value": 17612,
+        "unit": -3
+      },
+      {
+        "type": 5,
+        "value": 64688,
+        "unit": -3
+      },
+      {
+        "type": 76,
+        "value": 61500,
+        "unit": -3
+      },
+      {
+        "type": 77,
+        "value": 45100,
+        "unit": -3
+      },
+      {
+        "type": 88,
+        "value": 3188,
+        "unit": -3
+      },
+      {
+        "type": 11,
+        "value": 64,
+        "unit": 0
+      }
+    ],
+    "raw_hash": "8c076ca300961565ccf34d0dbdec3187"
+  },
+  "users/alice/weights/w_12": {
+    "id": "w_12",
+    "user_id": "alice",
+    "created_at": "2026-10-10T11:00:00.000Z",
+    "updated_at": "2026-10-10T11:00:01.000Z",
+    "source": "withings",
+    "deleted": false,
+    "kg": 80,
+    "day": "2026-10-10",
+    "measured_at": "2026-10-10T11:00:00.000Z",
+    "grpid": 12,
+    "review": true,
+    "w_modified": "2026-10-10T11:01:00.000Z"
+  }
+}

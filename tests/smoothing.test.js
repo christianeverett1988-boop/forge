@@ -23,6 +23,30 @@ test('same-day weigh-ins are averaged and sorted', () => {
   eq(d[1].kg, 81);
 });
 
+test('scale weigh-ins: the earliest of the day wins; typed-in entries that day don\'t move the trend', () => {
+  const d = dailyWeights([
+    { day: '2026-01-02', kg: 80.4, source: 'withings', measured_at: '2026-01-02T18:30:00Z' }, // evening, after dinner
+    { day: '2026-01-02', kg: 79.6, source: 'withings', measured_at: '2026-01-02T11:05:00Z' }, // morning
+    { day: '2026-01-02', kg: 82, source: 'manual', measured_at: '2026-01-02T13:00:00Z' },
+    { day: '2026-01-03', kg: 81, source: 'manual' },
+    { day: '2026-01-03', kg: 80, source: 'manual' },
+  ]);
+  eq(d[0].kg, 79.6);
+  eq(d[0].device, true);
+  eq(d[1].kg, 80.5, 'manual-only days still average');
+  eq(d[1].device, false);
+});
+
+test('weigh-ins waiting for "is this you?" stay out of the trend', () => {
+  const d = dailyWeights([
+    { day: '2026-01-02', kg: 60, source: 'withings', measured_at: '2026-01-02T10:00:00Z', review: true },
+    { day: '2026-01-02', kg: 80, source: 'withings', measured_at: '2026-01-02T11:00:00Z' },
+    { day: '2026-01-03', kg: 61, source: 'withings', measured_at: '2026-01-03T10:00:00Z', review: true },
+  ]);
+  eq(d.length, 1);
+  eq(d[0].kg, 80);
+});
+
 test('first trend point equals first weigh-in', () => {
   const s = smooth([{ day: '2026-01-01', kg: 90 }]);
   eq(s[0].trend, 90);
