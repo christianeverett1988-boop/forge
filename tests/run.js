@@ -10,6 +10,7 @@ import './session.test.js';
 import './figure.test.js';
 import './bodymap.test.js';
 import './preview.test.js';
+import './rings.test.js';
 import './awards.test.js';
 import { VERSION } from '../js/version.js';
 

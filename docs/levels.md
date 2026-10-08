@@ -1,6 +1,6 @@
-# Forge levels (draft for v0.3.2)
+# Forge levels (v0.3.2)
 
-30 unique names, no metal tiers repeated. They follow the forge from first spark to finished, unbreakable metal. XP and the level bar arrive in v0.3.2; this list is here for your approval first.
+30 unique names, no metal tiers repeated. They follow the forge from first spark to finished, unbreakable metal. XP needed for level L is 300 × (L − 1)^1.75 (see js/workouts/awards.js): a typical workout is ~400 XP, so level 2 comes with your first workout, level 10 after about two months at 3 a week, and Unbreakable after roughly two years.
 
 | # | Name | # | Name | # | Name |
 |---|------|---|------|---|------|

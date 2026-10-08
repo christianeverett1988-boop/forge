@@ -416,3 +416,19 @@ select { appearance: none; -webkit-appearance: none; background-image: linear-gr
 .picker-list { max-height: 55dvh; overflow: auto; }
 
 body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
+
+/* ---------- Today rings ---------- */
+.rings { display: grid; grid-template-columns: 132px 1fr; gap: 16px; align-items: center; }
+.rings-svg { display: block; overflow: visible; }
+.ring-track, .ring-arc { fill: none; stroke-width: 13; }
+.ring-track { opacity: 0.16; }
+.ring-arc { stroke-linecap: round; stroke-dashoffset: var(--off); transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1); }
+.rings-pre .ring-arc { stroke-dashoffset: var(--c); transition: none; }
+.ring-arc.ring-closed { filter: drop-shadow(0 0 6px currentColor); }
+.rings-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rings-legend li { display: grid; grid-template-columns: 10px 1fr; gap: 8px; align-items: start; }
+.rings-legend li > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.ring-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rc); margin-top: 5px; }
+.ring-done { color: var(--rc); }
+@media (prefers-reduced-motion: reduce) { .ring-arc { transition: none; } }
+@media (max-width: 340px) { .rings { grid-template-columns: 1fr; justify-items: center; } }

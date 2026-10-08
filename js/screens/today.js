@@ -12,6 +12,10 @@ import { dayKey } from '../weight/smoothing.js';
 import { todayKey } from '../ui.js';
 import { playerRoute } from './train.js';
 import { unlockAudio } from '../ui/sound.js';
+import { todayRings } from '../workouts/rings.js';
+import { weekOf } from '../workouts/awards.js';
+import { exerciseById } from '../workouts/library.js';
+import { ringsHtml, animateRings } from '../ui/rings.js';
 
 function workoutCard() {
   const active = activeWorkout();
@@ -63,6 +67,7 @@ export function renderToday(el) {
   }
 
   const installHint = isIOS() && !isStandalone();
+  const rings = todayRings({ workouts: state.workouts, cardio: state.cardio || [], profile: state.profile, exerciseById });
 
   el.innerHTML = `
     <section class="stack">
@@ -78,6 +83,11 @@ export function renderToday(el) {
         </div>` : ''}
 
       ${t.flags.map((f) => `<div class="notice ${f.level}">${esc(f.message)}</div>`).join('')}
+
+      <div class="card rings-card">
+        <div class="row between center"><p class="label">This week</p><a class="link small" href="#/awards">Awards ›</a></div>
+        ${ringsHtml(rings)}
+      </div>
 
       ${workoutCard()}
 
@@ -119,6 +129,7 @@ export function renderToday(el) {
     </section>`;
 
   $('[data-log]', el).onclick = openLogWeight;
+  animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));
   const start = $('[data-start]', el);
   if (start) start.onclick = () => {
     const plan = planToday();
