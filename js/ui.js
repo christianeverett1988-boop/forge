@@ -74,20 +74,9 @@ export function confirmSheet({ title, message, confirmLabel = 'Confirm', danger 
   });
 }
 
-/** PR celebration: a short burst plus the PR labels. */
+/** Old API: now forwards to the PR explosion in js/ui/fx.js (queued, never stacks). */
 export function celebrate(lines) {
-  const el = document.createElement('div');
-  el.className = 'celebrate';
-  el.setAttribute('role', 'status');
-  const bits = Array.from({ length: 18 }, (_, i) =>
-    `<i style="--a:${(i / 18) * 360}deg;--d:${60 + (i % 3) * 25}px;--c:${['var(--accent)', 'var(--ember)', 'var(--good)'][i % 3]}"></i>`).join('');
-  el.innerHTML = `<div class="burst" aria-hidden="true">${bits}</div>
-    <div class="pr-card"><b>New PR 🏆</b>${lines.map((l) => `<span>${esc(l)}</span>`).join('')}</div>`;
-  document.body.appendChild(el);
-  haptic(40);
-  setTimeout(() => el.classList.add('out'), 2600);
-  setTimeout(() => el.remove(), 3000);
-  el.addEventListener('click', () => el.remove());
+  import('./ui/fx.js').then((fx) => lines.forEach((label) => fx.prExplosion({ label, value: null, prev: null })));
 }
 
 export function haptic(ms = 10) {

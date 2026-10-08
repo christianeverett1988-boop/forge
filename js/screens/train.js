@@ -7,11 +7,14 @@ import {
 } from '../workouts/plan.js';
 import { PROGRAMS, DAY_TYPES, smartDayTypes } from '../workouts/programs.js';
 import { deloadInfo } from '../workouts/generator.js';
-import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { exerciseById } from '../workouts/library.js';
 import { openPlateCalculator, openCardioLog } from './tools.js';
 import { openExercisePicker } from './picker.js';
 import { patch } from '../db.js';
+import { unlockAudio } from '../ui/sound.js';
+
+/** Guided player by default; List view if you chose it in Settings. */
+export const playerRoute = () => (state.settings && state.settings.player === 'list' ? '#/session' : '#/play');
 
 let dayOverride = null;
 
@@ -42,7 +45,6 @@ export function renderTrain(el) {
   const d = deloadInfo(program, state.profile.experience);
   const stalled = !active ? stalledMainLifts() : [];
   const rec = currentRecovery();
-  const showMuscles = ['chest', 'front_delts', 'side_delts', 'lats', 'upper_back', 'biceps', 'triceps', 'abs', 'quads', 'hamstrings', 'glutes', 'calves'];
 
   el.innerHTML = `
     <section class="stack">
@@ -54,7 +56,7 @@ export function renderTrain(el) {
       </div>
 
       ${active ? `
-        <a class="card resume" href="#/session">
+        <a class="card resume" href="${playerRoute()}">
           <p class="label">In progress</p>
           <p class="big-title">${esc(active.label)}</p>
           <p class="muted small">Started ${new Date(active.started_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
@@ -105,15 +107,10 @@ export function renderTrain(el) {
         <p class="small muted">Week ${d.week} of ${d.cycle}${d.deload ? ' — deload week' : ` · deload in week ${d.cycle}`}</p>
       </div>
 
-      <div class="card">
-        <p class="label">Recovery</p>
-        <div class="recovery">
-          ${showMuscles.map((m) => `
-            <div class="rec-row"><span>${MUSCLE_LABELS[m]}</span>
-              <div class="rec-bar" role="img" aria-label="${MUSCLE_LABELS[m]} ${rec[m]}% recovered"><i style="width:${rec[m]}%" class="${rec[m] < 50 ? 'low' : rec[m] < 85 ? 'mid' : ''}"></i></div>
-              <b>${rec[m]}%</b></div>`).join('')}
-        </div>
-      </div>
+      <a class="card row between center nav-card" href="#/body">
+        <div><p class="label">Recovery</p><p>${['chest', 'lats', 'quads', 'hamstrings', 'glutes', 'front_delts'].filter((m) => rec[m] >= 85).length} of 6 major muscles fresh</p></div>
+        <span aria-hidden="true">›</span>
+      </a>
 
       <div class="tools">
         <a class="tool" href="#/timer"><span aria-hidden="true">⏱</span>Interval timer</a>
@@ -139,9 +136,10 @@ export function renderTrain(el) {
   const start = $('[data-start]', el);
   if (start)
     start.onclick = () => {
+      unlockAudio(); // this tap unlocks sound + voice for the 3-2-1 GO on iPhone
       startWorkout(plan);
       dayOverride = null;
-      location.hash = '#/session';
+      location.hash = playerRoute();
     };
   const dl = $('[data-deload]', el);
   if (dl) dl.onclick = () => { startDeload(); toast('Deload week started'); };

@@ -70,7 +70,9 @@ The generator works in your display unit so steps are round numbers. It looks at
 4. **The next weight is too big a jump for now** (for example 5 → 30 lb at home), or there's nothing heavier. Progression climbs a one-way ladder at the same weight:
    - **reps**, up to 8 past the top of the range, keeping your current set count;
    - then **one more set** at those reps, up to 5;
-   - then **slower tempo** (3–4 second lowering and a pause), which stays until something changes (for example you add a heavier weight to the location).
+   - then **slower tempo** (3–4 second lowering and a pause).
+
+   **Tempo escape (0.3.0):** tempo used to be a dead end. Now, once you've maxed out the ladder for **3 sessions** at the same weight, the app checks the next weight up again: if your last session predicts at least **5 reps** there (Epley), it moves you up and aims for the bottom of the range (never below 5 reps). 30 → 40 lb dumbbells gets there; 5 → 30 lb never does, so you stay on tempo until you own something in between.
 
    Each step keeps what you've already earned, so it can't loop back. Tests simulate 40 sessions in a row to prove it.
 5. **Two sessions in a row below the bottom of the range at the same weight:**

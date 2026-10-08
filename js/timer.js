@@ -1,35 +1,21 @@
-// Shared timer helpers: beeps (Web Audio), screen wake lock, and the floating rest timer.
-// Timers run from timestamps, not tick counts, so they stay accurate if the phone stutters.
+// Shared timer helpers: screen wake lock, clock formatting, and the rest timer.
+// Timers run from timestamps, not tick counts, so they stay accurate if the phone stutters or the app is
+// backgrounded (iPhone freezes web timers while locked; when you come back the time is still right).
+// The rest timer can pause (with the workout) and carries a "next up" preview for the full-screen rest.
+import { unlockAudio as unlock, beep as coachBeep, coach } from './ui/sound.js';
 
-let ctx = null;
-/** Call from a tap (iOS only allows audio after a user gesture). */
-export function unlockAudio() {
-  try {
-    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-  } catch {
-    ctx = null;
-  }
-}
+export const unlockAudio = unlock;
 
-export function beep({ freq = 880, ms = 160, gain = 0.25 } = {}) {
-  if (!ctx) return;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.frequency.value = freq;
-  g.gain.value = gain;
-  o.connect(g).connect(ctx.destination);
-  const t = ctx.currentTime;
-  g.gain.setValueAtTime(gain, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
-  o.start(t);
-  o.stop(t + ms / 1000 + 0.02);
+/** Kept for older callers: a coach beep. */
+export function beep({ freq = 880, ms = 160 } = {}) {
+  coachBeep(freq, ms);
 }
 
 export function buzz(pattern = [200, 100, 200]) {
-  if (navigator.vibrate) navigator.vibrate(pattern); // ignored on iPhone; the native app (Phase 3) adds real haptics
+  if (navigator.vibrate) navigator.vibrate(pattern); // ignored on iPhone; see js/ui/haptic.js for the switch trick
 }
 
+// ---------- wake lock (installed web apps on iOS 18.4+) ----------
 let wakeLock = null;
 export async function keepAwake(on) {
   try {
@@ -60,47 +46,71 @@ export const fmtClock = (sec) => {
 };
 
 // ---------- rest timer ----------
-let rest = null; // { end, total, label }
+// rest = { end, total, label, next: { name, detail } | null, pausedLeft: ms | null, said10, ticked }
+let rest = null;
 let tick = null;
 const listeners = new Set();
 export const onRestChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
-export function startRest(seconds, label = 'Rest') {
-  rest = { end: Date.now() + seconds * 1000, total: seconds, label, warned: false };
+/** next: optional { name, detail, speak } for the preview card and the voice line. */
+export function startRest(seconds, label = 'Rest', next = null) {
+  rest = { end: Date.now() + seconds * 1000, total: seconds, label, next, pausedLeft: null, said10: seconds <= 12, ticked: -1 };
+  coach.rest(seconds, next && next.speak);
   run();
 }
 export function adjustRest(delta) {
   if (!rest) return;
-  rest.end += delta * 1000;
+  if (rest.pausedLeft != null) rest.pausedLeft = Math.max(0, rest.pausedLeft + delta * 1000);
+  else rest.end += delta * 1000;
   rest.total = Math.max(5, rest.total + delta);
+  if (restRemaining() > 12) rest.said10 = false;
   run();
 }
 export function stopRest() {
   rest = null;
   run();
 }
-export const restRemaining = () => (rest ? (rest.end - Date.now()) / 1000 : 0);
+export function pauseRest() {
+  if (!rest || rest.pausedLeft != null) return;
+  rest.pausedLeft = Math.max(0, rest.end - Date.now());
+  run();
+}
+export function resumeRest() {
+  if (!rest || rest.pausedLeft == null) return;
+  rest.end = Date.now() + rest.pausedLeft;
+  rest.pausedLeft = null;
+  run();
+}
+export const restRemaining = () => (rest ? (rest.pausedLeft != null ? rest.pausedLeft : rest.end - Date.now()) / 1000 : 0);
+export const restInfo = () => (rest ? { ...rest, left: restRemaining(), paused: rest.pausedLeft != null } : null);
 
 function run() {
   clearInterval(tick);
   render();
-  if (!rest) return;
+  if (!rest || rest.pausedLeft != null) return;
   tick = setInterval(() => {
+    if (!rest) return clearInterval(tick);
     const left = restRemaining();
-    if (left <= 3.2 && !rest.warned) {
-      rest.warned = true;
-      beep({ freq: 660, ms: 120 });
+    if (left <= 10.2 && !rest.said10 && left > 4) {
+      rest.said10 = true;
+      coach.tenSeconds();
+    }
+    const whole = Math.ceil(left);
+    if (whole <= 3 && whole >= 1 && whole !== rest.ticked) {
+      rest.ticked = whole;
+      coachBeep(660, 90);
     }
     if (left <= 0) {
-      beep({ freq: 990, ms: 300 });
+      coach.restOver();
       buzz();
       rest = null;
       clearInterval(tick);
     }
     render();
-  }, 250);
+  }, 200);
 }
 
+// Small bar used by the list view. The guided player draws its own full-screen rest (body.playing hides this).
 function render() {
   let bar = document.getElementById('restbar');
   if (!bar) {
@@ -131,9 +141,9 @@ function render() {
   } else {
     const left = restRemaining();
     bar.classList.add('show');
-    bar.querySelector('.restlabel').textContent = rest.label;
+    bar.querySelector('.restlabel').textContent = rest.pausedLeft != null ? `${rest.label} · paused` : rest.label;
     bar.querySelector('.restclock').textContent = fmtClock(left);
     bar.querySelector('.restfill').style.transform = `scaleX(${Math.max(0, Math.min(1, left / rest.total))})`;
   }
-  listeners.forEach((fn) => fn(rest));
+  listeners.forEach((fn) => fn(restInfo()));
 }

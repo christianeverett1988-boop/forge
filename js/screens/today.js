@@ -9,11 +9,13 @@ import { openLogWeight } from './weight.js';
 import { activeWorkout, planToday, startWorkout, historyIndex } from '../workouts/plan.js';
 import { dayKey } from '../weight/smoothing.js';
 import { todayKey } from '../ui.js';
+import { playerRoute } from './train.js';
+import { unlockAudio } from '../ui/sound.js';
 
 function workoutCard() {
   const active = activeWorkout();
   if (active) {
-    return `<a class="card resume" href="#/session"><p class="label">Workout in progress</p>
+    return `<a class="card resume" href="${playerRoute()}"><p class="label">Workout in progress</p>
       <p class="big-title">${esc(active.label)}</p><span class="btn">Resume</span></a>`;
   }
   const doneToday = historyIndex().done.filter((w) => dayKey(w.started_at) === todayKey());
@@ -118,7 +120,8 @@ export function renderToday(el) {
   if (start) start.onclick = () => {
     const plan = planToday();
     if (!plan) return;
+    unlockAudio();
     startWorkout(plan);
-    location.hash = '#/session';
+    location.hash = playerRoute();
   };
 }

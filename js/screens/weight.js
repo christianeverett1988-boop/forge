@@ -5,6 +5,7 @@ import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../u
 import { trendChange, weeklyRate, projectGoalDate } from '../weight/smoothing.js';
 import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
+import { progressTabs } from './progress.js';
 
 const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
@@ -56,6 +57,7 @@ export function renderWeight(el) {
 
   el.innerHTML = `
     <section class="stack">
+      ${progressTabs('weight')}
       <div class="row between center">
         <h1>Weight</h1>
         <button class="btn small" data-log>+ Log weight</button>

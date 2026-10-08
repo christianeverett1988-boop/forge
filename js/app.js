@@ -4,6 +4,7 @@ import { state, subscribe, LOADED_KEYS } from './state.js';
 import { esc, toast } from './ui.js';
 import { APP_NAME } from '../config.js';
 import { stopRest, restRemaining } from './timer.js';
+import { viewTransition } from './ui/motion.js';
 
 const main = document.getElementById('main');
 const nav = document.getElementById('nav');
@@ -59,6 +60,10 @@ const routes = {
   today: () => import('./screens/today.js').then((m) => m.renderToday(main)),
   train: () => import('./screens/train.js').then((m) => m.renderTrain(main)),
   session: () => import('./screens/session.js').then((m) => m.renderSession(main)),
+  play: () => import('./screens/player.js').then((m) => m.renderPlayer(main)),
+  summary: (id) => import('./screens/summary.js').then((m) => m.renderSummary(main, decodeURIComponent(id || ''))),
+  body: () => import('./screens/body.js').then((m) => m.renderBody(main)),
+  progress: () => import('./screens/progress.js').then((m) => { location.replace(`#/${m.lastProgressRoute()}`); }),
   timer: () => import('./screens/timer.js').then((m) => m.renderTimer(main)),
   history: () => import('./screens/history.js').then((m) => m.renderHistory(main)),
   library: () => import('./screens/library.js').then((m) => m.renderLibrary(main)),
@@ -68,9 +73,18 @@ const routes = {
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
 };
 // Which tab lights up for each screen.
-const TAB_FOR = { session: 'train', timer: 'train', history: 'train', library: 'train', locations: 'settings', profile: 'settings' };
+const TAB_FOR = {
+  session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
+  history: 'weight', weight: 'weight', locations: 'settings', profile: 'settings',
+};
+// Screens that fill the whole screen (no tab bar).
+const FULLSCREEN = new Set(['play', 'summary', 'profile']);
+// For screen-change animations: tabs slide sideways, detail screens push in / pop out.
+const TAB_ORDER = ['today', 'train', 'body', 'weight', 'settings'];
+const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, settings: 0 };
 
-const currentRoute = () => (location.hash.replace(/^#\/?/, '').split('?')[0] || 'today');
+const routeParts = () => (location.hash.replace(/^#\/?/, '').split('?')[0] || 'today').split('/');
+const currentRoute = () => routeParts()[0];
 const allLoaded = () => LOADED_KEYS.every((k) => state.loaded[k]);
 
 let pendingRender = false;
@@ -131,16 +145,19 @@ async function render() {
   // The rest timer belongs to a running workout; never let it outlive one.
   if (restRemaining() > 0 && !state.workouts.some((w) => w.status === 'active' && !w.deleted)) stopRest();
   if (lastRoute === 'session' && route !== 'session') import('./screens/session.js').then((m) => m.leaveSession());
+  if (lastRoute === 'play' && route !== 'play') import('./screens/player.js').then((m) => m.leavePlayer());
+  if (lastRoute === 'summary' && route !== 'summary') import('./ui/fx.js').then((m) => m.clearParticles());
   lastRoute = route;
   const tab = TAB_FOR[route] || route;
-  nav.hidden = route === 'profile';
+  nav.hidden = FULLSCREEN.has(route);
+  document.body.classList.toggle('fullscreen', FULLSCREEN.has(route));
   nav.querySelectorAll('a').forEach((link) => {
     const target = link.getAttribute('href').slice(2);
     link.classList.toggle('active', target === tab);
     link.setAttribute('aria-current', target === tab ? 'page' : 'false');
   });
   try {
-    await routes[route]();
+    await routes[route](...routeParts().slice(1));
   } catch (e) {
     console.error(e);
     main.innerHTML = `<section class="card"><h1>Something broke</h1><p class="muted">${esc(e.message)}</p></section>`;
@@ -153,15 +170,32 @@ main.addEventListener('focusout', () => {
   }, 0);
 });
 
-// Re-render when data changes, but not for sync-status-only updates.
+// Re-render when data changes, but not for sync-status-only updates. While a workout is open (player or
+// list view), its own saves come back through the listener: skip those so animations aren't cut off.
 subscribe((patch) => {
   const keys = Object.keys(patch);
-  if (keys.length === 1 && keys[0] === 'sync') renderSync();
-  else render();
-});
-window.addEventListener('hashchange', () => {
+  if (keys.length === 1 && keys[0] === 'sync') return renderSync();
+  const route = currentRoute();
+  const onlyWorkouts = keys.every((k) => k === 'workouts' || k === 'loaded' || k === 'sync');
+  if ((route === 'play' || route === 'session') && onlyWorkouts && state.workouts.some((w) => w.status === 'active' && !w.deleted)) return;
   render();
-  window.scrollTo(0, 0);
+});
+
+let prevRoute = currentRoute();
+window.addEventListener('hashchange', () => {
+  const to = currentRoute();
+  const from = prevRoute;
+  prevRoute = to;
+  let kind = 'fade';
+  const dFrom = DEPTH[from] ?? 1;
+  const dTo = DEPTH[to] ?? 1;
+  if (dTo > dFrom) kind = 'push';
+  else if (dTo < dFrom) kind = 'pop';
+  else if (dTo === 0) kind = TAB_ORDER.indexOf(TAB_FOR[to] || to) >= TAB_ORDER.indexOf(TAB_FOR[from] || from) ? 'tab-fwd' : 'tab-back';
+  viewTransition(async () => {
+    await render();
+    window.scrollTo(0, 0);
+  }, kind);
 });
 window.addEventListener('forge:error', (e) => toast(e.detail, 4000));
 

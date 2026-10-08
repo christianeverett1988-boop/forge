@@ -1,0 +1,163 @@
+// Sound and voice coach. Everything is synthesized (Web Audio) or spoken (speechSynthesis): no audio files.
+//
+// iPhone notes:
+// - Audio must be unlocked by a tap: call unlockAudio() from a click handler (the player does it on Start).
+// - navigator.audioSession.type = 'ambient' (Safari 16.4+) makes Forge MIX with your music instead of stopping
+//   it. Trade-off you chose: with the ringer switch on silent, Forge's sounds are silent too.
+// - Speech is primed with a silent utterance during that first tap, because iOS only allows speech that
+//   starts from a user gesture until something has been spoken.
+// Settings (state.settings): audio_coach 'off' | 'beeps' | 'voice' (default 'voice'), sfx true/false (default true).
+import { state } from '../state.js';
+
+let ctx = null;
+let master = null;
+let primed = false;
+
+const prefs = () => ({
+  coach: (state.settings && state.settings.audio_coach) || 'voice',
+  sfx: !state.settings || state.settings.sfx !== false,
+});
+
+export function unlockAudio() {
+  try {
+    if (navigator.audioSession && navigator.audioSession.type !== 'ambient') navigator.audioSession.type = 'ambient';
+  } catch { /* not supported */ }
+  try {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = 0.9;
+      master.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+  } catch {
+    ctx = null;
+  }
+  if (!primed && 'speechSynthesis' in window) {
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+      primed = true;
+    } catch { /* ignore */ }
+  }
+}
+
+function tone({ freq = 880, type = 'sine', ms = 160, gain = 0.22, at = 0, slideTo = null, filter = null }) {
+  if (!ctx) return;
+  const t0 = ctx.currentTime + at;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t0);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + ms / 1000);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+  let node = o;
+  if (filter) {
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = filter;
+    o.connect(f);
+    node = f;
+  }
+  node.connect(g).connect(master);
+  o.start(t0);
+  o.stop(t0 + ms / 1000 + 0.05);
+}
+
+const semi = (f, n) => f * Math.pow(2, n / 12);
+
+/** Coach beeps (count-ins, rest end). Silent when the coach is Off. */
+export function beep(freq = 880, ms = 160) {
+  if (prefs().coach === 'off') return;
+  tone({ freq, ms, gain: 0.25 });
+}
+
+/** Sound effects (power-up, PR). Controlled by the separate Sound effects switch. */
+export const sfx = {
+  /** Set-complete "charge + chime". level 0..1 raises the pitch as the workout builds. */
+  charge(level = 0) {
+    if (!prefs().sfx) return;
+    const up = Math.round(level * 5);
+    tone({ freq: 160, slideTo: semi(620, up), type: 'sawtooth', ms: 170, gain: 0.08, filter: 1800 });
+    tone({ freq: semi(1318.5, up), ms: 260, gain: 0.16, at: 0.14 });
+    tone({ freq: semi(1975.5, up), ms: 320, gain: 0.12, at: 0.2 });
+  },
+  /** Bigger finish for the last set of an exercise. */
+  final() {
+    if (!prefs().sfx) return;
+    tone({ freq: 140, slideTo: 880, type: 'sawtooth', ms: 220, gain: 0.09, filter: 2200 });
+    [1318.5, 1661.2, 1975.5].forEach((f, k) => tone({ freq: f, ms: 360, gain: 0.13, at: 0.16 + k * 0.05 }));
+  },
+  /** PR: rising arpeggio plus a low thump. */
+  pr() {
+    if (!prefs().sfx) return;
+    tone({ freq: 70, slideTo: 45, type: 'sine', ms: 380, gain: 0.35 });
+    [1046.5, 1318.5, 1568, 2093].forEach((f, k) => tone({ freq: f, ms: 300, gain: 0.15, at: 0.08 + k * 0.08, type: 'triangle' }));
+    tone({ freq: 2637, ms: 600, gain: 0.08, at: 0.42 });
+  },
+  /** Workout complete. */
+  fanfare() {
+    if (!prefs().sfx) return;
+    [523.3, 659.3, 784, 1046.5, 1318.5].forEach((f, k) => tone({ freq: f, ms: 420, gain: 0.14, at: k * 0.11, type: 'triangle' }));
+  },
+};
+
+// ---------- voice coach ----------
+let lastSpoken = 0;
+function say(text, { interrupt = false } = {}) {
+  if (prefs().coach !== 'voice' || !('speechSynthesis' in window)) return;
+  try {
+    if (interrupt) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    u.pitch = 1;
+    u.lang = 'en-US';
+    speechSynthesis.speak(u);
+    lastSpoken = Date.now();
+  } catch { /* ignore */ }
+}
+
+export const coach = {
+  /** 3-2-1 countdown tick. n = 3, 2, 1. */
+  count(n) {
+    beep(660, 120);
+    say(String(n), { interrupt: true });
+  },
+  go() {
+    beep(990, 260);
+    say('Go!', { interrupt: true });
+  },
+  rest(sec, next) {
+    const nxt = next ? ` Next up: ${next}.` : '';
+    say(`Rest ${sec} seconds.${nxt}`, { interrupt: true });
+  },
+  tenSeconds() {
+    beep(740, 120);
+    say('10 seconds');
+  },
+  restOver() {
+    beep(990, 300);
+  },
+  lastSet() {
+    say('Last set!');
+  },
+  pr() {
+    say('New PR!', { interrupt: true });
+  },
+  workoutDone() {
+    say('Workout complete. Great work.', { interrupt: true });
+  },
+  /** Free text (boxing combos). */
+  call(text) {
+    say(text.replace(/-/g, ' '), { interrupt: true });
+  },
+  cancel() {
+    try { speechSynthesis.cancel(); } catch { /* ignore */ }
+  },
+  get lastSpoken() {
+    return lastSpoken;
+  },
+};

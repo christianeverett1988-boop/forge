@@ -390,3 +390,24 @@ test('fix 4: my own picks are kept, with a warning', () => {
   assert(/shoulder/.test(ohp.warning), 'warned');
   eq(w.exercises.find((e) => e.exercise_id === 'bb_back_squat').warning, null);
 });
+
+// ---------- v0.3.0: tempo dead end ----------
+test('tempo escape: 30 → 40 lb pair eventually jumps after two maxed tempo sessions', () => {
+  const row = byId('db_one_arm_row');
+  const hi = row.reps[1];
+  const inv = { dumbbells_kg: [30, 40].map((lb) => lb * 0.45359237) };
+  const ts = simulate(row, session(30, [hi, hi, hi]), 40, { inventory: inv, unit: 'lb', role: 'secondary' });
+  const jump = ts.findIndex((t) => t.weight === 40);
+  assert(jump > 0, 'reaches 40 lb');
+  const tempoBefore = ts.slice(0, jump).filter((t) => t.mode === 'tempo').length;
+  assert(tempoBefore >= 2, `at least 2 tempo sessions first (got ${tempoBefore})`);
+  assert(ts[jump].reps >= 5 && ts[jump].reps <= row.reps[0], `first target at 40: ${ts[jump].reps}`);
+  assert(ts.slice(jump).every((t) => t.weight === 40), 'stays at 40 (no drop back to 30)');
+});
+
+test('tempo escape never fires for 5 → 30 lb', () => {
+  const lat = EXERCISES.find((e) => e.load === 'dumbbell' && e.pattern === 'lateral_raise');
+  const hi = lat.reps[1];
+  const ts = simulate(lat, session(5, [hi, hi, hi]), 60, { inventory: HOME.weight_inventory, unit: 'lb' });
+  assert(ts.every((t) => t.weight === 5), ts.map((t) => t.weight).join());
+});

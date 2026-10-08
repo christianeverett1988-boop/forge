@@ -36,7 +36,10 @@ service cloud.firestore {
         && (col != 'settings' || id == 'main')
         && (col != 'weights' || (d.kg is number && d.kg > 0 && d.kg < 500 && d.day is string))
         && (col != 'locations' || (d.name is string && d.equipment is list && d.weight_inventory is map))
-        && (col != 'workouts' || (d.location_id is string && d.exercises is list && d.started_at is string && d.status is string))
+        && (col != 'workouts' || (d.location_id is string && d.exercises is list && d.started_at is string && d.status is string
+              && (!('paused_at' in d) || d.paused_at == null || d.paused_at is string)
+              && (!('paused_ms' in d) || (d.paused_ms is number && d.paused_ms >= 0))
+              && (!('duration_ms' in d) || (d.duration_ms is number && d.duration_ms >= 0))))
         && (col != 'cardio_sessions' || (d.activity is string && d.duration_min is number && d.started_at is string))
         && (col != 'programs' || (d.template is string && d.started_at is string))
         && (col != 'exercises' || (d.name is string && d.pattern is string && d.equipment is list));
