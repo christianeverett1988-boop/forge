@@ -4,6 +4,7 @@ import { buildQueue, nextOpenStep, restAfter, setLabel, supersetTag, validateSet
 import { muscleGlow, hasFigure } from '../js/ui/figure.js';
 import { coverage } from '../js/ui/poses.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
+import { exerciseRecords } from '../js/workouts/history.js';
 
 const T0 = Date.parse('2026-10-08T10:00:00Z');
 const min = 60000;
@@ -183,4 +184,18 @@ test('PRs: undo keeps a PR that another done set still earns', () => {
   item.sets[0].done = false;
   const recs = exercisePRs(ex, item, history, 'kg');
   eq(recs.find((r) => r.type === 'reps').value, 11);
+});
+
+test('history: exercise records — est. 1RM, heaviest, most reps; holds for timed work', () => {
+  const sessions = [
+    { date: '2026-10-01', sets: [{ weight: 100, reps: 5 }, { weight: 90, reps: 9 }] },
+    { date: '2026-09-20', sets: [{ weight: 110, reps: 2 }] },
+  ];
+  const r = exerciseRecords(sessions, { load: 'barbell' });
+  eq(r.heaviest.value, 110);
+  eq(r.reps.value, 9);
+  eq(r.e1rm.value, Math.round(90 * (1 + 9 / 30)));
+  const h = exerciseRecords([{ date: 'x', sets: [{ reps: 45 }, { reps: 60 }] }], { timed: true });
+  eq(h.hold.value, 60);
+  eq(exerciseRecords([], {}).e1rm, null);
 });

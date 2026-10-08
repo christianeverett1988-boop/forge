@@ -1,4 +1,5 @@
 import { state, units as getUnits } from '../state.js';
+import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
 import { exportJSON, exportWeightsCSV, exportWorkoutsCSV, exportCardioCSV } from '../export.js';
@@ -54,6 +55,11 @@ export function renderSettings(el) {
         </fieldset>
         <label class="choice check small"><input type="checkbox" name="sfx" ${sfxOn ? 'checked' : ''}><span>Sound effects<small>Power-up, PR and finish sounds.</small></span></label>
         <label class="choice check small"><input type="checkbox" name="haptics" ${hapOn ? 'checked' : ''}><span>Haptic tick (experimental)<small>${hapSupport === 'switch' ? 'A light tap on Done set (iOS 18+ trick).' : 'Not supported on this device.'}</small></span></label>
+        <div class="stack" data-photos hidden>
+          <p class="small"><b>Demo photos</b> <span class="muted" data-photo-status></span></p>
+          <button class="btn ghost" data-photo-dl>Download all demo photos</button>
+          <small class="muted">Start/end photos for exercises without an animated demo. Today’s are saved automatically when you start a workout.</small>
+        </div>
       </div>
 
       <a class="card row between center nav-card" href="#/locations">
@@ -99,6 +105,26 @@ export function renderSettings(el) {
     if (e.target.checked) setTimeout(() => sfx.charge(0.5), 50);
   });
   $('input[name=haptics]', el).addEventListener('change', (e) => patch('settings', 'main', { haptics: e.target.checked }));
+
+  // Demo photos: only shown once the photo script has added some.
+  const paintPhotos = async () => {
+    const st = await photoStatus();
+    const box = $('[data-photos]', el);
+    if (!box || !st.total) return;
+    box.hidden = false;
+    $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline`;
+    const btn = $('[data-photo-dl]', el);
+    btn.textContent = st.saved >= st.total ? 'All demo photos saved' : `Download all demo photos (≈ ${st.mb.toFixed(1)} MB)`;
+    btn.disabled = st.saved >= st.total;
+  };
+  paintPhotos();
+  $('[data-photo-dl]', el).onclick = async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await downloadAllPhotos((done, total) => (btn.textContent = `Saving… ${done} of ${total}`));
+    toast('Demo photos saved for offline use');
+    paintPhotos();
+  };
 
   const run = (fn) => async () => {
     try {

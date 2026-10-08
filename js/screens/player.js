@@ -14,6 +14,7 @@ import { coach } from '../ui/sound.js';
 import { powerUp, prExplosion, enqueue } from '../ui/fx.js';
 import { onFrame, reducedMotion, viewTransition } from '../ui/motion.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
+import { photoLoop, hasPhotos } from '../ui/photos.js';
 import { hapticInput, onHapticTap } from '../ui/haptic.js';
 import { openPaused, openAway, openComplete, saveAndSummarize, closeOverlays } from './overlays.js';
 import { openHowTo } from './session.js';
@@ -250,8 +251,8 @@ function drawSet(el) {
       <div class="pl-segs" role="progressbar" aria-valuemin="0" aria-valuemax="${order.length}" aria-valuenow="${exNo}" aria-label="Exercise ${exNo} of ${order.length}">${segs}</div>
       <p class="pl-count">Exercise ${exNo} of ${order.length}${tag ? ` <span class="tag ss">${tag}</span>` : ''}${s.warmup ? ' <span class="tag wu">Warm-up</span>' : ''}</p>
 
-      <button class="pl-demo ${hasFigure(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
-        ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
+      <button class="pl-demo ${hasFigure(ex.id) || hasPhotos(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
+        ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : hasPhotos(ex.id) ? photoLoop(ex.id, ex.name) : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
         <span class="pl-howto">How-To</span>
       </button>
       ${boxing ? '<p class="pl-combo" data-combo aria-live="polite"></p>' : ''}

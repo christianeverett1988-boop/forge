@@ -1,4 +1,5 @@
 import { state, units as getUnits } from '../state.js';
+import { cachePhotos } from '../ui/photos.js';
 import { esc, $, isStandalone, isIOS } from '../ui.js';
 import { formatWeight, weightToDisplay } from '../units.js';
 import { trendChange, projectGoalDate } from '../weight/smoothing.js';
@@ -124,6 +125,7 @@ export function renderToday(el) {
     if (!plan) return;
     unlockAudio();
     startWorkout(plan);
+    cachePhotos(plan.exercises.map((it) => it.exercise_id));
     location.hash = playerRoute();
   };
 }

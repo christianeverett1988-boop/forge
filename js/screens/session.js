@@ -4,16 +4,15 @@
 import { state } from '../state.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import { historyIndex, unit, activeLocation } from '../workouts/plan.js';
-import { exerciseById, loadInstructions } from '../workouts/library.js';
+import { exerciseById } from '../workouts/library.js';
 import { toUnit, fromUnit, nextTarget, warmups } from '../workouts/progression.js';
 import { expandEquipment, canDo } from '../workouts/equipment.js';
-import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { stopRest, unlockAudio, beep, buzz, fmtClock, setWantAwake } from '../timer.js';
 import { live, syncLive, save, completeSet, undoSet, elapsed, paused, checkAway, flush, discardWorkout } from '../workouts/live.js';
 import { powerUp, prExplosion } from '../ui/fx.js';
 import { openPaused, openAway, openFinish, closeOverlays } from './overlays.js';
 import { openPlateCalculator } from './tools.js';
-import { openExercisePicker, equipmentText } from './picker.js';
+import { openExercisePicker } from './picker.js';
 
 let clockTimer = null;
 let holdTimer = null;
@@ -357,29 +356,8 @@ function exerciseMenu(i, el) {
   });
 }
 
-export async function openHowTo(id) {
-  const ex = exerciseById(id);
-  if (!ex) return;
-  sheet(ex.name, async (body) => {
-    body.innerHTML = `
-      <div class="stack">
-        <p class="small muted">${esc(equipmentText(ex))}</p>
-        <p><b>Works:</b> ${esc(ex.primary.map((m) => MUSCLE_LABELS[m] || m).join(', '))}${ex.secondary.length ? `<span class="muted"> · also ${esc(ex.secondary.map((m) => MUSCLE_LABELS[m] || m).join(', '))}</span>` : ''}</p>
-        <div><p class="label">Form cues</p><ul class="reasons">${ex.cues.map((c) => `<li>${esc(c)}</li>`).join('') || '<li class="muted">No cues yet</li>'}</ul></div>
-        <div data-steps><p class="small muted">Loading steps…</p></div>
-      </div>`;
-    try {
-      const all = await loadInstructions();
-      const steps = all[id];
-      $('[data-steps]', body).innerHTML = steps
-        ? `<p class="label">Step by step</p><ol class="reasons">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-           <p class="small muted">Steps from free-exercise-db (public domain).</p>`
-        : '';
-    } catch {
-      $('[data-steps]', body).innerHTML = '';
-    }
-  });
-}
+// The How-To sheet lives in howto.js; re-exported here for older imports.
+export { openHowTo } from './howto.js';
 
 function workoutMenu(el) {
   sheet('Workout', (body, close) => {

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.3.1 — Silhouettes, muscle maps, How-To (2026-10-08)
+
+No database rule changes; just copy the files and push. Optional one-time step: run the demo-photo script (DEPLOY.md → Demo photos) and commit `media/ex`.
+
+**Animated demos for most of the library**
+- **221 of 280 exercises** now have the code-drawn silhouette, from 75 motion templates built on the approved squat, pull-up and curl look: squats, hinges, lunges, presses, push-ups, dips, rows, pulldowns, curls, triceps, raises, flyes, calves, carries, core, machines, jumps. Full list: `docs/silhouettes.md`.
+- What the figure holds follows the exercise: barbell (on the back, front rack or in the hands), dumbbell, kettlebell, goblet weight, cable or band (a line to its anchor), medicine ball, ab wheel, pull-up bar, dip bars, rings. Benches, boxes, walls and seats are drawn once behind the figure.
+- **Depth sorting:** limbs crossing in front of the body are drawn over it and behind it when they're behind; bars stay behind their plates; hands wrap the bar they hold.
+- The demo fills the player's demo box (the view fits the whole rep). Tempo days slow the demo to match.
+- Squat bar sits lower on the upper back (plate clears the head), glutes glow; the pull-up frames arms, bar and back; the curl shows only the near dumbbell; more contrast between the body and the background.
+- Exercises without a silhouette show their **start/end photos** (once you've run the photo script), otherwise the muscle list.
+
+**Muscle maps** (front/back body map ported from react-native-body-highlighter, MIT)
+- **Body tab:** the recovery heatmap (red / amber / green). Tap a muscle for its %, when you last trained it and its sets this week.
+- **Train:** today's muscles map plus a mini map on every exercise.
+- **Summary:** the session's muscles-worked map.
+- **How-To → Target:** the exercise's map.
+
+**How-To sheet (redesigned)**
+- Demo across the top with a **Figure | Photos** toggle, then **Favourite**, **Watch on YouTube** (opens a search; nothing embedded) and **Share**.
+- **Instructions | Target** tabs, and **your history**: est. 1-rep max, heaviest, most reps (or longest hold) and your last four sessions.
+
+**Demo photos**
+- `scripts/fetch-demo-photos.mjs` downloads free-exercise-db's photos once, resizes them to ~480 px / ~25 KB with `sips` (or ImageMagick) into `media/ex/`, and writes `media/ex/index.json`. It also reports exact-name matches for exercises not yet linked (none today; 2 linked ids have no images).
+- Offline: today's photos are cached when you start a workout, any photo is cached the first time it shows, and **Settings → Workouts → Download all demo photos (≈ N MB)** saves the rest. They live in their own cache, not the app shell.
+
+**Workout player fixes**
+- The **Workout complete** card comes back if the app is closed or reloaded while it's showing (and Today's card says **Finish**), instead of landing on set 1.
+- The bottom **Undo last set** ignores taps for 650 ms after the final Done, so a double tap can't undo behind the card.
+
+**Tests:** 119 unit tests (up from 99): rig and IK (bone lengths, planted feet, hands on bars and floors, bar over mid-foot), draw order (near/far limbs, a far arm crossing the front, grips, plates), framing, every mapped exercise solving cleanly with its own load, the muscle-map mapping and per-muscle stats, exercise records.
+
+**Size:** about 40 KB gzipped of new JS (20 KB of it the muscle-map paths, 9 KB the template library). No new libraries, no new origins in the CSP.
+
 ## 0.3.0 — Experience overhaul, drop 1 (2026-10-08)
 
 **⚠️ Rules changed.** Publish the new `firestore.rules` (Firebase console → Firestore Database → Rules → paste → Publish) **before** opening this version. Workouts now save `paused_at`, `paused_ms` and `duration_ms`.

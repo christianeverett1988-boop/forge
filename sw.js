@@ -1,8 +1,10 @@
 // Service worker: caches the app so it opens with no signal, and hands off new versions.
 // Bump VERSION here AND in js/version.js on every release.
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const CACHE = `forge-${VERSION}`;
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
+// Demo photos live in their own cache (not versioned, not precached): see js/ui/photos.js.
+const MEDIA = 'media-ex-v1';
 
 const SHELL = [
   './',
@@ -49,6 +51,8 @@ const SHELL = [
   './js/ui/rig.js',
   './js/ui/bodymap.js',
   './js/ui/bodymap-data.js',
+  './js/ui/photos.js',
+  './js/screens/howto.js',
   './js/workouts/clock.js',
   './js/workouts/session-core.js',
   './js/workouts/live.js',
@@ -112,6 +116,22 @@ self.addEventListener('fetch', (event) => {
 
   // The test page (tests/run.html) must load from the network, not the cached app page.
   if (sameOrigin && url.pathname.includes('/tests/')) return;
+
+  // Demo photos: cache-first in their own cache (they never change). The index is network-first.
+  if (sameOrigin && url.pathname.includes('/media/ex/')) {
+    if (url.pathname.endsWith('/index.json')) {
+      event.respondWith(fetch(req).then((res) => {
+        if (res.ok) { const copy = res.clone(); caches.open(MEDIA).then((c) => c.put(req, copy)); }
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || new Response('{"ids":{}}', { headers: { 'content-type': 'application/json' } }))));
+      return;
+    }
+    event.respondWith(caches.open(MEDIA).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) c.put(req, res.clone());
+      return res;
+    }))));
+    return;
+  }
 
   if (req.mode === 'navigate') {
     event.respondWith(caches.match('./index.html').then((r) => r || fetch(req)));

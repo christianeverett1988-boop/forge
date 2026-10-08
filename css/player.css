@@ -203,3 +203,28 @@ body.playing .topbar { display: none; }
 .plan-list li.with-map { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: center; }
 .plan-list li.with-map .bm-mini .bodymap { max-height: 58px; width: auto; margin: 0 auto; }
 .plan-list li div.bm { display: grid; }
+
+/* ---------- How-To sheet and demo photos ---------- */
+.ht-demo { position: relative; height: clamp(200px, 34vh, 300px); border-radius: 20px; border: 1px solid var(--line); background: radial-gradient(120% 90% at 50% 100%, #1d2410 0%, var(--surface) 60%); overflow: hidden; display: grid; place-items: center; }
+.ht-demo .fig-wrap { position: absolute; inset: 10px; display: grid; place-items: center; }
+.ht-demo .fig-wrap svg { height: 100%; width: auto; max-width: 100%; display: block; }
+.ht-demo .bm { width: 70%; }
+.ht-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-2); }
+.ht-seg button { border: 0; background: transparent; color: var(--muted); font: 700 14px var(--font, inherit); padding: 8px; border-radius: 9px; }
+.ht-seg button.on { background: var(--surface); color: var(--text); }
+.ht-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ht-act { display: grid; justify-items: center; gap: 2px; padding: 10px 6px; border-radius: 14px; background: var(--surface-2); color: var(--text); text-decoration: none; border: 0; font: inherit; font-size: 20px; }
+.ht-act small { font-size: 12px; color: var(--muted); }
+.ht-act.on span { color: var(--volt); }
+.ht-prs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.ht-prs div { background: var(--surface-2); border-radius: 12px; padding: 8px 10px; display: grid; }
+.ht-prs span { font-size: 11px; color: var(--muted); }
+.ht-prs b { font-size: 18px; }
+.ht-sessions li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.photo-loop { position: absolute; inset: 0; background: #fff; }
+.photo-loop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; animation: ph-a 3.2s ease-in-out infinite; }
+.photo-loop img.pl-b { animation-name: ph-b; }
+@keyframes ph-a { 0%, 40% { opacity: 1; transform: scale(1); } 50%, 90% { opacity: 0; transform: scale(1.03); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes ph-b { 0%, 40% { opacity: 0; transform: scale(1.03); } 50%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .photo-loop img { animation: none; } .photo-loop img.pl-b { display: none; } }
+.howto [data-panel][hidden] { display: none; }

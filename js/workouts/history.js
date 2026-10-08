@@ -1,7 +1,7 @@
 // Turns stored workouts into per-exercise history (most recent first), in the display unit.
 // Each session carries `deload` so progression and stall checks can skip deload weeks, while PRs,
 // charts and History still show them.
-import { toUnit } from './progression.js';
+import { toUnit, e1rm } from './progression.js';
 
 /** workouts: stored docs. unit: 'lb' | 'kg'. Only finished workouts count as history. */
 export function buildIndex(workouts, unit) {
@@ -32,4 +32,25 @@ export function buildIndex(workouts, unit) {
     historyFor: (id) => sessions.get(id) || [],
     daysSince: (id, now = Date.now()) => (lastDone.has(id) ? (now - lastDone.get(id)) / 86400000 : null),
   };
+}
+
+/**
+ * Best marks for one exercise from its sessions (display unit): estimated 1-rep max, heaviest weight,
+ * most reps in a set, longest hold for timed work, plus the date each was set.
+ */
+export function exerciseRecords(sessions, ex = {}) {
+  const r = { e1rm: null, heaviest: null, reps: null, hold: null };
+  for (const s of sessions || []) {
+    for (const set of s.sets || []) {
+      if (ex.timed) {
+        if (set.reps && (!r.hold || set.reps > r.hold.value)) r.hold = { value: set.reps, date: s.date };
+        continue;
+      }
+      if (set.reps && (!r.reps || set.reps > r.reps.value)) r.reps = { value: set.reps, weight: set.weight, date: s.date };
+      if (set.weight && (!r.heaviest || set.weight > r.heaviest.value)) r.heaviest = { value: set.weight, reps: set.reps, date: s.date };
+      const e = e1rm(set.weight, set.reps);
+      if (e && (!r.e1rm || e > r.e1rm.value)) r.e1rm = { value: Math.round(e), date: s.date };
+    }
+  }
+  return r;
 }

@@ -1,5 +1,6 @@
 // Train hub: pick a location, see today's plan, start or resume, recovery, program, tools.
 import { state } from '../state.js';
+import { cachePhotos } from '../ui/photos.js';
 import { bodyMap, exerciseValues } from '../ui/bodymap.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import {
@@ -141,6 +142,7 @@ export function renderTrain(el) {
     start.onclick = () => {
       unlockAudio(); // this tap unlocks sound + voice for the 3-2-1 GO on iPhone
       startWorkout(plan);
+      cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
       dayOverride = null;
       location.hash = playerRoute();
     };
