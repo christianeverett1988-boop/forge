@@ -134,3 +134,80 @@ test('workouts: pause fields are typed (v0.3.0)', async () => {
   await assertFails(updateDoc(ref, { paused_at: 12345 }));
   await assertFails(updateDoc(ref, { duration_ms: -1 }));
 });
+
+// ---------- v0.4.0: Withings (server-written collections) ----------
+const serverDoc = (uid, id, extra = {}) => ({ ...rec(uid, id), source: 'withings', ...extra });
+
+async function seed(path, data) {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), path), data); });
+}
+
+test('body_measures, health_daily, integrations: the owner can read them; others and signed-out visitors cannot', async () => {
+  await seed('users/alice/body_measures/w_1', serverDoc('alice', 'w_1', { metrics: { weight_kg: 82.3 } }));
+  await seed('users/alice/health_daily/2026-10-08', serverDoc('alice', '2026-10-08', { steps: 9000 }));
+  await seed('users/alice/integrations/withings', { connected: true, model: 'Body Comp' });
+  const alice = as('alice');
+  await assertSucceeds(getDoc(doc(alice, 'users/alice/body_measures/w_1')));
+  await assertSucceeds(getDocs(collection(alice, 'users/alice/body_measures')));
+  await assertSucceeds(getDoc(doc(alice, 'users/alice/health_daily/2026-10-08')));
+  await assertSucceeds(getDoc(doc(alice, 'users/alice/integrations/withings')));
+  const bob = as('bob');
+  await assertFails(getDoc(doc(bob, 'users/alice/body_measures/w_1')));
+  await assertFails(getDocs(collection(bob, 'users/alice/health_daily')));
+  await assertFails(getDoc(doc(bob, 'users/alice/integrations/withings')));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'users/alice/body_measures/w_1')));
+});
+
+test('the owner cannot create or freely update server-written records, or hard-delete them', async () => {
+  const alice = as('alice');
+  await assertFails(setDoc(doc(alice, 'users/alice/body_measures/w_9'), serverDoc('alice', 'w_9', { metrics: { weight_kg: 70 } })));
+  await assertFails(setDoc(doc(alice, 'users/alice/health_daily/2026-10-09'), serverDoc('alice', '2026-10-09')));
+  await assertFails(setDoc(doc(alice, 'users/alice/integrations/withings'), { connected: true }));
+  await seed('users/alice/body_measures/w_1', serverDoc('alice', 'w_1', { metrics: { weight_kg: 82.3 }, needs_review: false }));
+  await seed('users/alice/integrations/withings', { connected: true });
+  await assertFails(updateDoc(doc(alice, 'users/alice/body_measures/w_1'), { metrics: { weight_kg: 60 }, updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(doc(alice, 'users/alice/body_measures/w_1'), { deleted: true, source: 'manual', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(doc(alice, 'users/alice/integrations/withings'), { connected: false }));
+  await assertFails(deleteDoc(doc(alice, 'users/alice/body_measures/w_1')), 'hard delete would let the sync write it back');
+  await assertFails(deleteDoc(doc(alice, 'users/alice/integrations/withings')));
+});
+
+test('deleting a body measurement is a tombstone the owner can set but never undo', async () => {
+  await seed('users/alice/body_measures/w_1', serverDoc('alice', 'w_1', { metrics: { weight_kg: 82.3 } }));
+  await seed('users/alice/health_daily/2026-10-08', serverDoc('alice', '2026-10-08', { steps: 1 }));
+  const alice = as('alice');
+  const ref = doc(alice, 'users/alice/body_measures/w_1');
+  await assertSucceeds(updateDoc(ref, { deleted: true, deleted_at: '2026-10-09T00:00:00Z', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(ref, { deleted: false, updated_at: '2026-10-09T00:01:00Z' }));
+  await assertFails(updateDoc(ref, { deleted: 'yes', updated_at: '2026-10-09T00:01:00Z' }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice/health_daily/2026-10-08'), { deleted: true, deleted_at: '2026-10-09T00:00:00Z', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(doc(as('bob'), 'users/alice/body_measures/w_1'), { deleted: true, updated_at: '2026-10-09T00:00:00Z' }));
+});
+
+test('a flagged weigh-in can be confirmed (needs_review/reviewed_at only)', async () => {
+  await seed('users/alice/body_measures/w_2', serverDoc('alice', 'w_2', { needs_review: true }));
+  const ref = doc(as('alice'), 'users/alice/body_measures/w_2');
+  await assertSucceeds(updateDoc(ref, { needs_review: false, reviewed_at: '2026-10-09T00:00:00Z', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(ref, { needs_review: 'no', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertFails(updateDoc(ref, { reviewed_at: 5, updated_at: '2026-10-09T00:00:00Z' }));
+});
+
+test('Withings weights (w_*) stay ordinary weights: the owner can soft-delete and confirm them', async () => {
+  await seed('users/alice/weights/w_3', { ...weight('alice', 'w_3'), source: 'withings', grpid: 3, review: true });
+  const ref = doc(as('alice'), 'users/alice/weights/w_3');
+  await assertSucceeds(updateDoc(ref, { review: false, reviewed_at: '2026-10-09T00:00:00Z', updated_at: '2026-10-09T00:00:00Z' }));
+  await assertSucceeds(updateDoc(ref, { deleted: true, deleted_at: '2026-10-09T00:00:00Z', updated_at: '2026-10-09T00:00:00Z' }));
+});
+
+test('top-level server collections are closed to everyone; private/shortcut too', async () => {
+  for (const ctx of [as('alice'), env.unauthenticatedContext().firestore()]) {
+    for (const path of ['oauth_states/abc', 'withings_users/424242', 'shortcut_tokens/deadbeef']) {
+      await assertFails(getDoc(doc(ctx, path)));
+      await assertFails(setDoc(doc(ctx, path), { uid: 'alice' }));
+    }
+    await assertFails(getDocs(collection(ctx, 'withings_users')));
+  }
+  const alice = as('alice');
+  await assertFails(getDoc(doc(alice, 'users/alice/private/shortcut')));
+  await assertFails(setDoc(doc(alice, 'users/alice/private/shortcut'), { token_hash: 'x' }));
+});

@@ -1,5 +1,5 @@
-# Runs on every push to main and every pull request: unit tests (math, generator, progression, CSV)
-# and the Firestore security-rule tests against the local emulator (demo project, never your real one).
+# Runs on every push to main and every pull request: unit tests (math, generator, progression, CSV),
+# the Cloud Functions tests (functions/, no network) and the Firestore security-rule tests against the local emulator (demo project, never your real one).
 name: tests
 
 on:
@@ -21,6 +21,21 @@ jobs:
         with:
           node-version: 22
       - run: node tests/run.js
+
+  functions:
+    name: Functions tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install and run (no network calls in tests; fake Firestore and Withings)
+        working-directory: functions
+        run: |
+          npm install --no-audit --no-fund
+          npm test
 
   rules:
     name: Security rule tests
