@@ -15,8 +15,10 @@ import { unlockAudio } from '../ui/sound.js';
 function workoutCard() {
   const active = activeWorkout();
   if (active) {
-    return `<a class="card resume" href="${playerRoute()}"><p class="label">Workout in progress</p>
-      <p class="big-title">${esc(active.label)}</p><span class="btn">Resume</span></a>`;
+    // Every set done but not saved yet (the app was closed on the Workout complete card): go straight back to it.
+    const allDone = (active.exercises || []).some((x) => x.sets.length) && active.exercises.every((x) => x.sets.every((s) => s.done));
+    return `<a class="card resume" href="${allDone ? '#/play' : playerRoute()}"><p class="label">${allDone ? 'All sets done' : 'Workout in progress'}</p>
+      <p class="big-title">${esc(active.label)}</p><span class="btn">${allDone ? 'Finish' : 'Resume'}</span></a>`;
   }
   const doneToday = historyIndex().done.filter((w) => dayKey(w.started_at) === todayKey());
   if (doneToday.length) {
