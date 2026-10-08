@@ -174,7 +174,17 @@ main.addEventListener('focusout', () => {
 
 // Re-render when data changes, but not for sync-status-only updates. While a workout is open (player or
 // list view), its own saves come back through the listener: skip those so animations aren't cut off.
+// First run after the badges update: save the badges you already have, quietly (no celebrations), before
+// any summary can show. Loaded lazily; it's a no-op once settings/main.awards_seen exists.
+let awardsSeeded = false;
+function seedAwards() {
+  if (awardsSeeded || !allLoaded() || !state.settings || state.settings.awards_seen) return;
+  awardsSeeded = true;
+  import('./workouts/awards-store.js').then((m) => m.syncBadges());
+}
+
 subscribe((patch) => {
+  seedAwards();
   const keys = Object.keys(patch);
   if (keys.length === 1 && keys[0] === 'sync') return renderSync();
   const route = currentRoute();

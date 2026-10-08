@@ -1,19 +1,28 @@
 // Progress → Awards: your level and XP, the weekly streak (with this week's days and the monthly freeze),
-// and badges. All derived from history (js/workouts/awards.js); nothing extra is stored.
+// and badges. Derived from history (js/workouts/awards.js); earned badges are also kept in
+// settings/main.awards_seen so they never disappear.
 import { state } from '../state.js';
 import { esc } from '../ui.js';
-import { totalXP, levelFor, streak, badges, LEVELS, xpForLevel } from '../workouts/awards.js';
+import { streak, LEVELS, xpForLevel, XP_RULES } from '../workouts/awards.js';
+import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
+import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
 import { progressTabs } from './progress.js';
+
+const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
 
 const fmt = (n) => Math.round(n).toLocaleString();
 const when = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
 export function renderAwards(el) {
-  const goal = (state.profile && state.profile.trainingDays) || 3;
-  const xp = totalXP(state.workouts);
-  const lv = levelFor(xp);
+  const goal = goalDays();
+  const aw = myAwards();
+  const xp = aw.total;
+  const lv = aw.level;
   const st = streak(state.workouts, state.cardio || [], goal);
-  const bs = badges(state.workouts, state.cardio || [], goal);
+  // Earned first (newest first), then locked by tier.
+  const bs = [...aw.badges].sort((a, b) => (!!b.earned - !!a.earned)
+    || (a.earned ? (b.earned.at > a.earned.at ? 1 : -1) : BADGE_ART[a.id].tier - BADGE_ART[b.id].tier));
+  syncBadges(); // anything earned outside a summary (e.g. a cardio day finishing a streak) is kept from now on
   const got = bs.filter((b) => b.earned);
   const dots = Array.from({ length: goal }, (_, i) => `<i class="${i < st.thisWeek.done ? 'on' : ''}"></i>`).join('');
 
@@ -28,7 +37,7 @@ export function renderAwards(el) {
         <div class="aw-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(lv.progress * 100)}" aria-label="Progress to next level"><i style="--p:${lv.progress.toFixed(3)}"></i></div>
         <p class="small muted">${lv.next != null ? `${fmt(xp)} XP · ${fmt(lv.next - xp)} to <b>${esc(lv.nextName)}</b>` : `${fmt(xp)} XP · top level reached`}</p>
         <details class="small"><summary class="muted">How XP works</summary>
-          <p class="muted">+10 per working set, +25 per exercise, +100 per workout, +50 per PR.</p>
+          <p class="muted">${esc(XP_RULES)}</p>
           <ol class="aw-levels">${LEVELS.map((n, i) => `<li class="${i + 1 <= lv.level ? 'on' : ''}"><span>${esc(n)}</span><small>${fmt(xpForLevel(i + 1))}</small></li>`).join('')}</ol>
         </details>
       </div>
@@ -47,7 +56,8 @@ export function renderAwards(el) {
         <ul class="aw-badges">
           ${bs.map((b) => `
             <li class="${b.earned ? 'on' : ''}">
-              <span class="aw-medal" aria-hidden="true">${b.earned ? '🏅' : '🔒'}</span>
+              ${badgeSVG(b.id, { earned: !!b.earned, shine: !!b.earned && Date.now() - Date.parse(b.earned.at) < RECENT, size: 76, label: `${b.name}${b.earned ? '' : ' (locked)'}` })}
+              <span class="aw-tier">${TIER_NAMES[BADGE_ART[b.id].tier]}</span>
               <b>${esc(b.name)}</b>
               <small class="muted">${b.earned ? `Earned ${when(b.earned.at)}` : esc(b.how)}</small>
             </li>`).join('')}

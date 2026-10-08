@@ -57,6 +57,8 @@ const SHELL = [
   './js/workouts/awards.js',
   './js/ui/sharecard.js',
   './js/ui/rings.js',
+  './js/ui/badges.js',
+  './js/workouts/awards-store.js',
   './js/workouts/rings.js',
   './js/workouts/clock.js',
   './js/workouts/session-core.js',

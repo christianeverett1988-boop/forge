@@ -15,7 +15,8 @@ import { confetti } from '../ui/fx.js';
 import { sfx, coach } from '../ui/sound.js';
 import { fmtClock } from '../timer.js';
 import { finishedCopy } from '../workouts/live.js';
-import { workoutAwards } from '../workouts/awards.js';
+import { summaryAwards, rememberBadges } from '../workouts/awards-store.js';
+import { badgeSVG } from '../ui/badges.js';
 import { levelUp } from '../ui/fx.js';
 import { renderShareCard, shareImage } from '../ui/sharecard.js';
 
@@ -62,8 +63,21 @@ export function renderSummary(el, id) {
   const maxMus = topMus.length ? topMus[0][1] : 1;
 
   // XP, level, streak and badges, derived from history with this workout counted as done.
-  const goal = (state.profile && state.profile.trainingDays) || 3;
-  const aw = workoutAwards([...state.workouts.filter((x) => x.id !== w.id), { ...w, status: 'done' }], state.cardio || [], goal, w.id);
+  const aw = summaryAwards(w);
+  const xpParts = aw ? [['Sets', aw.xp.sets], ['Exercises', aw.xp.exercises], ['PRs', aw.xp.prs], ['Weekly goal', aw.xp.week], ['Badges', aw.xp.badges]].filter(([, v]) => v) : [];
+  const key = `forge.summary.${w.id}`;
+  const firstShow = !sessionStorage.getItem(key);
+  // New badges pop and shine. The screen re-renders a few times as the save lands, so the badges to
+  // celebrate are fixed on the first showing and kept for a few seconds; after that they draw still.
+  const celKey = `forge.summary.badges.${w.id}`;
+  let cel = null;
+  try { cel = JSON.parse(sessionStorage.getItem(celKey) || 'null'); } catch { /* ignore */ }
+  if (firstShow && aw) {
+    cel = { ids: aw.celebrate.map((b) => b.id), until: Date.now() + 5000 };
+    try { sessionStorage.setItem(celKey, JSON.stringify(cel)); } catch { /* ignore */ }
+  }
+  const celebrating = cel && Date.now() < cel.until;
+  const celebrate = new Set(celebrating ? cel.ids : []);
 
   el.innerHTML = `
     <section class="summary">
@@ -81,10 +95,11 @@ export function renderSummary(el, id) {
       ${aw ? `
       <div class="card sum-xp">
         <div class="row between center"><p class="label">XP earned</p><b>+<span data-c="xp">${aw.xp.total}</span></b></div>
+        ${xpParts.length ? `<p class="small muted sum-xp-parts">${xpParts.map(([k, v]) => `${k} +${v}`).join(' · ')}</p>` : ''}
         <div class="aw-bar" role="progressbar" aria-label="Level progress"><i data-xpbar style="--p:${(aw.levelUp ? aw.after.progress : aw.after.progress).toFixed(3)}"></i></div>
         <p class="small muted"><b class="lvl-name">Level ${aw.after.level} · ${esc(aw.after.name)}</b>${aw.after.next != null ? ` · ${(aw.after.next - aw.after.xp).toLocaleString()} XP to ${esc(aw.after.nextName)}` : ''}</p>
         <p class="small">${aw.streak.current ? `🔥 ${aw.streak.current}-week streak` : '🔥 Streak starts when you hit your planned days this week'} · ${aw.streak.thisWeek.done} of ${aw.streak.thisWeek.goal} days this week</p>
-        ${aw.badges.length ? `<div class="sum-badges">${aw.badges.map((b) => `<span>🏅 ${esc(b.name)}</span>`).join('')}</div>` : ''}
+        ${aw.badges.length ? `<p class="label">New badge${aw.badges.length === 1 ? '' : 's'}</p><div class="sum-badges">${aw.badges.map((b, k) => `<span class="sum-badge ${celebrate.has(b.id) ? 'bdg-pop' : ''}" style="--d:${(1.6 + k * 0.3).toFixed(1)}s">${badgeSVG(b.id, { shine: celebrate.has(b.id), size: 64 })}${esc(b.name)}</span>`).join('')}</div>` : ''}
         <a class="small" href="#/awards">See all awards ›</a>
       </div>` : ''}
 
@@ -115,9 +130,10 @@ export function renderSummary(el, id) {
       <a class="btn big" href="#/today">Done</a>
     </section>`;
 
-  // Celebrate once per workout.
-  const key = `forge.summary.${w.id}`;
-  if (!sessionStorage.getItem(key)) {
+  // Celebrate once per workout. New badges are saved (awards_seen) after their moment, so the save's
+  // re-render doesn't cut it short.
+  if (aw && aw.celebrate.length) setTimeout(() => rememberBadges(aw.celebrate), celebrating ? Math.max(0, cel.until - Date.now()) : 0);
+  if (firstShow) {
     sessionStorage.setItem(key, '1');
     sfx.fanfare();
     coach.workoutDone();
@@ -165,13 +181,26 @@ export function renderSummary(el, id) {
   const card = {
     number, date: new Date(w.started_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }), label: w.label || '',
     time: fmtDuration(durationMs), sets: st.sets, volume: st.volume.toLocaleString(), unit: u,
-    prs: prs.map((p) => p.label || ''), muscles: Object.fromEntries(Object.entries(mus).map(([m, v]) => [m, 0.25 + 0.75 * (v / maxMus)])),
+    prs: prs.map((p) => {
+      const name = exerciseById(p.exercise_id)?.name || '';
+      const label = p.label || '';
+      return { name, what: name && label.startsWith(`${name}: `) ? label.slice(name.length + 2) : label };
+    }), muscles: Object.fromEntries(Object.entries(mus).map(([m, v]) => [m, 0.25 + 0.75 * (v / maxMus)])),
     level: aw ? aw.after : { level: 1, name: 'Spark' }, streak: aw ? aw.streak.current : 0, xp: aw ? aw.xp.total : 0,
   };
-  setTimeout(() => renderShareCard(card).then((b) => (blob = b)).catch(() => {}), 1200);
-  $('[data-share]', el).onclick = async () => {
+  // Rendered straight away; the button waits until the image is ready so the tap itself opens the share
+  // sheet (an await before navigator.share would lose iPhone's tap permission).
+  const shareBtn = $('[data-share]', el);
+  shareBtn.disabled = true;
+  shareBtn.textContent = 'Preparing image…';
+  const ready = renderShareCard(card).then((b) => (blob = b)).catch(() => null).finally(() => {
+    if (!shareBtn.isConnected) return;
+    shareBtn.disabled = false;
+    shareBtn.textContent = 'Share image';
+  });
+  shareBtn.onclick = async () => {
     try {
-      const b = blob || (await renderShareCard(card));
+      const b = blob || (await ready) || (await renderShareCard(card));
       const how = await shareImage(b, `forge-workout-${number}.png`);
       if (how === 'downloaded') toast('Image saved');
     } catch (e) {

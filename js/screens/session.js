@@ -284,6 +284,7 @@ function swapExercise(i, ex, el) {
   }
   const entry = buildEntry(ex, old.role);
   entry.superset = old.superset;
+  if (old.rest_sec) entry.rest_sec = old.rest_sec; // the rest you chose in the preview stays with the slot
   L().exercises[i] = entry;
   save();
   renderSession(el);

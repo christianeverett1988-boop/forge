@@ -2,34 +2,69 @@
 
 ## 0.3.2 — XP, levels, badges, Today rings, share image (2026-10-08)
 
-No database rule changes; just copy the files and push. Everything here is worked out from your saved workouts on your phone; nothing new is stored or sent anywhere.
+No database rule changes; just copy the files and push. Everything is worked out on your phone from your saved workouts and cardio. The one new thing saved is the list of badges you've earned (`settings/main.awards_seen`), so a badge never disappears; the existing rules already allow it. Nothing is sent anywhere.
 
 **XP and levels**
-- Every workout earns XP: 10 per working set, 25 per exercise finished, 100 for the workout, 50 per PR. A typical session is about 400 XP.
-- **30 levels**, from **Spark** to **Unbreakable** (`docs/levels.md`). Level 2 comes with your first workout, level 10 after about two months at three a week.
-- The summary shows **+XP** with a filling level bar, and a **level-up** moment when you cross one.
+- XP per workout:
+  - **+10 per working set** (up to 40).
+  - **+25 per exercise with 2+ working sets**.
+  - **+50 per PR** (up to +200).
+  - **+100 for the workout that hits your planned days** for the week.
+  - **+100 per badge**.
+- Warm-ups earn nothing. A finished workout with no working sets earns nothing and isn't a training day.
+- **30 levels**, Spark → Unbreakable, at 250 × (level − 1)^1.6 XP. At three typical sessions a week that's level 10 in about 7 weeks. Full table: `docs/levels.md`. **How XP works** on the Awards tab says the same.
+- The summary shows **+XP** with a breakdown (Sets · Exercises · PRs · Weekly goal · Badges), a filling level bar, and a **level-up** moment.
 
 **Streak and badges**
-- **Weekly streak:** weeks in a row where you trained on your planned days (Settings → Edit profile & targets → days a week). Logged cardio counts as a day. Miss one week a month and a **freeze** covers it automatically; the current week never breaks it while it's in progress.
-- **19 badges**: first workout, 10/50/100/250 workouts, PR milestones, 3 PRs in one session, total and single-workout tonnage, 4/12/26-week streaks, early and late sessions, and reaching Hammer Strike. New badges show on the summary.
-- **Progress → Awards** tab: your level and XP to the next, the streak (best, freeze status, this week's days) and every badge, earned or locked, with how to get it.
+- **Weekly streak:** weeks in a row where you trained on your planned days (Settings → Edit profile & targets → days a week). Logged cardio counts as a day. Miss one week a month and a **freeze** covers it automatically.
+- **22 badges, each its own medal:**
+  - The metal shows the tier: Ember, Steel, Gold, White heat.
+  - The shape shows the family: hexagon for workouts, shield for records, medallion for tonnage, flame for streaks, diamond for the rest.
+  - Each has its own engraved icon, and milestones carry their number.
+  - Locked badges are grey silhouettes. A new one pops and shines on the summary, and shines again on Awards for 3 days.
+- **New badges:**
+  - **Full House:** 4+ sets for every major muscle group in one week.
+  - **Recovery Respect:** finish a deload-week workout.
+  - **Comeback:** train again after 3+ weeks away.
+- **Badges stay earned.** Changing your planned days, for example, no longer takes Hot Streak away. On the first run after updating, the badges you already have are saved quietly, with no celebrations.
+- **Progress → Awards:** level and XP to the next level, the streak with this week's days and the freeze, and the badge grid (earned first, newest first).
 
 **Today rings** (top of Today)
-- **Training:** days trained this week vs your planned days.
-- **Weekly sets:** working sets this week vs a target per group (Push / Pull / Legs, 10 / 14 / 18 each for beginner / intermediate / advanced). Each group only counts up to its own target, so one huge leg day can't close it.
+- **Training:** days this week vs your planned days.
+- **Weekly sets:** Push / Pull / Legs vs 10 / 14 / 18 sets each (beginner / intermediate / advanced). Each group counts only up to its own target. In a **deload week** the target is halved and the ring says "deload".
 - **Recovery:** how fresh your six big muscles are on average.
-- They fill on load. Closing Training or Weekly sets gets a **burst** (once a week per ring) and the ring keeps a glow. Room is left for the food rings.
+- The rings fill on load. Closing Training or Weekly sets gets a **burst** (once a week per ring) and a glow.
 
 **Share image**
-- **Share image** on the summary makes a 1080×1350 card (workout number and date, time, sets, volume, PRs, muscles worked, level, streak and XP) and opens the iPhone share sheet, or downloads it where sharing files isn't supported. It's drawn on your phone; nothing is uploaded.
+- A 1080×1350 card (workout number and date, time, sets, volume, PRs, muscles worked, level, streak, XP) opens the iPhone share sheet, or downloads where sharing files isn't supported. It's drawn on your phone.
+- Each PR shows the exercise, then what you beat, wrapped rather than cut off ("+N more records" when there isn't room).
+- The image is drawn as soon as the summary opens, and the button says "Preparing image…" until it's ready, so a tap always opens the share sheet.
+
+**Workout preview follow-ups** (from 0.3.1.2)
+- **Today's card and Start** use the same plan as Train, including any Replace, Rest timer, Switch or different day you chose there.
+- Swapping an exercise mid-workout keeps the rest timer you chose for that slot.
 
 **Player polish** (from the v0.3.0 review)
-- Coach says rests in minutes and seconds ("Rest 2 minutes 30") and no longer cuts itself off for a PR; audio wakes up again after the phone was locked.
-- One PR card per set, and a new **volume PR** (best weight × reps in a set).
-- **Set weight:** dumbbell and kettlebell exercises start at what you used earlier today for the same kind of weight, or your lightest; barbells start at the empty bar. If there's no weight yet, the hero shows **Set weight**: tap it to step.
-- The screen stays awake during a workout, lets go after 5 minutes paused, and retries on the next tap if iPhone refused. A running rest timer survives the app being closed.
+- **Coach and audio:**
+  - Rests are spoken in minutes and seconds ("Rest 2 minutes 30").
+  - The "New record" line no longer interrupts.
+  - Audio wakes up again after the phone was locked.
+- **Records:** one PR card per set, and a new **volume PR** (best weight × reps in a set).
+- **Starting weight:**
+  - Barbells start at the empty bar.
+  - Dumbbells and kettlebells start at what you used earlier today for the same kind of weight, or your lightest.
+  - That weight is marked **suggested** (dimmed, with a tag) until you change it.
+  - If there's no weight at all, tap **Set weight**.
+- **Screen and rest timer:** the screen stays awake during a workout and lets go after 5 minutes paused. A running rest timer survives the app being closed.
 
-**Tests:** 136 (up from 124): XP, levels, streak and freezes, badges, the rings (groups, weekly window, caps, cardio days), rest phrasing, volume PRs, and every JS/CSS file being in the offline shell.
+**Tests:** 143 (up from 124). They cover:
+- the XP plan (caps, the 2-set rule, the weekly-goal bonus with cardio and same-day workouts, badge XP);
+- empty workouts;
+- badges kept after 3 → 4 planned days;
+- Full House, Recovery Respect and Comeback;
+- unique art for all 22 badges;
+- the rings, including deload;
+- rest phrasing and volume PRs.
 
 ## 0.3.1.2 — Workout preview (2026-10-08)
 

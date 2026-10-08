@@ -27,7 +27,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 /**
- * card: { number, date, label, time, sets, volume, unit, prs: [labels], muscles: {muscle: 0..1},
+ * card: { number, date, label, time, sets, volume, unit, prs: [{ name, what }] (or label strings), muscles: {muscle: 0..1},
  *         level: { level, name }, streak, xp }
  * Resolves to a PNG Blob.
  */
@@ -94,12 +94,45 @@ export async function renderShareCard(card) {
   let y = 760;
   ctx.font = `800 34px ${FONT}`;
   ctx.fillStyle = '#ffc94a';
-  for (const p of card.prs.slice(0, 4)) {
-    const text = `🏆 ${p}`;
-    let t = text;
-    while (ctx.measureText(t).width > 470 && t.length > 4) t = `${t.slice(0, -2)}…`;
-    ctx.fillText(t, 580, y);
-    y += 56;
+  // Each PR: the exercise (white) over what you beat (gold), each wrapped to the column, never cut mid-word.
+  const wrap = (text, max, lines = 2) => {
+    const out = [];
+    let line = '';
+    // Split on plain spaces only; "→ 12" is glued with a no-break space so a number never sits alone.
+    for (const word of String(text).replace(/ → /g, ' →\u00a0').split(/ +/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= max || !line) line = next;
+      else { out.push(line); line = word; }
+    }
+    if (line) out.push(line);
+    if (out.length > lines) {
+      out.length = lines;
+      let last = out[lines - 1];
+      while (ctx.measureText(`${last}…`).width > max && last.includes(' ')) last = last.slice(0, last.lastIndexOf(' '));
+      out[lines - 1] = `${last}…`;
+    }
+    return out;
+  };
+  const prs = card.prs.map((p) => (typeof p === 'string' ? { name: '', what: p } : p));
+  let shown = 0;
+  for (const p of prs) {
+    if (y > 960) break; // leave room for the level
+    if (p.name) {
+      ctx.font = `700 28px ${FONT}`;
+      ctx.fillStyle = '#f2f5f8';
+      for (const l of wrap(p.name, 460, 1)) { ctx.fillText(l, 580, y); y += 36; }
+    }
+    ctx.font = `800 32px ${FONT}`;
+    ctx.fillStyle = '#ffc94a';
+    for (const l of wrap(`🏆 ${p.what}`, 460, 2)) { ctx.fillText(l, 580, y); y += 40; }
+    y += 18;
+    shown++;
+  }
+  if (shown < prs.length) {
+    ctx.font = `700 28px ${FONT}`;
+    ctx.fillStyle = '#9aa4b0';
+    ctx.fillText(`+${prs.length - shown} more record${prs.length - shown === 1 ? '' : 's'}`, 580, y);
+    y += 40;
   }
   y = Math.max(y + 20, 1000);
   ctx.fillStyle = '#9aa4b0';

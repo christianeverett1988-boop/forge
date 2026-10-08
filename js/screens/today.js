@@ -1,5 +1,4 @@
 import { state, units as getUnits } from '../state.js';
-import { cachePhotos } from '../ui/photos.js';
 import { esc, $, isStandalone, isIOS } from '../ui.js';
 import { formatWeight, weightToDisplay } from '../units.js';
 import { trendChange, projectGoalDate } from '../weight/smoothing.js';
@@ -7,11 +6,11 @@ import { sparklineSVG } from '../weight/chart.js';
 import { weightSeries, currentTargets } from '../derived.js';
 import { FLOOR_SOURCE } from '../nutrition/targets.js';
 import { openLogWeight } from './weight.js';
-import { activeWorkout, planToday, startWorkout, historyIndex } from '../workouts/plan.js';
+import { activeWorkout, historyIndex, activeProgram } from '../workouts/plan.js';
+import { deloadInfo } from '../workouts/generator.js';
 import { dayKey } from '../weight/smoothing.js';
 import { todayKey } from '../ui.js';
-import { playerRoute } from './train.js';
-import { unlockAudio } from '../ui/sound.js';
+import { playerRoute, previewPlan, startPlan } from './train.js';
 import { todayRings } from '../workouts/rings.js';
 import { weekOf } from '../workouts/awards.js';
 import { exerciseById } from '../workouts/library.js';
@@ -34,7 +33,7 @@ function workoutCard() {
       <p class="small muted">${sets} sets${(w.prs || []).length ? ` · ${w.prs.length} PR${w.prs.length === 1 ? '' : 's'} 🏆` : ''}. Recovery starts now.</p>
       <a class="btn ghost" href="#/history">See history</a></div>`;
   }
-  const plan = planToday();
+  const plan = previewPlan(); // with any edits you made on Train
   if (!plan || !plan.exercises.length) return '';
   return `<div class="card"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p>
     <p class="big-title">${esc(plan.label)}</p>
@@ -67,7 +66,9 @@ export function renderToday(el) {
   }
 
   const installHint = isIOS() && !isStandalone();
-  const rings = todayRings({ workouts: state.workouts, cardio: state.cardio || [], profile: state.profile, exerciseById });
+  const program = activeProgram();
+  const deload = !!program && deloadInfo(program, state.profile.experience).deload;
+  const rings = todayRings({ workouts: state.workouts, cardio: state.cardio || [], profile: state.profile, exerciseById, deload });
 
   el.innerHTML = `
     <section class="stack">
@@ -132,11 +133,7 @@ export function renderToday(el) {
   animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));
   const start = $('[data-start]', el);
   if (start) start.onclick = () => {
-    const plan = planToday();
-    if (!plan) return;
-    unlockAudio();
-    startWorkout(plan);
-    cachePhotos(plan.exercises.map((it) => it.exercise_id));
-    location.hash = playerRoute();
+    const plan = previewPlan();
+    if (plan && plan.exercises.length) startPlan(plan);
   };
 }

@@ -15,6 +15,8 @@ export const groupOf = (pattern) => GROUP_OF[pattern] || null;
 // Hard sets a week per group: roughly 10–20 per muscle group, from where you are.
 export const WEEKLY_SET_TARGET = { beginner: 10, intermediate: 14, advanced: 18 };
 
+export const DELOAD_SCALE = 0.5;
+
 // The big muscles the Recovery ring averages (same six as Train's recovery card).
 export const MAJOR = ['chest', 'lats', 'quads', 'hamstrings', 'glutes', 'front_delts'];
 
@@ -34,12 +36,14 @@ export function weeklySets(workouts, exerciseById, now = Date.now()) {
 
 /**
  * The three rings, each { key, label, value (0..1+), done, goal, text }.
- *   profile: { trainingDays, experience }
+ *   profile: { trainingDays, experience }; deload: this is a deload week (smaller sets target)
  */
-export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseById, now = Date.now() }) {
+export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseById, now = Date.now(), deload = false }) {
   const goalDays = profile.trainingDays || 3;
   const st = streak(workouts, cardio, goalDays, now);
-  const per = WEEKLY_SET_TARGET[profile.experience] || WEEKLY_SET_TARGET.beginner;
+  // Deload week: half the usual sets (the generator halves sets on a deload), so the ring can still close.
+  const base = WEEKLY_SET_TARGET[profile.experience] || WEEKLY_SET_TARGET.beginner;
+  const per = deload ? Math.round(base * DELOAD_SCALE) : base;
   const sets = weeklySets(workouts, exerciseById, now);
   // Each group counts up to its own target, so 40 leg sets can't close the ring on their own.
   const setsDone = Object.values(sets).reduce((n, v) => n + Math.min(v, per), 0);
@@ -49,7 +53,7 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
   return [
     { key: 'training', label: 'Training', value: st.thisWeek.done / goalDays, done: st.thisWeek.done, goal: goalDays, text: `${st.thisWeek.done}/${goalDays} days` },
     {
-      key: 'sets', label: 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
+      key: 'sets', label: deload ? 'Weekly sets · deload' : 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
       text: `${sets.push}/${per} push · ${sets.pull}/${per} pull · ${sets.legs}/${per} legs`, groups: sets, per,
     },
     { key: 'recovery', label: 'Recovery', value: fresh / 100, done: fresh, goal: 100, text: `${fresh}% fresh` },

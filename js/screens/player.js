@@ -244,7 +244,10 @@ function drawSet(el) {
     draft = { key: `${i}:${j}`, weight: kg != null ? round1(toUnit(kg, u)) : null, reps, rir: s.rir ?? null };
     // Still no weight on a loaded lift: start at the empty bar, or the dumbbell/kettlebell you last used
     // today (else your lightest one). Machines and cables wait for a tap on "Set weight".
-    if (draft.weight == null && showWeight && !isTimed) draft.weight = startingWeight(ex, w);
+    if (draft.weight == null && showWeight && !isTimed) {
+      draft.weight = startingWeight(ex, w);
+      if (draft.weight != null) draft.suggested = draft.weight; // shown as "suggested" until you change it
+    }
   }
   const prev = historyIndex().historyFor(ex.id)[0];
   const prevSet = prev && !s.warmup ? prev.sets[lbl.n - 1] : null;
@@ -282,7 +285,7 @@ function drawSet(el) {
 
       <div class="pl-hero" data-hero style="view-transition-name: pl-hero">
         <div class="pl-hero-n">${heroAmount}</div>
-        ${showWeight ? `<div class="pl-hero-w ${draft.weight == null ? 'unset' : ''}"><b data-hero-w role="${draft.weight == null ? 'button' : 'text'}">${draft.weight ?? 'Set weight'}</b><span>${u}</span></div>` : ''}
+        ${showWeight ? `<div class="pl-hero-w ${draft.weight == null ? 'unset' : ''} ${draft.suggested != null && draft.weight === draft.suggested ? 'suggested' : ''}"><b data-hero-w role="${draft.weight == null ? 'button' : 'text'}">${draft.weight ?? 'Set weight'}</b><span>${u}</span><small class="pl-sugg">suggested</small></div>` : ''}
         <div class="pl-ring" data-ring hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" data-ringfg/></svg></div>
       </div>
 
@@ -334,6 +337,8 @@ function drawSet(el) {
     if (hw) {
       hw.textContent = draft.weight ?? 'Set weight';
       hw.parentElement.classList.toggle('unset', draft.weight == null);
+      if (draft.suggested != null && draft.weight !== draft.suggested) draft.suggested = null; // touched: it's yours now
+      hw.parentElement.classList.toggle('suggested', draft.suggested != null);
       hw.setAttribute('role', draft.weight == null ? 'button' : 'text');
     }
     const rv = $('[data-rv]', el);

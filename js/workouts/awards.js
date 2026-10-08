@@ -1,29 +1,48 @@
-// XP, levels, weekly streaks and badges. Everything is derived from your workout history (and cardio log),
-// so nothing new is stored and it can always be recomputed. Pure functions; see docs/levels.md.
+// XP, levels, weekly streaks and badges. Derived from your workout history (and cardio log); the only
+// thing stored is the list of badges you've earned (settings/main.awards_seen = { id: date }), so a badge
+// stays earned even if a later change (say 3 → 4 planned days) would no longer unlock it.
+// Pure functions; see docs/levels.md.
 
 // ---------- XP ----------
-export const XP = { set: 10, exercise: 25, workout: 100, pr: 50 };
+export const XP = {
+  set: 10, setCap: 40, // +10 per working set, up to 40 sets a workout
+  exercise: 25, exerciseMinSets: 2, // +25 per exercise with at least 2 working sets
+  pr: 50, prCap: 200, // +50 per PR, up to +200 a workout
+  week: 100, // +100 for the workout that hits your weekly goal
+  badge: 100, // +100 per badge
+};
+export const XP_RULES = '+10 per working set (up to 40), +25 per exercise with 2 or more working sets, +50 per PR (up to +200 a workout), +100 for the workout that hits your weekly goal, and +100 per badge.';
 
-/** XP for one finished workout: +10 per working set, +25 per exercise with a working set, +100, +50 per PR. */
-export function workoutXP(w) {
+const workingSets = (it) => (it.sets || []).filter((s) => s.done && !s.warmup).length;
+/** A finished workout only counts (XP, training days, streaks, badges) if it has a working set. */
+export const hasWork = (w) => (w.exercises || []).some((it) => workingSets(it) > 0);
+
+/**
+ * XP for one finished workout. ctx.week: this workout hit the weekly goal; ctx.badges: badges it unlocked.
+ * Returns { sets, exercises, prs, week, badges, total } (XP per part).
+ */
+export function workoutXP(w, { week = false, badges = 0 } = {}) {
+  if (!hasWork(w)) return { sets: 0, exercises: 0, prs: 0, week: 0, badges: 0, total: 0 };
   let sets = 0;
   let exercises = 0;
   for (const it of w.exercises || []) {
-    const n = (it.sets || []).filter((s) => s.done && !s.warmup).length;
+    const n = workingSets(it);
     sets += n;
-    if (n) exercises++;
+    if (n >= XP.exerciseMinSets) exercises++;
   }
-  if (!sets) return { sets: 0, exercises: 0, workout: 0, prs: 0, total: 0 };
-  const prs = (w.prs || []).length;
-  const parts = { sets: sets * XP.set, exercises: exercises * XP.exercise, workout: XP.workout, prs: prs * XP.pr };
-  return { ...parts, total: parts.sets + parts.exercises + parts.workout + parts.prs };
+  const parts = {
+    sets: Math.min(sets, XP.setCap) * XP.set,
+    exercises: exercises * XP.exercise,
+    prs: Math.min((w.prs || []).length * XP.pr, XP.prCap),
+    week: week ? XP.week : 0,
+    badges: badges * XP.badge,
+  };
+  return { ...parts, total: parts.sets + parts.exercises + parts.prs + parts.week + parts.badges };
 }
 
 const finished = (workouts) => workouts
-  .filter((w) => w.status === 'done' && !w.deleted)
+  .filter((w) => w.status === 'done' && !w.deleted && hasWork(w))
   .sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
-
-export const totalXP = (workouts) => finished(workouts).reduce((n, w) => n + workoutXP(w).total, 0);
 
 // ---------- levels ----------
 export const LEVELS = [
@@ -32,12 +51,8 @@ export const LEVELS = [
   'Forge Master', 'Ironclad', 'Titanium', 'Tungsten', 'Meteorite', 'Molten Core', 'Star Forge', 'Supernova', 'Adamant', 'Unbreakable',
 ];
 
-/**
- * XP needed to reach a level (level 1 = 0). Grows a little faster than linearly: a typical workout is
- * ~400 XP, so level 2 comes after the first workout, level 10 after ~2 months at 3 a week, and
- * Unbreakable after roughly two years of steady training.
- */
-export const xpForLevel = (level) => (level <= 1 ? 0 : Math.round(300 * Math.pow(level - 1, 1.75)));
+/** XP needed to reach a level (level 1 = 0): 250 × (level − 1)^1.6. */
+export const xpForLevel = (level) => (level <= 1 ? 0 : Math.round(250 * Math.pow(level - 1, 1.6)));
 
 export function levelFor(xp) {
   let level = 1;
@@ -74,8 +89,9 @@ const addWeeks = (key, n) => {
   const dt = new Date(y, m - 1, d + n * 7, 12);
   return dateKey(dt.toISOString());
 };
+const liveCardio = (cardio) => (cardio || []).filter((c) => !c.deleted && c.started_at);
 
-/** Distinct training days per week (finished workouts and logged cardio both count). */
+/** Distinct training days per week: finished workouts with a working set, and logged cardio. */
 export function daysPerWeek(workouts, cardio = []) {
   const weeks = new Map();
   const add = (iso) => {
@@ -84,7 +100,7 @@ export function daysPerWeek(workouts, cardio = []) {
     weeks.get(w).add(dateKey(iso));
   };
   finished(workouts).forEach((w) => add(w.started_at));
-  cardio.filter((c) => !c.deleted && c.started_at).forEach((c) => add(c.started_at));
+  liveCardio(cardio).forEach((c) => add(c.started_at));
   return new Map([...weeks].map(([k, v]) => [k, v.size]));
 }
 
@@ -127,6 +143,15 @@ export function streak(workouts, cardio, goal, now = Date.now()) {
 }
 
 // ---------- badges ----------
+// The muscle groups "Full House" wants in one week: at least FULL_HOUSE_SETS working sets each, counted
+// by the exercise's primary muscles (one full-body session alone doesn't do it).
+export const FULL_HOUSE_SETS = 4;
+export const FULL_HOUSE = {
+  chest: ['chest'], back: ['lats', 'upper_back'], shoulders: ['front_delts', 'side_delts', 'rear_delts'],
+  arms: ['biceps', 'triceps'], quads: ['quads'], hamstrings: ['hamstrings'], glutes: ['glutes'], core: ['abs', 'obliques'],
+};
+const GROUP_OF_MUSCLE = Object.fromEntries(Object.entries(FULL_HOUSE).flatMap(([g, ms]) => ms.map((m) => [m, g])));
+
 // Each badge: id, name, how you earn it, and a test over the running totals after each workout.
 export const BADGES = [
   { id: 'first', name: 'First Spark', how: 'Finish your first workout', test: (t) => t.workouts >= 1 },
@@ -145,54 +170,139 @@ export const BADGES = [
   { id: 'st4', name: 'Hot Streak', how: 'Hit your planned days 4 weeks running', test: (t) => t.bestStreak >= 4 },
   { id: 'st12', name: 'Heat Treated', how: 'Hit your planned days 12 weeks running', test: (t) => t.bestStreak >= 12 },
   { id: 'st26', name: 'Half-Year Forge', how: 'Hit your planned days 26 weeks running', test: (t) => t.bestStreak >= 26 },
+  { id: 'full', name: 'Full House', how: 'In one week, 4+ sets for every major muscle group', test: (t) => t.fullHouse },
+  { id: 'deload', name: 'Recovery Respect', how: 'Finish a workout in a deload week', test: (t) => t.deloads >= 1 },
+  { id: 'comeback', name: 'Comeback', how: 'Train again after 3 weeks or more away', test: (t) => t.comebacks >= 1 },
   { id: 'dawn', name: 'Dawn Patrol', how: 'Start 5 workouts before 7 am', test: (t) => t.early >= 5 },
   { id: 'night', name: 'Night Shift', how: 'Start 5 workouts after 8 pm', test: (t) => t.late >= 5 },
   { id: 'lv11', name: 'Into the Forge', how: 'Reach level 11 (Hammer Strike)', test: (t) => t.level >= 11 },
 ];
 
 /**
- * Badges with the date each was earned (null if not yet). Walks the history in order so each badge gets
- * the workout that unlocked it. Volume counts weighted working sets in kg.
+ * One pass over your history: XP per workout (with the weekly-goal bonus and badge XP), badges with the
+ * workout that unlocked them, total XP and level.
+ *   opts.seen          settings/main.awards_seen ({ id: ISO date }): badges stay earned once seen
+ *   opts.exerciseById  for Full House (primary muscles); without it Full House is never unlocked
+ * Returns { total, level, perWorkout: Map(id → { xp, badges: [ids], at }), badges: [{ id, name, how, earned }] }
  */
-export function badges(workouts, cardio = [], goal = 3) {
+export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exerciseById = null } = {}) {
   const list = finished(workouts);
-  const t = { workouts: 0, prs: 0, maxPrsInWorkout: 0, volumeKg: 0, maxVolumeKg: 0, bestStreak: 0, early: 0, late: 0, level: 1, xp: 0 };
+  const cardioList = liveCardio(cardio).sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
+  const t = { workouts: 0, prs: 0, maxPrsInWorkout: 0, volumeKg: 0, maxVolumeKg: 0, bestStreak: 0, early: 0, late: 0, level: 1, xp: 0, fullHouse: false, deloads: 0, comebacks: 0 };
   const earned = {};
+  const perWorkout = new Map();
+  const weekDays = new Map(); // week → Set(day keys) trained so far
+  const weekGroups = new Map(); // week → { group: working sets }
   const upTo = [];
+  let ci = 0;
+  let lastAt = null;
   for (const w of list) {
     upTo.push(w);
-    const x = workoutXP(w);
-    if (!x.total) continue;
+    const wk = weekOf(w.started_at);
+    // Weekly goal: did this workout bring its week to `goal` days? (cardio logged before it counts too)
+    while (ci < cardioList.length && cardioList[ci].started_at <= w.started_at) {
+      const c = cardioList[ci++];
+      const k = weekOf(c.started_at);
+      if (!weekDays.has(k)) weekDays.set(k, new Set());
+      weekDays.get(k).add(dateKey(c.started_at));
+    }
+    if (!weekDays.has(wk)) weekDays.set(wk, new Set());
+    const days = weekDays.get(wk);
+    const before = days.size;
+    days.add(dateKey(w.started_at));
+    const week = before < goal && days.size >= goal;
+
     t.workouts++;
     const prs = (w.prs || []).length;
     t.prs += prs;
     t.maxPrsInWorkout = Math.max(t.maxPrsInWorkout, prs);
     let vol = 0;
-    for (const it of w.exercises || []) for (const s of it.sets || []) if (s.done && !s.warmup && s.weight_kg && s.reps) vol += s.weight_kg * s.reps;
+    for (const it of w.exercises || []) {
+      for (const s of it.sets || []) if (s.done && !s.warmup && s.weight_kg && s.reps) vol += s.weight_kg * s.reps;
+      const n = workingSets(it);
+      if (exerciseById && n > 0) {
+        const ex = exerciseById(it.exercise_id);
+        if (!weekGroups.has(wk)) weekGroups.set(wk, {});
+        const g = weekGroups.get(wk);
+        for (const grp of new Set(((ex && ex.primary) || []).map((m) => GROUP_OF_MUSCLE[m]).filter(Boolean))) g[grp] = (g[grp] || 0) + n;
+      }
+    }
+    if (weekGroups.has(wk) && Object.keys(FULL_HOUSE).every((grp) => (weekGroups.get(wk)[grp] || 0) >= FULL_HOUSE_SETS)) t.fullHouse = true;
     t.volumeKg += vol;
     t.maxVolumeKg = Math.max(t.maxVolumeKg, vol);
+    if (w.deload) t.deloads++;
+    if (lastAt != null && Date.parse(w.started_at) - lastAt >= 21 * 86400000) t.comebacks++;
+    lastAt = Date.parse(w.started_at);
     const h = new Date(w.started_at).getHours();
     if (h < 7) t.early++;
     if (h >= 20) t.late++;
-    t.xp += x.total;
-    t.level = levelFor(t.xp).level;
-    t.bestStreak = streak(upTo, cardio.filter((c) => c.started_at <= (w.finished_at || w.started_at)), goal, Date.parse(w.finished_at || w.started_at)).best;
-    for (const b of BADGES) if (!earned[b.id] && b.test(t)) earned[b.id] = { at: w.finished_at || w.started_at, workoutId: w.id };
+    const at = w.finished_at || w.started_at;
+    t.bestStreak = streak(upTo, cardioList.filter((c) => c.started_at <= at), goal, Date.parse(at)).best;
+
+    // XP without badges first, then badges (badge XP can unlock "Into the Forge", so repeat until stable).
+    t.xp += workoutXP(w, { week }).total;
+    const mine = [];
+    for (let changed = true; changed;) {
+      changed = false;
+      t.level = levelFor(t.xp).level;
+      for (const b of BADGES) {
+        if (earned[b.id] || !b.test(t)) continue;
+        earned[b.id] = { at, workoutId: w.id };
+        mine.push(b.id);
+        t.xp += XP.badge;
+        changed = true;
+      }
+    }
+    perWorkout.set(w.id, { xp: workoutXP(w, { week, badges: mine.length }), badges: mine, at });
   }
-  return BADGES.map((b) => ({ id: b.id, name: b.name, how: b.how, earned: earned[b.id] || null }));
+  // Badges you earned before that today's history no longer unlocks (planned days changed, a workout
+  // deleted…) stay earned and keep their XP.
+  let kept = 0;
+  for (const [id, date] of Object.entries(seen || {})) {
+    if (earned[id] || !BADGES.some((b) => b.id === id)) continue;
+    earned[id] = { at: date, workoutId: null };
+    kept++;
+  }
+  const total = t.xp + kept * XP.badge;
+  return {
+    total,
+    level: levelFor(total),
+    perWorkout,
+    badges: BADGES.map((b) => ({ id: b.id, name: b.name, how: b.how, earned: earned[b.id] || null })),
+  };
 }
 
-/** Everything the summary screen needs about one workout: XP, level before/after, new badges, streak. */
-export function workoutAwards(workouts, cardio, goal, workoutId, now = Date.now()) {
+export const totalXP = (workouts, cardio = [], goal = 3, opts = {}) => awardsFor(workouts, cardio, goal, opts).total;
+export const badges = (workouts, cardio = [], goal = 3, opts = {}) => awardsFor(workouts, cardio, goal, opts).badges;
+
+/** Badges to add to settings/main.awards_seen: earned now but not seen yet. { id: date } or null if none. */
+export function unseenBadges(list, seen = {}) {
+  const add = {};
+  for (const b of list) if (b.earned && !(seen && seen[b.id])) add[b.id] = b.earned.at;
+  return Object.keys(add).length ? add : null;
+}
+
+/**
+ * Everything the summary screen needs about one workout: XP, level before/after, the badges it unlocked
+ * (`badges`), the ones to celebrate (`celebrate`: not in `seen` yet), and the streak.
+ */
+export function workoutAwards(workouts, cardio, goal, workoutId, now = Date.now(), opts = {}) {
+  const a = awardsFor(workouts, cardio, goal, opts);
+  const mine = a.perWorkout.get(workoutId);
+  if (!mine) return null;
   const list = finished(workouts);
   const idx = list.findIndex((w) => w.id === workoutId);
-  if (idx < 0) return null;
-  const w = list[idx];
-  const xp = workoutXP(w);
-  const before = list.slice(0, idx).reduce((n, x) => n + workoutXP(x).total, 0);
+  let before = list.slice(0, idx).reduce((n, w) => n + a.perWorkout.get(w.id).xp.total, 0);
+  // Kept badges (earned before, no longer unlocked by history) count toward the level before, by date.
+  for (const b of a.badges) if (b.earned && !b.earned.workoutId && b.earned.at < mine.at) before += XP.badge;
   const lvBefore = levelFor(before);
-  const lvAfter = levelFor(before + xp.total);
-  const all = badges(list.slice(0, idx + 1), cardio, goal);
-  const fresh = all.filter((b) => b.earned && b.earned.workoutId === workoutId);
-  return { xp, before: lvBefore, after: lvAfter, levelUp: lvAfter.level > lvBefore.level, badges: fresh, streak: streak(list, cardio, goal, now) };
+  const lvAfter = levelFor(before + mine.xp.total);
+  const byId = Object.fromEntries(a.badges.map((b) => [b.id, b]));
+  const unlocked = mine.badges.map((id) => byId[id]);
+  const seen = opts.seen || {};
+  return {
+    xp: mine.xp, before: lvBefore, after: lvAfter, levelUp: lvAfter.level > lvBefore.level,
+    badges: unlocked, celebrate: unlocked.filter((b) => !seen[b.id]),
+    streak: streak(workouts, cardio, goal, now), all: a.badges,
+  };
 }
