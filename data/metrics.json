@@ -1,0 +1,170 @@
+{
+  "_about": "Forge's own explainer text for each body metric (written for Forge; not copied from Withings). Shown in the metric sheet on the Body tab. noise_floor_per_week is used by trend detection (W2): smaller weekly changes are treated as noise. Units: SI, converted on screen.",
+  "metrics": {
+    "weight_kg": {
+      "name": "Weight",
+      "unit": "mass",
+      "what": "Your total body weight: muscle, fat, bone, organs, water and whatever you ate and drank.",
+      "how": "Measured directly by the scale's load cells. Very accurate for the moment you step on; the day-to-day swings are you, not the scale.",
+      "moves": "Water and salt (often 0.5–2 kg overnight), food in your gut, carbs (stored with water), training soreness, hormones, and only slowly fat or muscle.",
+      "ranges": "No 'good' weight on its own. Forge judges the trend against your goal: about 0.5–1% of body weight a week when cutting keeps muscle best (Helms et al., 2014).",
+      "caveats": "Single weigh-ins are noisy. Forge smooths them into a trend and, when the scale weighs you more than once a day, uses the earliest weigh-in (morning, before food).",
+      "in_forge": "Weigh in each morning after the bathroom, before eating. The trend sets your calorie targets.",
+      "noise_floor_per_week": 0.1
+    },
+    "bmi": {
+      "name": "BMI",
+      "unit": "kg/m²",
+      "what": "Weight divided by height squared. A quick population screen, not a body-composition measure.",
+      "how": "Calculated by Forge from your weight and height.",
+      "moves": "Only weight (height is fixed).",
+      "ranges": "WHO adult categories: under 18.5 underweight, 18.5–24.9 normal, 25–29.9 overweight, 30+ obesity.",
+      "caveats": "BMI ignores muscle: a muscular lifter can read 'overweight' while lean. Look at FFMI and FMI next to it.",
+      "in_forge": "Shown for reference only. Forge's goals use fat mass and the weight trend instead."
+    },
+    "fat_ratio_pct": {
+      "name": "Body fat %",
+      "unit": "%",
+      "what": "The share of your weight that is fat.",
+      "how": "Estimated by bioimpedance: a tiny current through your feet, plus your height, age and sex in a formula. It estimates; it doesn't see fat.",
+      "moves": "Real fat loss or gain over weeks, but also hydration, a recent workout, a meal, cold feet and time of day.",
+      "ranges": "ACE categories, men: 2–5% essential, 6–13% athletes, 14–17% fitness, 18–24% average, 25%+ obese. Women: 10–13%, 14–20%, 21–24%, 25–31%, 32%+.",
+      "caveats": "A day-to-day jump of 1–2 points is almost always water, not fat. Compare weekly or monthly averages at the same time of day.",
+      "in_forge": "Forge watches the 28-day trend of fat mass (kg), which matters more on a cut than the percentage.",
+      "noise_floor_per_week": 0.25
+    },
+    "fat_mass_kg": {
+      "name": "Fat mass",
+      "unit": "mass",
+      "what": "How much of your weight is fat, in kg or lb.",
+      "how": "Weight × body fat % (both from the scale).",
+      "moves": "Eating below or above maintenance over weeks. Short swings come from the fat % estimate.",
+      "ranges": "Personal: the direction over 4+ weeks is what counts.",
+      "caveats": "Inherits the noise of the fat % estimate.",
+      "in_forge": "On a cut, Forge checks this falls at a safe pace while fat-free mass holds.",
+      "noise_floor_per_week": 0.15
+    },
+    "fat_free_mass_kg": {
+      "name": "Fat-free mass",
+      "unit": "mass",
+      "what": "Everything that isn't fat: muscle, bone, organs and water.",
+      "how": "Weight minus fat mass.",
+      "moves": "Muscle gain or loss, and water (glycogen, salt, hydration).",
+      "ranges": "FFMI (fat-free mass ÷ height²) puts it in context; natural lifters rarely exceed about 25 (Kouri et al., 1995).",
+      "caveats": "A drop in the first week of a diet is mostly water and glycogen.",
+      "in_forge": "Forge's lean-preservation check uses this during a cut (losing more than about 0.1 kg a week is a flag).",
+      "noise_floor_per_week": 0.15
+    },
+    "muscle_mass_kg": {
+      "name": "Muscle mass",
+      "unit": "mass",
+      "what": "The scale's estimate of muscle (including the water inside it).",
+      "how": "Bioimpedance estimate, derived from fat-free mass.",
+      "moves": "Training and protein over months; hydration day to day.",
+      "ranges": "Personal: compare with yourself over 8+ weeks.",
+      "caveats": "Changes of a few hundred grams are within the estimate's error. Muscle grows slowly (well under 0.5 kg a month for most people).",
+      "in_forge": "Shown next to your weekly training sets, so you can see whether volume and muscle move together.",
+      "noise_floor_per_week": 0.15
+    },
+    "hydration_kg": {
+      "name": "Water",
+      "unit": "mass",
+      "what": "Total body water.",
+      "how": "Bioimpedance estimate.",
+      "moves": "Drinking, sweating, salt, carbs, alcohol, illness.",
+      "ranges": "Roughly half to two-thirds of body weight in adults; leaner people sit higher.",
+      "caveats": "This is the number that explains most surprise weight jumps.",
+      "in_forge": "When weight jumps and water jumps with it, Forge calls it water, not fat (W2 trend cards)."
+    },
+    "bone_mass_kg": {
+      "name": "Bone mass",
+      "unit": "mass",
+      "what": "The scale's estimate of the mineral weight of your skeleton.",
+      "how": "Estimated from fat-free mass with a formula; not a bone-density scan.",
+      "moves": "Very slowly over years.",
+      "ranges": "Typically a few percent of body weight.",
+      "caveats": "Not a substitute for a DEXA bone-density test. Ignore week-to-week changes.",
+      "in_forge": "Shown monthly only."
+    },
+    "heart_pulse_bpm": {
+      "name": "Standing heart rate",
+      "unit": "bpm",
+      "what": "Your heart rate while standing on the scale.",
+      "how": "Measured through the feet while you stand still.",
+      "moves": "Time since waking, coffee, stress, poor sleep, illness, fitness over months.",
+      "ranges": "60–100 bpm is the usual adult resting range (American Heart Association); standing reads a bit higher than lying down.",
+      "caveats": "Not the same as resting heart rate from your Watch overnight. Compare like with like.",
+      "in_forge": "From W2, shown next to your Watch's overnight resting heart rate."
+    },
+    "visceral_fat": {
+      "name": "Visceral fat",
+      "unit": "index",
+      "what": "An index for fat stored around the organs in your abdomen.",
+      "how": "Withings' own bioimpedance estimate, given as an index rather than kg.",
+      "moves": "Overall fat loss or gain; it usually falls early in a fat-loss phase.",
+      "ranges": "Withings' index has no published external standard. Compare with yourself over months.",
+      "caveats": "An estimate, not an MRI. Only returned if your Withings API plan includes it (see the data check).",
+      "in_forge": "Trend over 90 days."
+    },
+    "bmr_kcal": {
+      "name": "BMR",
+      "unit": "kcal/day",
+      "what": "Basal metabolic rate: the calories your body burns at complete rest.",
+      "how": "From the scale if Withings returns it; otherwise Forge estimates it (Mifflin–St Jeor, 1990).",
+      "moves": "Body size, muscle mass, age.",
+      "ranges": "Personal. Typically 1,300–2,000 kcal for adults.",
+      "caveats": "Any BMR from a scale or formula is an estimate, often 5–10% off.",
+      "in_forge": "A floor for your calorie targets; adaptive TDEE (Checkpoint C) learns your real burn from your logs."
+    },
+    "metabolic_age": {
+      "name": "Metabolic age",
+      "unit": "years",
+      "what": "The age whose average BMR matches yours.",
+      "how": "Withings compares your BMR with age-group averages.",
+      "moves": "Mostly muscle mass and body size.",
+      "ranges": "Lower than your real age is the usual hope; it's a comparison, not a health measure.",
+      "caveats": "An estimate built on another estimate. Not medical.",
+      "in_forge": "Shown if returned; labelled as an estimate."
+    },
+    "vascular_age": {
+      "name": "Vascular age",
+      "unit": "years",
+      "what": "An estimate of how stiff your arteries are, as an age.",
+      "how": "From pulse wave velocity measured by the scale through your feet.",
+      "moves": "Fitness, blood pressure, smoking, age.",
+      "ranges": "Compared with your actual age.",
+      "caveats": "Probably not on the free API. Still free to view in the Withings app. Not a diagnosis.",
+      "in_forge": "Shown if returned; otherwise a monthly manual entry."
+    },
+    "nerve_health_score": {
+      "name": "Nerve Health Score",
+      "unit": "score",
+      "what": "A score for the small nerves in your feet that control sweating.",
+      "how": "A guided measurement on the scale (electrochemical skin conductance).",
+      "moves": "Changes slowly; your doctor can interpret it.",
+      "ranges": "Withings shows its own bands.",
+      "caveats": "Probably not on the free API. Not a diagnosis.",
+      "in_forge": "Shown if returned; otherwise a manual entry."
+    },
+    "ffmi": {
+      "name": "FFMI",
+      "unit": "kg/m²",
+      "what": "Fat-free mass index: fat-free mass divided by height squared. BMI for lean mass.",
+      "how": "Calculated by Forge.",
+      "moves": "Muscle gain or loss.",
+      "ranges": "Around 18–20 is typical for untrained men, 15–17 for women; natural lifters rarely pass about 25 (Kouri et al., 1995).",
+      "caveats": "Inherits bioimpedance error.",
+      "in_forge": "Shown next to BMI so a muscular build isn't mislabelled."
+    },
+    "fmi": {
+      "name": "FMI",
+      "unit": "kg/m²",
+      "what": "Fat mass index: fat mass divided by height squared.",
+      "how": "Calculated by Forge.",
+      "moves": "Fat gain or loss.",
+      "ranges": "Reference bands by sex in Kyle et al., 2003 (used by the Forge Score from W2).",
+      "caveats": "Inherits bioimpedance error.",
+      "in_forge": "Shown next to BMI."
+    }
+  }
+}

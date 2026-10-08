@@ -72,12 +72,15 @@ const routes = {
   awards: () => import('./screens/awards.js').then((m) => m.renderAwards(main)),
   settings: () => import('./screens/settings.js').then((m) => m.renderSettings(main)),
   locations: () => import('./screens/locations.js').then((m) => m.renderLocations(main)),
+  withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
+  metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
 };
 // Which tab lights up for each screen.
 const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
   history: 'weight', weight: 'weight', awards: 'weight', locations: 'settings', profile: 'settings',
+  withings: 'settings', metric: 'body',
 };
 // Screens that fill the whole screen (no tab bar).
 const FULLSCREEN = new Set(['play', 'summary', 'profile']);
@@ -225,6 +228,13 @@ const WATCH = [
   ['programs', (rows) => ({ programs: rows })],
   ['exercises', (rows) => ({ exercises: rows })],
 ];
+// Server-written (Withings, Apple Health). Not part of "loaded": if they fail (rules not published yet,
+// functions not deployed) the app still opens; the Withings screen explains.
+const WATCH_SERVER = [
+  ['body_measures', (rows) => ({ body_measures: rows })],
+  ['health_daily', (rows) => ({ health_daily: rows })],
+  ['integrations', (rows) => ({ integrations: Object.fromEntries(rows.map((r) => [r.id || 'withings', r])) })],
+];
 
 // v0.1.x stored weight inventory in pounds (dumbbells_lb); v0.2.0 stores kg like everything else.
 let dbModule = null;
@@ -277,6 +287,15 @@ async function boot() {
         col,
         (rows) => state.set({ ...toPatch(rows), loaded: { ...state.loaded, [key]: true } }),
         (err) => state.set({ loadError: err })
+      ));
+    }
+    const serverErr = {};
+    const firstErr = () => Object.values(serverErr).find(Boolean) || null;
+    for (const [col, toPatch] of WATCH_SERVER) {
+      unsubs.push(db.watch(
+        col,
+        (rows) => { serverErr[col] = null; state.set({ ...toPatch(rows), serverError: firstErr() }); },
+        (err) => { serverErr[col] = err.code || 'error'; state.set({ serverError: firstErr() }); }
       ));
     }
     db.updateSync();

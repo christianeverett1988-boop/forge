@@ -44,7 +44,7 @@ export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = ()
 
   const st = (await statusRef.get()).data() || {};
   const bf = st.backfill || {};
-  const stale = !bf.done && (!bf.updated_at || now() - Date.parse(bf.updated_at) > 6 * 3600 * 1000);
+  const stale = !bf.done && !bf.error && (!bf.updated_at || now() - Date.parse(bf.updated_at) > 6 * 3600 * 1000);
   if (stale) {
     // Continue where it stopped (same offset) under a fresh run id.
     const runId = randomBytes(6).toString('hex');

@@ -62,12 +62,14 @@ export async function getAccessToken({ db, api, uid, now = () => Date.now(), sle
         const s = await tx.get(ref);
         if (s.exists && s.data().lease_id === step.leaseId) tx.update(ref, { lease_until: 0, lease_id: null });
       }).catch(() => {});
-      if (e instanceof WithingsError && e.invalidToken && !retriedInvalid) {
+      // Withings answers an expired/revoked refresh token with JSON status 503 ("invalid params").
+      const invalid = e instanceof WithingsError && (e.invalidToken || e.status === 503);
+      if (invalid && !retriedInvalid) {
         retriedInvalid = true; // maybe someone else rotated it a moment ago: re-read once and retry
         force = false;
         continue;
       }
-      if (e instanceof WithingsError && e.invalidToken) {
+      if (invalid) {
         await db.doc(P.status(uid)).set({ needs_reconnect: true, last_error_code: String(e.status) }, { merge: true });
         log('token_invalid', { status: Number(e.status) || 0 });
       }

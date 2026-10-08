@@ -2,13 +2,20 @@ import { state, units as getUnits } from '../state.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
-import { exportJSON, exportWeightsCSV, exportWorkoutsCSV, exportCardioCSV } from '../export.js';
+import { exportJSON, exportWeightsCSV, exportWorkoutsCSV, exportCardioCSV, exportBodyCSV } from '../export.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import { formatHeight, formatWeight } from '../units.js';
 import { GOALS } from '../nutrition/targets.js';
 import { VERSION } from '../version.js';
 import { unlockAudio, coach, sfx, beep } from '../ui/sound.js';
 import { hapticSupport } from '../ui/haptic.js';
+
+function withingsLine() {
+  const w = state.integrations && state.integrations.withings;
+  if (!w || !w.connected) return 'Not connected';
+  if (w.needs_reconnect) return '⚠️ Needs reconnecting';
+  return `Connected${w.model ? ` · ${esc(w.model)}` : ''}`;
+}
 
 export function renderSettings(el) {
   const u = getUnits();
@@ -67,14 +74,20 @@ export function renderSettings(el) {
         <span aria-hidden="true">›</span>
       </a>
 
+      <a class="card row between center nav-card" href="#/withings" data-withings-card>
+        <div><p class="label">Withings</p><p>${withingsLine()}</p></div>
+        <span aria-hidden="true">›</span>
+      </a>
+
       <div class="card stack">
         <p class="label">Your data</p>
         <button class="btn ghost" data-export-json>Export everything (JSON)</button>
         <button class="btn ghost" data-export-csv>Export weights (CSV)</button>
         <button class="btn ghost" data-export-workouts>Export workouts (CSV)</button>
         <button class="btn ghost" data-export-cardio>Export cardio (CSV)</button>
+        <button class="btn ghost" data-export-body>Export body measurements (CSV)</button>
         <button class="btn danger-ghost" data-delete>Delete everything</button>
-        <p class="small muted">Your data is stored in your own Firebase project. Nothing is sent to any other service.</p>
+        <p class="small muted">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
       </div>
 
       <div class="card">
@@ -139,6 +152,7 @@ export function renderSettings(el) {
   $('[data-export-csv]', el).onclick = run(exportWeightsCSV);
   $('[data-export-workouts]', el).onclick = run(exportWorkoutsCSV);
   $('[data-export-cardio]', el).onclick = run(exportCardioCSV);
+  $('[data-export-body]', el).onclick = run(exportBodyCSV);
 
   $('[data-signout]', el).onclick = async () => {
     if (state.sync !== 'synced') {

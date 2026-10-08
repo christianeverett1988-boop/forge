@@ -19,8 +19,12 @@ const same = (a, b) => {
   return x.length === y.length && x.length > 0 && timingSafeEqual(x, y);
 };
 
-/** Task id for one notification: Withings' retries of the same notification map to the same task. */
-export const notifyTaskId = (uid, p) => `n-${uid}-${Number(p.startdate) || 0}-${Number(p.enddate) || 0}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 480);
+/**
+ * Task id for one notification. Withings' quick retries of the same notification (10 s later) land in the
+ * same 2-minute bucket and become one task; a genuinely new change to the same measurement later is a new
+ * task (Cloud Tasks keeps used ids blocked for about an hour).
+ */
+export const notifyTaskId = (uid, p, received) => `n-${uid}-${Number(p.startdate) || 0}-${Number(p.enddate) || 0}-${Math.floor(received / 120000)}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 480);
 
 /**
  * req: { method, query, body } (body already parsed into an object). deps: { db, enqueue(data, {id}), key, now }.
@@ -55,7 +59,7 @@ export async function handleWebhook(req, { db, enqueue, key, now = () => Date.no
   }
   const received = now();
   try {
-    await enqueue({ kind: 'notify', uid, received_at: received, startdate: Number(p.startdate) || null, enddate: Number(p.enddate) || null }, { id: notifyTaskId(uid, p) });
+    await enqueue({ kind: 'notify', uid, received_at: received, startdate: Number(p.startdate) || null, enddate: Number(p.enddate) || null }, { id: notifyTaskId(uid, p, received) });
   } catch (e) {
     if (e && e.code !== 'functions/task-already-exists' && !/already exists/i.test(e.message || '')) {
       log('notify_enqueue_failed');

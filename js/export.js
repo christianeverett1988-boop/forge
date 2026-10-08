@@ -1,9 +1,10 @@
-// Export your data (JSON for everything, CSV for weights). Works offline from the on-device cache.
-import { COLLECTIONS, readAll } from './db.js';
+// Export your data (JSON for everything, CSV per collection). Works offline from the on-device cache.
+import { COLLECTIONS, READ_ONLY_COLLECTIONS, readAll } from './db.js';
 import { todayKey } from './ui.js';
 import { VERSION } from './version.js';
 import { exerciseById } from './workouts/library.js';
 import { toCSV } from './csv.js';
+import { BODY_COLUMNS, bodyRows } from './export-body.js';
 
 async function deliver(filename, text, type) {
   const blob = new Blob([text], { type });
@@ -30,6 +31,8 @@ async function deliver(filename, text, type) {
 export async function exportJSON() {
   const out = { app: 'forge', version: VERSION, exported_at: new Date().toISOString(), data: {} };
   for (const col of COLLECTIONS) out.data[col] = await readAll(col);
+  // Server-written (Withings body measurements, Apple Health days, connection status; never tokens).
+  for (const col of READ_ONLY_COLLECTIONS) out.data[col] = await readAll(col).catch(() => []);
   await deliver(`forge-export-${todayKey()}.json`, JSON.stringify(out, null, 2), 'application/json');
 }
 
@@ -72,4 +75,10 @@ export async function exportCardioCSV() {
     .map((r) => ({ ...r, distance_mi: r.distance_km ? (r.distance_km / 1.609344).toFixed(2) : '' }));
   const csv = toCSV(rows, ['day', 'started_at', 'activity', 'duration_min', 'distance_km', 'distance_mi', 'calories', 'avg_hr', 'notes', 'source', 'id']);
   await deliver(`forge-cardio-${todayKey()}.csv`, csv, 'text/csv');
+}
+
+export async function exportBodyCSV() {
+  const rows = bodyRows(await readAll('body_measures').catch(() => []));
+  const csv = toCSV(rows, ['day', 'measured_at', ...BODY_COLUMNS, 'needs_review', 'model', 'source', 'grpid', 'id']);
+  await deliver(`forge-body-${todayKey()}.csv`, csv, 'text/csv');
 }

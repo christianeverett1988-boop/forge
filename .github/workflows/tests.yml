@@ -36,6 +36,7 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm test
+          test -f .smoke-ran && echo "::notice title=Functions wiring::$(cat .smoke-ran) functions load with region us-east1 and maxInstances 2"
 
   rules:
     name: Security rule tests

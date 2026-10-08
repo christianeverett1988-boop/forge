@@ -18,6 +18,14 @@ import { state } from './state.js';
 // Every collection the app writes. Export, delete-everything and firestore.rules use this list.
 export const COLLECTIONS = ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises'];
 
+// Written only by Cloud Functions (Withings sync; Apple Health from W2). The app reads them, includes them
+// in exports and in delete-everything, and may only mark a record deleted (a tombstone the sync respects)
+// or confirm a flagged weigh-in. put()/patch()/softDelete() refuse them.
+export const READ_ONLY_COLLECTIONS = ['body_measures', 'health_daily', 'integrations'];
+const readOnly = (col) => {
+  if (READ_ONLY_COLLECTIONS.includes(col)) throw new Error(`${col} is written by the server only`);
+};
+
 const uid = () => auth.currentUser && auth.currentUser.uid;
 const now = () => new Date().toISOString();
 
@@ -51,16 +59,37 @@ function reportWriteError(err) {
 
 // ---- writes ----
 export function put(col, record) {
+  readOnly(col);
   setDoc(doc(db, 'users', uid(), col, record.id), record).catch(reportWriteError);
   return record;
 }
 
 export function patch(col, id, changes) {
+  readOnly(col);
   updateDoc(doc(db, 'users', uid(), col, id), { ...changes, updated_at: now() }).catch(reportWriteError);
 }
 
 export function softDelete(col, id) {
+  if (col === 'body_measures' || col === 'health_daily') return tombstone(col, id);
   patch(col, id, { deleted: true, deleted_at: now() });
+}
+
+/** Delete a server-written record for good: deleted: true, which the sync never undoes. */
+export function tombstone(col, id) {
+  const t = now();
+  updateDoc(doc(db, 'users', uid(), col, id), { deleted: true, deleted_at: t, updated_at: t }).catch(reportWriteError);
+}
+
+/** "That's me" / "Not me" for a weigh-in Withings couldn't match to you. */
+export function reviewBodyMeasure(id, isMe) {
+  const t = now();
+  if (isMe) {
+    updateDoc(doc(db, 'users', uid(), 'body_measures', id), { needs_review: false, reviewed_at: t, updated_at: t }).catch(reportWriteError);
+    updateDoc(doc(db, 'users', uid(), 'weights', id), { review: false, reviewed_at: t, updated_at: t }).catch(() => {});
+  } else {
+    tombstone('body_measures', id);
+    updateDoc(doc(db, 'users', uid(), 'weights', id), { deleted: true, deleted_at: t, updated_at: t }).catch(() => {});
+  }
 }
 
 // ---- reads ----
@@ -79,7 +108,7 @@ export function watch(col, cb, onError) {
       // Skip metadata-only updates (e.g. "write confirmed") so screens don't redraw for nothing.
       if (!first && snap.docChanges().length === 0) return;
       first = false;
-      cb(snap.docs.map((d) => d.data()).filter((r) => !r.deleted));
+      cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => !r.deleted)); // server status docs carry no id field
     },
     (err) => {
       console.error(col, err);
@@ -97,6 +126,14 @@ export async function readAll(col) {
 // ---- delete everything ----
 export async function deleteAllUserData() {
   if (!navigator.onLine) throw new Error('You need a connection to delete your cloud data.');
+  // Server-written data (Withings tokens, body measures, Apple Health days) goes first, through the
+  // server: the app can't delete those itself. Skipped only if you never had any.
+  const count = (col) => getDocs(collection(db, 'users', uid(), col)).then((x) => x.size, () => 0); // rules not published yet → none
+  const serverData = (await Promise.all(READ_ONLY_COLLECTIONS.map(count))).some((n) => n > 0);
+  if (serverData) {
+    const { call } = await import('./functions.js');
+    await call('withingsDisconnect', { deleteData: true });
+  }
   for (const col of COLLECTIONS) {
     const snap = await getDocs(collection(db, 'users', uid(), col));
     for (let i = 0; i < snap.docs.length; i += 400) {

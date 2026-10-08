@@ -15,11 +15,11 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
 import { defineSecret, defineString } from 'firebase-functions/params';
 
-import { makeClient } from './src/withings-api.js';
+import { makeClient, WithingsError } from './src/withings-api.js';
 import { startAuth, handleCallback } from './src/oauth.js';
 import { handleWebhook } from './src/webhook.js';
 import { runTask } from './src/tasks.js';
-import { getAccessToken } from './src/tokens.js';
+import { getAccessToken, NotConnected } from './src/tokens.js';
 import { incrementalSync } from './src/sync.js';
 import { runDataCheck, saveReport } from './src/datacheck.js';
 import { maintainAll, disconnect } from './src/maintenance.js';
@@ -38,11 +38,26 @@ const APP_URL = defineString('FORGE_APP_URL', { default: 'https://christianevere
 const project = () => process.env.GCLOUD_PROJECT || JSON.parse(process.env.FIREBASE_CONFIG || '{}').projectId;
 const base = () => `https://${REGION}-${project()}.cloudfunctions.net`;
 const redirectUri = () => `${base()}/withingsOAuthCallback`;
-const webhookUrl = () => `${base()}/withingsWebhook?k=${WEBHOOK_KEY.value()}`;
+const webhookKey = () => WEBHOOK_KEY.value().trim(); // a pasted trailing space must not break every notification
+const webhookUrl = () => `${base()}/withingsWebhook?k=${webhookKey()}`;
 
 const db = () => getFirestore();
 const api = () => makeClient({ fetch: globalThis.fetch, clientId: CLIENT_ID.value(), clientSecret: CLIENT_SECRET.value() });
 const enqueue = (data, opts) => getFunctions().taskQueue(`locations/${REGION}/functions/withingsTask`).enqueue(data, opts);
+
+/** Errors the app can show as they are (everything else becomes a generic message). */
+async function friendly(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof HttpsError) throw e;
+    if (e instanceof NotConnected) throw new HttpsError('failed-precondition', 'Withings isn’t connected.');
+    if (e && e.code === 'failed-precondition') throw new HttpsError('failed-precondition', 'Run the check first, then save it.');
+    if (e instanceof WithingsError && e.invalidToken) throw new HttpsError('failed-precondition', 'Withings needs you to connect again (Settings → Withings).');
+    if (e instanceof WithingsError && e.transient) throw new HttpsError('unavailable', 'Withings is busy. Try again in a few minutes.');
+    throw new HttpsError('internal', 'Something went wrong on Forge’s server.');
+  }
+}
 
 const needUid = (req) => {
   if (!req.auth || !req.auth.uid) throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -52,7 +67,7 @@ const needUid = (req) => {
 // ---------- connect ----------
 export const withingsAuthStart = onCall({ secrets: [] }, async (req) => {
   const uid = needUid(req);
-  return startAuth({ db: db(), api: makeClient({ fetch: globalThis.fetch, clientId: CLIENT_ID.value() }), uid, redirectUri: redirectUri() });
+  return friendly(() => startAuth({ db: db(), api: makeClient({ fetch: globalThis.fetch, clientId: CLIENT_ID.value() }), uid, redirectUri: redirectUri() }));
 });
 
 export const withingsOAuthCallback = onRequest({ secrets: [CLIENT_SECRET, WEBHOOK_KEY], invoker: 'public', timeoutSeconds: 30 }, async (req, res) => {
@@ -66,7 +81,7 @@ export const withingsOAuthCallback = onRequest({ secrets: [CLIENT_SECRET, WEBHOO
 
 // ---------- notifications ----------
 export const withingsWebhook = onRequest({ secrets: [WEBHOOK_KEY], invoker: 'public', timeoutSeconds: 10 }, async (req, res) => {
-  const r = await handleWebhook({ method: req.method, query: req.query, body: req.body }, { db: db(), enqueue, key: WEBHOOK_KEY.value() });
+  const r = await handleWebhook({ method: req.method, query: req.query, body: req.body }, { db: db(), enqueue, key: webhookKey() });
   res.status(r.status).type('text').send(r.text);
 });
 
@@ -92,23 +107,32 @@ export const withingsSyncNow = onCall({ secrets: [CLIENT_SECRET], timeoutSeconds
     tx.set(ref, { last_manual_sync_at: new Date().toISOString() }, { merge: true });
     return 0;
   });
-  if (wait) throw new HttpsError('resource-exhausted', `Try again in ${wait} min.`);
-  const token = await getAccessToken({ db: db(), api: api(), uid });
-  const r = await incrementalSync({ db: db(), api: api(), uid, token, reason: 'manual' });
-  return { created: r.created, updated: r.updated };
+  if (wait) throw new HttpsError('resource-exhausted', `Withings asks apps not to sync more often. Try again in ${wait} min.`);
+  return friendly(async () => {
+    try {
+      const token = await getAccessToken({ db: db(), api: api(), uid });
+      const r = await incrementalSync({ db: db(), api: api(), uid, token, reason: 'manual' });
+      return { created: r.created, updated: r.updated };
+    } catch (e) {
+      await ref.set({ last_manual_sync_at: null }, { merge: true }).catch(() => {}); // a failed sync doesn't use up the 10 minutes
+      throw e;
+    }
+  });
 });
 
 export const withingsDataCheck = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY], timeoutSeconds: 300 }, async (req) => {
   const uid = needUid(req);
   const data = req.data || {};
-  if (data.action === 'save') return saveReport({ db: db(), uid, label: data.label });
-  const token = await getAccessToken({ db: db(), api: api(), uid });
-  return runDataCheck({ db: db(), api: api(), uid, token, webhookUrl: webhookUrl() });
+  if (data.action === 'save') return friendly(() => saveReport({ db: db(), uid, label: data.label }));
+  return friendly(async () => {
+    const token = await getAccessToken({ db: db(), api: api(), uid });
+    return runDataCheck({ db: db(), api: api(), uid, token, webhookUrl: webhookUrl() });
+  });
 });
 
 export const withingsDisconnect = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY], timeoutSeconds: 300 }, async (req) => {
   const uid = needUid(req);
-  return disconnect({ db: db(), api: api(), uid, webhookUrl: webhookUrl(), deleteData: !!(req.data && req.data.deleteData) });
+  return friendly(() => disconnect({ db: db(), api: api(), uid, webhookUrl: webhookUrl(), deleteData: !!(req.data && req.data.deleteData) }));
 });
 
 // ---------- daily upkeep (1 Cloud Scheduler job) ----------

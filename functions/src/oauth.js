@@ -61,11 +61,14 @@ export async function handleCallback(query, deps) {
   if (existing.exists && existing.data().uid !== uid) return { status: 409, page: 'other_account' };
 
   const t = now();
+  const before = await db.doc(P.priv(uid)).get();
+  const oldUser = before.exists ? before.data().withings_userid : null;
+  if (oldUser && oldUser !== withingsUser) await db.doc(P.wuser(oldUser)).delete(); // reconnected with another Withings account
   await db.doc(P.priv(uid)).set({ ...tokenFields(tok, t), withings_userid: withingsUser, cursor: Math.floor(t / 1000), connected_at: t });
   await mapRef.set({ uid, connected_at: new Date(t).toISOString() });
   await db.doc(P.status(uid)).set({
     connected: true, connected_at: new Date(t).toISOString(), scopes: tok.scope || null, needs_reconnect: false,
-    last_error_code: null, subscription_ok: null, backfill: { done: false, groups: 0, pages: 0 },
+    last_error_code: null, subscription_ok: null,
   }, { merge: true });
 
   // Best effort from here: the device, the notification subscription and the backfill. Each records its

@@ -10,13 +10,25 @@ function snapshot(path, data) {
   return { id, exists: data !== undefined, ref: { path, id }, data: () => clone(data) };
 }
 
+const isMap = (v) => v && typeof v === 'object' && !Array.isArray(v);
+/** Like Firestore set(..., { merge: true }): maps merge deeply; other values replace. */
 function merge(target, src) {
   const out = { ...(target || {}) };
   for (const [k, v] of Object.entries(src)) {
-    if (v && typeof v === 'object' && !Array.isArray(v) && v.__delete) delete out[k];
+    if (isMap(v) && isMap(out[k])) out[k] = merge(out[k], v);
     else out[k] = v;
   }
   return out;
+}
+/** Like set(..., { mergeFields }): the listed top-level fields are replaced whole; others untouched. */
+function mergeFields(target, src, fields) {
+  const out = { ...(target || {}) };
+  for (const f of fields) out[f] = src[f];
+  return out;
+}
+/** update(): top-level fields replaced whole (dotted paths aren't used by the functions). */
+function shallow(target, src) {
+  return { ...(target || {}), ...src };
 }
 
 export function fakeDb() {
@@ -32,10 +44,12 @@ export function fakeDb() {
     else docs.set(path, clone(data));
   };
   const applyOp = (op) => {
-    if (op.kind === 'set') write(op.path, op.opts && op.opts.merge ? merge(docs.get(op.path), op.data) : op.data);
-    else if (op.kind === 'update') {
+    if (op.kind === 'set') {
+      const o = op.opts || {};
+      write(op.path, o.mergeFields ? mergeFields(docs.get(op.path), op.data, o.mergeFields) : o.merge ? merge(docs.get(op.path), op.data) : op.data);
+    } else if (op.kind === 'update') {
       if (!docs.has(op.path)) throw Object.assign(new Error(`NOT_FOUND ${op.path}`), { code: 5 });
-      write(op.path, merge(docs.get(op.path), op.data));
+      write(op.path, shallow(docs.get(op.path), op.data));
     } else if (op.kind === 'delete') write(op.path, undefined);
   };
 

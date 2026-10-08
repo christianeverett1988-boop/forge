@@ -16,6 +16,10 @@ export const state = {
   cardio: [],
   programs: [],
   exercises: [], // custom exercises
+  body_measures: [], // server-written (Withings)
+  health_daily: [], // server-written (Apple Health, W2)
+  integrations: {}, // server-written status: { withings: {...} }
+  serverError: null,
   sync: navigator.onLine ? 'synced' : 'offline',
 
   set(patch) {
@@ -27,6 +31,7 @@ export const state = {
     this.set({
       user, loaded: notLoaded(), loadError: null, profile: null, settings: null,
       locations: [], weights: [], workouts: [], cardio: [], programs: [], exercises: [],
+      body_measures: [], health_daily: [], integrations: {}, serverError: null,
     });
   },
 };

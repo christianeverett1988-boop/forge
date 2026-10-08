@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 
 const installed = existsSync(new URL('../node_modules/firebase-functions/package.json', import.meta.url));
 
-test('index.js exports every function with region us-east1 and maxInstances 2', { skip: !installed && 'npm install first' }, async () => {
+test('index.js exports every function with region us-east1 and maxInstances 2', { skip: !installed && !process.env.CI && 'npm install first' }, async () => {
   process.env.GCLOUD_PROJECT = 'demo-forge';
   const mod = await import('../index.js');
   const names = ['withingsAuthStart', 'withingsOAuthCallback', 'withingsWebhook', 'withingsTask', 'withingsSyncNow', 'withingsDataCheck', 'withingsDisconnect', 'withingsMaintenance'];
@@ -21,4 +21,5 @@ test('index.js exports every function with region us-east1 and maxInstances 2', 
   assert.ok(mod.withingsTask.__endpoint.taskQueueTrigger, 'withingsTask is a task queue function');
   assert.ok(mod.withingsMaintenance.__endpoint.scheduleTrigger, 'maintenance is scheduled');
   assert.equal(Object.keys(mod).filter((k) => mod[k] && mod[k].__endpoint && mod[k].__endpoint.eventTrigger).length, 0, 'no event (Firestore) triggers');
+  if (process.env.GITHUB_ACTIONS) (await import('node:fs')).writeFileSync(new URL('../.smoke-ran', import.meta.url), `${names.length}`);
 });

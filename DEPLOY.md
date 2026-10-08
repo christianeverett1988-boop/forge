@@ -8,8 +8,8 @@ When I send a new zip, copy **all** its files over your repo folder. Replacing e
 
 1. Copy the new or changed files I send you into your `forge` repo folder, replacing the old ones.
 2. Make sure the version number matches in **both** places (I'll have done this in files I send you):
-   - `js/version.js` → `export const VERSION = '0.3.1';`
-   - `sw.js` → `const VERSION = '0.3.1';` (line 3)
+   - `js/version.js` → `export const VERSION = '0.4.0';`
+   - `sw.js` → `const VERSION = '0.4.0';` (line 3)
    The service worker only fetches new files when `sw.js` changes, so a forgotten bump means your phone keeps the old version.
 3. **GitHub Desktop** → you'll see the changed files listed → Summary: e.g. `v0.2.0 – workouts` → **Commit to main** → **Push origin**.
 4. Wait 1–2 minutes. Open the app on your phone. A green bar appears at the top: **New version ready — tap to refresh**. Tap it.
@@ -18,8 +18,20 @@ When I send a new zip, copy **all** its files over your repo folder. Replacing e
 
 ## If an update changes `firestore.rules`
 
-The CHANGELOG says when a version changes the rules (0.2.0 and 0.3.0 did; 0.2.1 and **0.3.1 don't**). Pushing to GitHub does **not** update the database rules. Publish them **before** you open the new version, or the app will show "Can't read your data":
+The CHANGELOG says when a version changes the rules (0.2.0, 0.3.0 and **0.4.0** did). Pushing to GitHub does **not** update the database rules. Publish them **before** you open the new version, or the app will show "Can't read your data":
 Firebase console → **Firestore Database → Rules** → select all, paste the new `firestore.rules` → **Publish**.
+
+## Withings and Cloud Functions (from 0.4.0)
+
+Forge's Withings sync runs as Cloud Functions in your Firebase project (`functions/`). Pushing to GitHub does **not** deploy them. The one-time setup (Blaze plan, Node, Firebase tools, the Withings developer app, two secrets) is in **[docs/withings.md](docs/withings.md) → Your steps**.
+
+After that, any update that touches `functions/` or `firestore.rules` is one command in Terminal, in your Forge folder, after pulling:
+
+```
+firebase deploy --only functions,firestore:rules
+```
+
+It also publishes `firestore.rules`, so you don't need to paste the rules in the console any more. Deploy **before** opening the new version on your phone.
 
 ## Demo photos (one time, needs Node 18+)
 
