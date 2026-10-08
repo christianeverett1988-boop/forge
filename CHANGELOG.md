@@ -1,5 +1,89 @@
 # Changelog
 
+## 0.3.2 — XP, levels, badges, Today rings, share image (2026-10-08)
+
+No database rule changes; just copy the files and push. Everything is worked out on your phone from your saved workouts and cardio. The one new thing saved is the list of badges you've earned (`settings/main.awards_seen`), so a badge never disappears; the existing rules already allow it. Nothing is sent anywhere.
+
+**XP and levels**
+- XP per workout:
+  - **+10 per working set** (up to 40).
+  - **+25 per exercise with 2+ working sets**.
+  - **+50 per PR** (up to +200).
+  - **+100 for the workout that hits your planned days** for the week.
+  - **+100 per badge**.
+- Warm-ups earn nothing. A finished workout with no working sets earns nothing and isn't a training day.
+- **30 levels**, Spark → Unbreakable, at 250 × (level − 1)^1.6 XP. At three typical sessions a week that's level 10 in about 7 weeks. Full table: `docs/levels.md`. **How XP works** on the Awards tab says the same.
+- The summary shows **+XP** with a breakdown (Sets · Exercises · PRs · Weekly goal · Badges), a filling level bar, and a **level-up** moment.
+
+**Streak and badges**
+- **Weekly streak:** weeks in a row where you trained on your planned days (Settings → Edit profile & targets → days a week). Logged cardio counts as a day. Miss one week a month and a **freeze** covers it automatically.
+- **22 badges, each its own medal:**
+  - The metal shows the tier: Ember, Steel, Gold, White heat.
+  - The shape shows the family: hexagon for workouts, shield for records, medallion for tonnage, flame for streaks, diamond for the rest.
+  - Each has its own engraved icon, and milestones carry their number.
+  - Locked badges are grey silhouettes. A new one pops and shines on the summary, and shines again on Awards for 3 days.
+- **New badges:**
+  - **Full House:** 4+ sets for every major muscle group in one week.
+  - **Recovery Respect:** finish a deload-week workout.
+  - **Comeback:** train again after 3+ weeks away.
+- **Badges stay earned.** Changing your planned days, for example, no longer takes Hot Streak away. On the first run after updating, the badges you already have are saved quietly, with no celebrations.
+- **Progress → Awards:** level and XP to the next level, the streak with this week's days and the freeze, and the badge grid (earned first, newest first).
+
+**Today rings** (top of Today)
+- **Training:** days this week vs your planned days.
+- **Weekly sets:** Push / Pull / Legs vs 10 / 14 / 18 sets each (beginner / intermediate / advanced). Each group counts only up to its own target. In a **deload week** the target is halved and the ring says "deload".
+- **Recovery:** how fresh your six big muscles are on average.
+- The rings fill on load. Closing Training or Weekly sets gets a **burst** (once a week per ring) and a glow.
+
+**Share image**
+- A 1080×1350 card (workout number and date, time, sets, volume, PRs, muscles worked, level, streak, XP) opens the iPhone share sheet, or downloads where sharing files isn't supported. It's drawn on your phone.
+- Each PR shows the exercise, then what you beat, wrapped rather than cut off ("+N more records" when there isn't room).
+- The image is drawn as soon as the summary opens, and the button says "Preparing image…" until it's ready, so a tap always opens the share sheet.
+
+**Workout preview follow-ups** (from 0.3.1.2)
+- **Today's card and Start** use the same plan as Train, including any Replace, Rest timer, Switch or different day you chose there.
+- Swapping an exercise mid-workout keeps the rest timer you chose for that slot.
+
+**Player polish** (from the v0.3.0 review)
+- **Coach and audio:**
+  - Rests are spoken in minutes and seconds ("Rest 2 minutes 30").
+  - The "New record" line no longer interrupts.
+  - Audio wakes up again after the phone was locked.
+- **Records:** one PR card per set, and a new **volume PR** (best weight × reps in a set).
+- **Starting weight:**
+  - Barbells start at the empty bar.
+  - Dumbbells and kettlebells start at what you used earlier today for the same kind of weight, or your lightest.
+  - That weight is marked **suggested** (dimmed, with a tag) until you change it.
+  - If there's no weight at all, tap **Set weight**.
+- **Screen and rest timer:** the screen stays awake during a workout and lets go after 5 minutes paused. A running rest timer survives the app being closed.
+
+**Tests:** 143 (up from 124). They cover:
+- the XP plan (caps, the 2-set rule, the weekly-goal bonus with cardio and same-day workouts, badge XP);
+- empty workouts;
+- badges kept after 3 → 4 planned days;
+- Full House, Recovery Respect and Comeback;
+- unique art for all 22 badges;
+- the rings, including deload;
+- rest phrasing and volume PRs.
+
+## 0.3.1.2 — Workout preview (2026-10-08)
+
+No database rule changes; just copy the files and push. (Workouts can now save a `rest_sec` per exercise; the rules already allow it.)
+
+**Train → Today's workout, before you press Start**
+- **Chips** for the estimated time and the location, and **"6 exercises · 15 muscles"** next to a mini muscle map.
+- A **Warm-up** block: a few minutes of easy cardio and mobility, plus which lifts get lighter ramp-up sets (they're built into the workout).
+- **Supersets and circuits** are grouped in a box with their rounds ("Superset A · 3 rounds"), each exercise labelled A1, A2…
+- **Thumbnails:** each exercise shows its silhouette at the hardest point, its first demo photo, or its muscle map.
+- **⋯ on every exercise:**
+  - **Replace** with a similar move you can do here.
+  - **History & how-to**: opens How-To scrolled to your history.
+  - **Rest timer**: Auto or 1–4 min. It's used for that exercise's working sets in the player and list view; warm-ups keep their short rest, and supersets still go straight from A1 to A2.
+- **⇄ Switch** regenerates the workout with the same generator, steering away from what you were just shown. Press again for more options. When nothing else fits it goes back to the recommended picks.
+- Edits last until you start, or until you change the location or day.
+
+**Tests:** 124 (up from 119): grouping and muscle counts, Replace and Switch in the generator, and the rest-timer override.
+
 ## 0.3.1.1 — Fixes from the v0.3.1 review (2026-10-08)
 
 No database rule changes; just copy the files and push. Includes the demo photos (`media/ex`, 175 exercises) now on main.

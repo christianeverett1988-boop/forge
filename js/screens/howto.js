@@ -18,9 +18,9 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', 
 
 /**
  * Open the How-To sheet for an exercise. `extra(body, close)` lets a caller add its own controls at the
- * bottom (the library adds "Never suggest this" and custom-exercise delete).
+ * bottom (the library adds "Never suggest this" and custom-exercise delete). focus: 'history' scrolls to your history.
  */
-export function openHowTo(id, { extra } = {}) {
+export function openHowTo(id, { extra, focus } = {}) {
   const ex = exerciseById(id);
   if (!ex) return;
   // Open straight away, even on a weak signal: the Photos view joins in when the photo index arrives.
@@ -103,6 +103,8 @@ export function openHowTo(id, { extra } = {}) {
     };
     paintToggle();
     showView();
+    // After the sheet's open animation, so the scroll isn't lost.
+    if (focus === 'history') setTimeout(() => $('.ht-history', body)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 260);
     if (!pics) {
       loadPhotoIndex().then(() => {
         if (!demo.isConnected || !hasPhotos(id)) return;

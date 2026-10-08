@@ -293,6 +293,10 @@ export function detectPRs(ex, sessionSets, history) {
     const bestW = Math.max(...prevSets.map((s) => s.weight || 0));
     const nowW = Math.max(...sessionSets.map((s) => s.weight || 0));
     if (nowW > bestW) prs.push({ type: 'weight', value: nowW, prev: bestW, label: `Heaviest: ${nowW}` });
+    // Best single-set volume (weight × reps).
+    const bestV = Math.max(0, ...prevSets.map((s) => (s.weight || 0) * (s.reps || 0)));
+    const nowV = Math.max(0, ...sessionSets.map((s) => (s.weight || 0) * (s.reps || 0)));
+    if (bestV > 0 && nowV > bestV * 1.001) prs.push({ type: 'volume', value: Math.round(nowV), prev: Math.round(bestV), label: `Best set volume ${Math.round(nowV)}` });
     // Rep PR at a weight you've used before (great for fixed dumbbells).
     for (const s of sessionSets) {
       const sameW = prevSets.filter((p) => p.weight === s.weight);

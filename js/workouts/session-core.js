@@ -91,7 +91,8 @@ export function restAfter(queue, exercises, k, ex, { deload = false } = {}) {
   if (s.warmup) {
     sec = REST.warmup;
     label = 'Warm-up rest';
-  } else if (ex && ex.timed) sec = REST.timed;
+  } else if (it.rest_sec) return { sec: it.rest_sec, label: it.superset ? 'Rest (superset)' : 'Rest' }; // set in the preview's ⋯ menu
+  else if (ex && ex.timed) sec = REST.timed;
   else if (it.superset) {
     sec = REST.accessory;
     label = 'Rest (superset)';
@@ -161,7 +162,7 @@ export function exercisePRs(ex, item, history, u) {
     .filter((x) => x.done && !x.warmup)
     .map((x) => ({ weight: x.weight_kg == null ? null : Math.round(toUnit(x.weight_kg, u) * 10) / 10, reps: x.reps }));
   return detectPRs(ex, sets, history).map((p) => {
-    const withUnit = p.type === 'e1rm' || p.type === 'weight' ? ` ${u}` : '';
+    const withUnit = p.type === 'e1rm' || p.type === 'weight' || p.type === 'volume' ? ` ${u}` : '';
     const rec = { exercise_id: ex.id, type: p.type, value: p.value, prev: p.prev ?? null, unit: withUnit.trim() || null, label: `${ex.name}: ${p.label}${withUnit}` };
     if (p.weight != null) rec.weight = p.weight;
     return rec;
@@ -170,3 +171,12 @@ export function exercisePRs(ex, item, history, u) {
 
 /** Replace one exercise's records in the workout's list with a recomputed set. */
 export const replacePRs = (prs, exerciseId, recs) => [...(prs || []).filter((q) => q.exercise_id !== exerciseId), ...recs];
+
+/** How the voice coach says a rest: "Rest 2 minutes 30", "Rest 1 minute", "Rest 45 seconds". */
+export function restPhrase(sec) {
+  const s = Math.max(0, Math.round(sec));
+  if (s < 60) return `Rest ${s} seconds`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `Rest ${m} ${m === 1 ? 'minute' : 'minutes'}${r ? ` ${r}` : ''}`;
+}

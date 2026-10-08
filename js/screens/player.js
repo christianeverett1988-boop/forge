@@ -189,6 +189,23 @@ function stepWeight(ex, cur, dir) {
   return Math.max(0, round1(cur + dir * st));
 }
 
+/** A sensible first weight for a loaded lift with nothing logged or planned (display unit), or null. */
+function startingWeight(ex, w) {
+  const u = unit();
+  if (ex.load === 'barbell' || ex.load === 'smith') return barWeight(u);
+  if (ex.load === 'dumbbell' || ex.load === 'kettlebell') {
+    for (const it of [...w.exercises].reverse()) {
+      const other = exerciseById(it.exercise_id);
+      if (!other || other.load !== ex.load) continue;
+      const last = it.sets.filter((x) => x.done && x.weight_kg != null).pop();
+      if (last) return round1(toUnit(last.weight_kg, u));
+    }
+    const loads = loadsFor(ex);
+    return loads && loads.length ? loads[0] : null;
+  }
+  return null;
+}
+
 function currentStep() {
   const w = live.w;
   const q = buildQueue(w.exercises);
@@ -225,6 +242,12 @@ function drawSet(el) {
     const kg = s.weight_kg ?? s.plan_weight_kg ?? (before ? before.weight_kg : null);
     const reps = s.reps ?? s.plan_reps ?? (before ? before.reps : null) ?? ex.reps[1];
     draft = { key: `${i}:${j}`, weight: kg != null ? round1(toUnit(kg, u)) : null, reps, rir: s.rir ?? null };
+    // Still no weight on a loaded lift: start at the empty bar, or the dumbbell/kettlebell you last used
+    // today (else your lightest one). Machines and cables wait for a tap on "Set weight".
+    if (draft.weight == null && showWeight && !isTimed) {
+      draft.weight = startingWeight(ex, w);
+      if (draft.weight != null) draft.suggested = draft.weight; // shown as "suggested" until you change it
+    }
   }
   const prev = historyIndex().historyFor(ex.id)[0];
   const prevSet = prev && !s.warmup ? prev.sets[lbl.n - 1] : null;
@@ -235,7 +258,7 @@ function drawSet(el) {
     const sets = w.exercises[xi].sets.filter((y) => !y.warmup);
     const done = sets.filter((y) => y.done).length;
     const pct = sets.length ? Math.round((done / sets.length) * 100) : 0;
-    return `<span class="seg-bar ${xi === i ? 'cur' : ''}" data-seg="${xi}"><i style="width:${pct}%"></i></span>`;
+    return `<span class="seg-bar ${xi === i ? 'cur' : ''}" data-seg="${xi}"><i style="--f:${(pct / 100).toFixed(3)}"></i></span>`;
   }).join('');
 
   const muscles = [...ex.primary.map((m) => `<span class="chip-m p">${esc(MUSCLE_LABELS[m] || m)}</span>`), ...ex.secondary.slice(0, 3).map((m) => `<span class="chip-m">${esc(MUSCLE_LABELS[m] || m)}</span>`)].join('');
@@ -249,7 +272,7 @@ function drawSet(el) {
         <button class="pl-ico" data-pause aria-label="Pause workout">❚❚</button>
       </header>
       <div class="pl-segs" role="progressbar" aria-valuemin="0" aria-valuemax="${order.length}" aria-valuenow="${exNo}" aria-label="Exercise ${exNo} of ${order.length}">${segs}</div>
-      <p class="pl-count">Exercise ${exNo} of ${order.length}${tag ? ` <span class="tag ss">${tag}</span>` : ''}${s.warmup ? ' <span class="tag wu">Warm-up</span>' : ''}</p>
+      <p class="pl-count">Exercise ${exNo} of ${order.length}${tag ? ` <span class="tag ss">${esc(tag)}</span>` : ''}${s.warmup ? ' <span class="tag wu">Warm-up</span>' : ''}</p>
 
       <button class="pl-demo ${hasFigure(ex.id) || hasPhotos(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
         ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : hasPhotos(ex.id) ? photoLoop(ex.id, ex.name) : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
@@ -262,7 +285,7 @@ function drawSet(el) {
 
       <div class="pl-hero" data-hero style="view-transition-name: pl-hero">
         <div class="pl-hero-n">${heroAmount}</div>
-        ${showWeight ? `<div class="pl-hero-w"><b data-hero-w>${draft.weight ?? '—'}</b><span>${u}</span></div>` : ''}
+        ${showWeight ? `<div class="pl-hero-w ${draft.weight == null ? 'unset' : ''} ${draft.suggested != null && draft.weight === draft.suggested ? 'suggested' : ''}"><b data-hero-w role="${draft.weight == null ? 'button' : 'text'}">${draft.weight ?? 'Set weight'}</b><span>${u}</span><small class="pl-sugg">suggested</small></div>` : ''}
         <div class="pl-ring" data-ring hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" data-ringfg/></svg></div>
       </div>
 
@@ -311,7 +334,13 @@ function drawSet(el) {
     const hr = $('[data-hero-n]', el);
     if (hr) hr.textContent = draft.reps;
     const hw = $('[data-hero-w]', el);
-    if (hw) hw.textContent = draft.weight ?? '—';
+    if (hw) {
+      hw.textContent = draft.weight ?? 'Set weight';
+      hw.parentElement.classList.toggle('unset', draft.weight == null);
+      if (draft.suggested != null && draft.weight !== draft.suggested) draft.suggested = null; // touched: it's yours now
+      hw.parentElement.classList.toggle('suggested', draft.suggested != null);
+      hw.setAttribute('role', draft.weight == null ? 'button' : 'text');
+    }
     const rv = $('[data-rv]', el);
     if (rv) rv.textContent = draft.reps;
     const wv = $('[data-wv]', el);
@@ -323,6 +352,12 @@ function drawSet(el) {
     draft.weight = stepWeight(ex, draft.weight, Number(b.dataset.w));
     sync();
   }));
+  const setW = $('[data-hero-w]', el);
+  if (setW) setW.addEventListener('click', () => {
+    if (draft.weight != null) return;
+    draft.weight = stepWeight(ex, null, 1);
+    sync();
+  });
   $$('[data-r]', el).forEach((b) => b.addEventListener('click', () => {
     const d = Number(b.dataset.r) * (isTimed ? 5 : 1);
     draft.reps = Math.max(1, (draft.reps || 0) + d);
@@ -394,7 +429,7 @@ function doneSet(el, ex, i, j, repsOverride) {
   const segment = $(`[data-seg="${i}"] i`, el);
   if (segment) {
     const sets = w.exercises[i].sets.filter((y) => !y.warmup);
-    segment.style.width = `${Math.round((sets.filter((y) => y.done).length / (sets.length || 1)) * 100)}%`;
+    segment.style.setProperty('--f', (sets.filter((y) => y.done).length / (sets.length || 1)).toFixed(3));
   }
   const label = $('[data-done-label]', el);
   const txt = $('[data-done-text]', el);
@@ -408,7 +443,7 @@ function doneSet(el, ex, i, j, repsOverride) {
     const demo = $('[data-demo]', el);
     if (demo) demo.classList.add('flash-muscles');
   }
-  for (const pr of res.prs) prExplosion(pr, { origin: $('[data-hero]', el) });
+  if (res.prs.length) prExplosion(res.prs, { origin: $('[data-hero]', el) }); // one card per set
 
   // Move on after the power-up has had its moment (rest is already running underneath).
   setTimeout(() => {

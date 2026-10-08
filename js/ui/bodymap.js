@@ -124,3 +124,24 @@ export function exerciseValues(ex) {
   for (const m of ex.primary || []) v[m] = 1;
   return v;
 }
+
+/**
+ * Front and back as one self-contained SVG string (no sprite references), for drawing into a canvas
+ * (the share card). values/mode as for bodyMap().
+ */
+export function bodyMapStandalone(values, { mode = 'intensity', base = '#2b323b', muscle = '#3a434e' } = {}) {
+  const side = (parts, sd) => {
+    const rv = regionValues(values, sd, mode === 'recovery' ? Math.min : Math.max);
+    return parts.map(([slug, paths]) => {
+      let fill = NON_MUSCLE.has(slug) ? base : muscle;
+      let op = 1;
+      const v = rv[slug];
+      if (!NON_MUSCLE.has(slug) && v != null && !(mode === 'intensity' && v <= 0)) {
+        fill = mode === 'recovery' ? recoveryColor(v) : '#ff6a2b';
+        op = mode === 'recovery' ? 0.9 : Math.max(0.25, Math.min(1, v));
+      }
+      return paths.map((d) => `<path d="${d}" fill="${fill}" fill-opacity="${op}" stroke="#0e1116" stroke-width="2"/>`).join('');
+    }).join('');
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1448 1448" width="1448" height="1448">${side(FRONT, 'front')}${side(BACK, 'back')}</svg>`;
+}
