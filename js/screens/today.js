@@ -18,6 +18,9 @@ import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
+import { topInsights, dismissInsight, reportFor, currentReportWeek } from '../health/intel.js';
+import { insightCardsHtml, bindInsightCards } from '../health/cards.js';
+import { showReportCard } from '../health/weekly.js';
 
 function workoutCard() {
   const active = activeWorkout();
@@ -95,6 +98,23 @@ function scoreCard() {
     <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
 }
 
+/** Sunday / Monday: the weekly report, with its one suggestion. */
+function weeklyCard() {
+  if (!showReportCard(todayKey())) return '';
+  const r = reportFor(currentReportWeek());
+  if (!r.hasData) return '';
+  return `<a class="card stack nav-card" href="#/weekly" data-weekly-card>
+    <p class="label">${r.partial ? 'Your week so far' : 'Your week'}</p>
+    <p class="big-title">${r.training.workouts} of ${r.training.planned} workouts${r.score.delta ? ` · Score ${r.score.delta > 0 ? 'up' : 'down'} ${Math.abs(round(r.score.delta))}` : ''}</p>
+    <p class="small muted">${esc(r.suggestion.text)}</p><span class="small link">See the full report${icon('chev')}</span></a>`;
+}
+
+/** The top 3 insight cards (ranked by severity × recency); each can be hidden for 7 days. */
+function insightsBlock() {
+  const cards = topInsights(3);
+  return cards.length ? `<div class="insights stack" data-insights>${insightCardsHtml(cards)}</div>` : '';
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
@@ -149,6 +169,10 @@ export function renderToday(el) {
       ${workoutCard()}
 
       ${scoreCard()}
+
+      ${insightsBlock()}
+
+      ${weeklyCard()}
 
       <div class="card weight-card">
         <div class="row between center">
@@ -205,6 +229,7 @@ export function renderToday(el) {
     overrideReadiness(false);
     renderToday(el);
   };
+  bindInsightCards(el, dismissInsight);
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);
   animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));

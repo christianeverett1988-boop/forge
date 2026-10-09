@@ -10,7 +10,7 @@ const SHAPES = {
   body: [bar('sk-title'), bar('sk-card'), bar('sk-card tall'), bar('sk-card short')],
   list: [bar('sk-title'), bar('sk-row'), bar('sk-row'), bar('sk-row'), bar('sk-row')],
 };
-const KIND = { today: 'today', train: 'train', weight: 'progress', history: 'progress', awards: 'progress', score: 'progress', body: 'body', metric: 'body', withings: 'list', settings: 'list' };
+const KIND = { today: 'today', train: 'train', weight: 'progress', trends: 'progress', weekly: 'progress', history: 'list', awards: 'list', score: 'progress', body: 'body', metric: 'body', withings: 'list', settings: 'list' };
 
 export const skeletonKind = (route) => KIND[route] || 'today';
 

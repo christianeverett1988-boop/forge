@@ -97,3 +97,65 @@
 .copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
 .copy-chip code { word-break: break-all; text-align: left; }
 .copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }
+
+/* ---------- v0.7.0 (W2b): trends, insights, weekly report, goal path, Body Profile. Tokens only. ---------- */
+.progress-seg a { font-size: 15px; }
+
+/* Insight cards: borderless surface-1 cards; a small tinted dot says good / watch, never a coloured outline. */
+.insights { display: grid; gap: var(--s-3); }
+.insight { position: relative; background: var(--top-light), var(--surface-1); border-radius: var(--r-xl); box-shadow: var(--elev-1); }
+.insight-main { display: grid; gap: 6px; padding: var(--s-4) 56px var(--s-4) 20px; color: inherit; text-decoration: none; min-height: 56px; border-radius: var(--r-xl); }
+.insight-main:active { background: var(--surface-2); }
+.insight-title { font-size: 17px; line-height: 22px; display: flex; align-items: center; gap: var(--s-2); }
+.insight-title::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.insight.good .insight-title::before { background: var(--good); }
+.insight.bad .insight-title::before { background: var(--warn); }
+.insight-why, .insight-do { font-size: 15px; color: var(--text-2); }
+.insight-do { color: var(--text-1); }
+.insight-note { color: var(--text-2); font-size: 13px; }
+.insight-x { position: absolute; top: 2px; right: 2px; width: 48px; height: 48px; border: 0; background: none; color: var(--text-3); border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+.insight-x svg { width: 18px; height: 18px; }
+.insight-x:active { background: var(--surface-2); }
+
+/* Trends list: an inset-grouped list (.group / .g-row) with a sparkline and value on the right. */
+.trend-row { font-variant-numeric: tabular-nums; min-height: 64px; }
+.trend-row .spark { flex: none; width: 84px; height: 28px; }
+.trend-row .spark path { fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.trend-row.good .spark path { stroke: var(--good); }
+.trend-row.bad .spark path { stroke: var(--danger); }
+.tr-val { flex: none; display: flex; align-items: center; gap: 6px; justify-content: flex-end; min-width: 84px; }
+.tr-arrow { display: inline-flex; width: 18px; color: var(--text-3); }
+.tr-arrow svg { width: 18px; height: 18px; }
+.trend-row.good .tr-arrow { color: var(--good); }
+.trend-row.bad .tr-arrow { color: var(--danger); }
+
+/* Weekly report */
+.week-nav .btn { min-width: 56px; min-height: 56px; padding: 0; background: var(--surface-2); color: var(--text-1); }
+.week-nav .btn:disabled { opacity: .35; }
+.w-hero { margin: 0; }
+.w-lines { list-style: none; margin: 0; padding: 0; display: grid; font-variant-numeric: tabular-nums; }
+.w-lines li { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: var(--s-3) 0; align-items: center; }
+.w-lines li + li::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: .5px; background: var(--separator); }
+.w-lines li small { grid-column: 1 / -1; text-align: right; color: var(--text-2); font-size: 14px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.w-lines li small svg { width: 14px; height: 14px; }
+.w-lines li small.good { color: var(--good); }
+.w-lines li small.warn { color: var(--warn); }
+.w-lines li b .ic { width: 16px; height: 16px; vertical-align: -2px; color: var(--gold); }
+.suggest { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* Goal path */
+.gp-band { fill: var(--accent); opacity: .16; }
+.gp-proj { stroke: var(--accent-text); stroke-width: 2; stroke-dasharray: 5 4; }
+.gp-goal { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 2 4; }
+.goalpath .trend { fill: none; }
+
+/* Body Profile */
+.bp-wrap { display: grid; grid-template-columns: 22px 1fr; gap: var(--s-2); align-items: stretch; }
+.bp-y { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; color: var(--text-2); font-size: 12px; font-weight: 700; }
+.bp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.bp-cell { position: relative; aspect-ratio: 1; background: var(--surface-2); border-radius: var(--r-sm); display: grid; place-items: center; }
+.bp-cell.c2.r0, .bp-cell.c2.r1, .bp-cell.c3.r0, .bp-cell.c3.r1 { background: var(--good-tint); }
+.bp-now { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); }
+.bp-trail { width: 8px; height: 8px; border-radius: 50%; background: var(--text-2); opacity: .45; margin: 1px; }
+.bp-x { display: flex; justify-content: space-between; margin-left: 30px; color: var(--text-2); font-size: 12px; font-weight: 700; }
+

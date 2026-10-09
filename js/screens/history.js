@@ -8,7 +8,6 @@ import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { dayKey, addDays } from '../weight/smoothing.js';
 import { softDelete } from '../db.js';
 import { CARDIO_TYPES } from './tools.js';
-import { progressTabs } from './progress.js';
 import { icon, emptyState } from '../ui/icons.js';
 
 let trendId = null;
@@ -100,7 +99,6 @@ export function renderHistory(el) {
 
   el.innerHTML = `
     <section class="stack">
-      ${progressTabs('history')}
       <h1>History</h1>
 
       <div class="card">

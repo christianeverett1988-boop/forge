@@ -6,7 +6,6 @@ import { esc } from '../ui.js';
 import { streak, LEVELS, xpForLevel, XP_RULES } from '../workouts/awards.js';
 import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
 import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
-import { progressTabs } from './progress.js';
 import { icon, emptyState } from '../ui/icons.js';
 
 const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
@@ -29,8 +28,7 @@ export function renderAwards(el) {
 
   el.innerHTML = `
     <section class="stack">
-      <h1>Progress</h1>
-      ${progressTabs('awards')}
+      <h1>Awards</h1>
 
       <div class="card aw-level">
         <p class="label">Level ${lv.level} of ${LEVELS.length}</p>
