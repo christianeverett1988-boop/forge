@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import { esc, $, $$ } from '../ui.js';
 import { progressTabs } from './progress.js';
 import { currentScore } from '../health/today.js';
+import { isNative } from '../native/bridge.js';
 import { ringSvg, animateScoreRings, scoreColor, round } from '../health/ui.js';
 import { PILLARS } from '../health/score.js';
 import { weeklyScores, longTerm } from '../health/longterm.js';
@@ -78,8 +79,8 @@ export function renderScore(el) {
     <div class="card stack" data-no-score>
       <p class="big-title">${s.trackedCount > 0 ? `Based on ${s.trackedCount} of 5 parts so far` : 'Your score starts soon'}</p>
       <p class="muted">Forge scores five things: your body, recovery, sleep, training and (soon) food. It shows a number once at least ${s.minPillars} of them have data, so a score is never built from just one or two.</p>
-      <ul class="reasons"><li>Log your weight a few times, or connect your Withings scale.</li><li>Finish a couple of workouts.</li>${apple ? '' : '<li>Add Apple Health for recovery and sleep.</li>'}</ul>
-      ${apple ? '' : '<p class="small muted">Apple Health adds your recovery and sleep.</p><a class="btn bigbtn" href="#/apple">Add Apple Health</a>'}
+      <ul class="reasons"><li>Log your weight a few times, or connect your Withings scale.</li><li>Finish a couple of workouts.</li>${apple ? '' : `<li>${isNative() ? 'Connect Apple Health' : 'Add Apple Health'} for recovery and sleep.</li>`}</ul>
+      ${apple ? '' : `<p class="small muted">Apple Health adds your recovery and sleep.</p><a class="btn bigbtn" href="#/apple">${isNative() ? 'Connect Apple Health' : 'Add Apple Health'}</a>`}
     </div>`;
 
   const movers = s.movers.length ? `

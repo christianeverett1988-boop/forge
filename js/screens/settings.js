@@ -1,4 +1,5 @@
 import { state, units as getUnits } from '../state.js';
+import { isNative } from '../native/bridge.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
@@ -21,6 +22,7 @@ function withingsLine() {
 }
 
 function appleLine() {
+  if (isNative() && !(state.health_daily || []).length) return 'Tap to connect';
   const a = (state.integrations && state.integrations.apple) || {};
   const n = (state.health_daily || []).length;
   if (a.connected) return n ? `Connected · ${n} days of data` : 'Connected · waiting for the first data';

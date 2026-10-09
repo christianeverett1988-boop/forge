@@ -2,12 +2,14 @@
 
 ## 0.15.0 — iPhone app proof of concept (Capacitor) (2026-10-09)
 
-The same Forge code can now run inside a native iPhone shell, built on your Mac with Xcode: **docs/native-ios.md**. The web app on GitHub Pages works exactly as before; nothing here runs in a browser. No Cloud Functions, `firestore.rules` or `config.js` changes. Merge after 0.14.5 and 0.14.6.
+The same Forge code can now run inside a native iPhone shell, built on your Mac with Xcode: one command (`bash scripts/ios-setup.sh`) and **docs/ios-setup.md**. HealthKit works with a free Apple ID (Personal Team); the $99 program is only for TestFlight, the App Store and no weekly re-sign. The web app on GitHub Pages works exactly as before; nothing here runs in a browser. No Cloud Functions, `firestore.rules` or `config.js` changes. Merge after 0.14.5 and 0.14.6.
 
 **In the iPhone app:**
 - **Real haptics:** the Taptic Engine on Done set, tabs, segments and "rest's over", instead of the iOS switch trick.
 - **The rest timer reaches the lock screen:** a "Rest's over · Next: Bench press" notification, kept in step with +/- 15 s, pause and skip.
-- **Apple Health straight from HealthKit:** Settings → Apple Health → Connect. Forge reads HRV, resting heart rate, breathing, blood oxygen, sleep stages, steps, active energy and exercise minutes, turns them into the same daily summaries as the export import (same code), and saves only those. It reads again by itself on open, every 6 hours at most. The Shortcut and export import are still there under "Other ways".
+- **Apple Health straight from HealthKit:** Settings → Apple Health → Connect. Forge reads HRV, resting heart rate, breathing, blood oxygen, sleep stages, sleeping wrist temperature, VO₂max, steps, active energy and exercise minutes, turns them into the same daily summaries as the export import (same code), and saves only those. It reads again by itself on open, every 6 hours at most. The Shortcut and export import are still there under "Other ways". In the app, every "set up the Shortcut" prompt (Today, Score, metric screens, Settings) says **Connect Apple Health**. After connecting, the card shows which kinds arrived and, for any with nothing, the exact switch: Settings → Health → Data Access & Devices → Forge → Turn On All. Walking heart rate isn't in the HealthKit plugin, so it isn't read (nothing depends on it).
+- **Feels like an app:** the real Forge icon (1024 px) and a dark launch screen with the Forge mark (no Capacitor art, no white flash; it comes down once the first screen is drawn), the keyboard shrinks the view so sheets and set entry stay above it (key bar with Done stays on), no rubber-banding, no link previews or long-press callouts, no text selection on controls, portrait only, and the in-app edge swipe is the only back gesture.
+- **Ready to build:** the configured `ios/` project is committed (HealthKit entitlement, privacy strings, portrait, icon, splash) with `package-lock.json`, `scripts/ios-setup.sh`, `docs/ios-setup.md` and `docs/app-store-checklist.md`.
 - **Opens offline:** the app carries its own files and Firebase's code (`scripts/build-www.mjs`), so it needs no service worker.
 - **Withings sign-in** opens over the app (Safari view) instead of leaving it.
 - **Status bar** follows light and dark.
@@ -15,7 +17,7 @@ The same Forge code can now run inside a native iPhone shell, built on your Mac 
 **Under the hood:**
 - `js/native/bridge.js` is the only place the app touches native code. Every call is a no-op in a browser.
 - `js/native/health.js` maps HealthKit to export-style records. The export aggregator gained `addRecord()`.
-- New files: `capacitor.config.json` (bundle ID `com.christianeverett.forge` for now; it becomes your LLC's before TestFlight) and npm scripts `native:build`, `native:sync`, `native:open`.
+- New files: `capacitor.config.json` (bundle ID `com.christianeverett.forge` for now; it becomes your LLC's before TestFlight) and npm scripts `native:setup`, `native:build`, `native:assets`, `native:sync`, `native:open`.
 - New tests cover the bridge (with a fake native shell), the HealthKit → daily-summary path, and the www build.
 
 ## 0.14.4 — Figures for cardio machines, jump rope and boxing (2026-10-09)

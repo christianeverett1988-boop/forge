@@ -1,7 +1,10 @@
 # Client-only releases must not touch functions/ via a stray lockfile
 functions/package-lock.json
 
-# iPhone app (Capacitor): built and installed on the Mac (docs/native-ios.md)
+# iPhone app (Capacitor): built and installed on the Mac (docs/ios-setup.md)
 node_modules/
 /www/
-/package-lock.json
+
+# Output of scripts/ios-setup.sh
+/ios-setup.log
+/.shots/

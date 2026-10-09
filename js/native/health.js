@@ -13,7 +13,11 @@ export const SAMPLE_TYPES = {
   restingHeartRate: 'HKQuantityTypeIdentifierRestingHeartRate',
   respiratoryRate: 'HKQuantityTypeIdentifierRespiratoryRate',
   oxygenSaturation: 'HKQuantityTypeIdentifierOxygenSaturation',
+  appleSleepingWristTemperature: 'HKQuantityTypeIdentifierAppleSleepingWristTemperature', // Readiness (overnight only, like the export)
+  vo2Max: 'HKQuantityTypeIdentifierVO2Max', // the Longevity card
 };
+// Walking Heart Rate Average isn't in the plugin, so it isn't read. Nothing waits for it: it only feeds one optional
+// line in the doctor summary (js/health/clinical.js), and the Data check leaves it out in the app.
 /** Daily totals: HealthKit adds them up itself and removes iPhone + Watch double counting. */
 export const SUM_TYPES = {
   steps: 'HKQuantityTypeIdentifierStepCount',
@@ -86,7 +90,7 @@ export function daysFromHealth({ samples = {}, totals = {}, since }) {
 }
 
 /** The HealthKit plugin, or null outside the app. */
-export const healthPlugin = () => plugin('Health', 'CapacitorHealth', 'HealthPlugin');
+export const healthPlugin = () => plugin('Health');
 
 /**
  * Ask for read access (iOS shows its Health sheet once; later calls return at once), then read `days` days and

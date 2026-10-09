@@ -31,6 +31,7 @@ const dayText = (d) => (d ? formatDay(d, { weekday: 'short', month: 'short', day
 const NATIVE_KEY = () => `forge.healthkit.last.${(state.user && state.user.uid) || ''}`; // per account on a shared phone
 const AUTO_EVERY_MS = 6 * 3600 * 1000;
 let nativeState = null; // { text } while reading
+const NOT_IN_HEALTHKIT = ['walkhr', 'workouts']; // not read from HealthKit (Forge has its own workouts; the plugin has no walking heart rate)
 const lastNative = () => { try { return Number(localStorage.getItem(NATIVE_KEY())) || 0; } catch { return 0; } };
 
 /**
@@ -69,7 +70,7 @@ function nativeCard() {
   const last = lastNative();
   return `<div class="card stack" data-native-health>
     <p class="label">Apple Health on this iPhone</p>
-    <p>Forge reads your Watch’s HRV, resting heart rate, sleep, breathing, blood oxygen, steps and exercise straight from Apple Health. Only daily summaries are saved. ${last ? '' : 'iOS asks once which data to share: turn them all on.'}</p>
+    <p>Forge reads your Watch’s HRV, resting heart rate, sleep, wrist temperature, breathing, blood oxygen, cardio fitness, steps and exercise straight from Apple Health. Only daily summaries are saved. ${last ? '' : 'iOS asks once which data to share: turn them all on.'}</p>
     ${nativeState ? `<p class="small" aria-live="polite">${esc(nativeState.text)}</p>` : ''}
     <button class="btn bigbtn" data-native-read ${nativeState ? 'disabled' : ''}>${nativeState ? 'Reading…' : last ? 'Read Apple Health now' : 'Connect Apple Health'}</button>
     <p class="small muted">${last ? `Last read ${esc(ago(new Date(last).toISOString()))}. Forge reads again by itself when you open it (every 6 hours at most).` : `The first read brings in the last ${IMPORT_DAYS} days.`}</p>
@@ -97,6 +98,10 @@ function statusCard() {
   const r = currentReadiness();
   const a = A();
   const have = Math.min(NEEDED_DAYS, r.baselineDays || 0);
+  const native = isNative();
+  if (native) st.fields = st.fields.filter((f) => !NOT_IN_HEALTHKIT.includes(f.key)); // the plugin can't read these
+  // After the first read: kinds HealthKit gave nothing for, with the exact switch to flip in iOS.
+  const missing = native && lastNative() ? st.fields.filter((f) => !f.lastDay).map((f) => f.label) : [];
   const chips = st.fields.map((f) => `<div class="field-chip ${f.lastDay ? 'on' : 'off'}">
       <b>${esc(f.label)}</b><small>${f.lastDay ? `${f.count28} of last 28 days · last ${esc(dayText(f.lastDay))}` : 'Not received yet'}</small></div>`).join('');
   return `<div class="card stack apple-status" data-status>
@@ -108,6 +113,7 @@ function statusCard() {
       <p class="small muted" style="margin-top:6px">${have >= NEEDED_DAYS ? 'Readiness has enough history.' : `Readiness needs ${NEEDED_DAYS} days of HRV, resting heart rate or sleep. You have ${have}.`}</p>
     </div>
     ${(a.rejected_last || []).length ? `<div class="notice warn small" data-rejected>${esc(rejectedText(a.rejected_last))}</div>` : ''}
+    ${missing.length ? `<div class="notice small" data-missing><b>No ${esc(missing.join(', ').toLowerCase())} from Apple Health yet.</b> If iOS didn’t share ${missing.length > 1 ? 'them' : 'it'}: on your iPhone open Settings → Health → Data Access &amp; Devices → Forge → <b>Turn On All</b>, then tap Read Apple Health now. Wrist temperature and cardio fitness also need an Apple Watch that records them.</div>` : ''}
     <div class="field-grid">${chips}</div>
   </div>`;
 }

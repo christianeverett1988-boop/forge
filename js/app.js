@@ -1,5 +1,5 @@
 // App boot: service worker, sign-in, live data, and a tiny hash router.
-import { isNative, syncStatusBar } from './native/bridge.js';
+import { isNative, syncStatusBar, hideSplash, setupKeyboard } from './native/bridge.js';
 import { configured } from './firebase.js';
 import { state, subscribe, LOADED_KEYS } from './state.js';
 import { esc, toast, closeAllSheets } from './ui.js';
@@ -28,7 +28,17 @@ if (isNative()) {
   const dark = window.matchMedia('(prefers-color-scheme: dark)');
   syncStatusBar(dark.matches);
   dark.addEventListener('change', (e) => syncStatusBar(e.matches));
+  setupKeyboard();
 }
+// The splash stays up until the first real screen is on the page (never a white flash or a blank frame), with a
+// fallback so a slow start can't leave it covering the app.
+let splashDone = !isNative();
+const firstPaint = () => {
+  if (splashDone) return;
+  splashDone = true;
+  requestAnimationFrame(() => requestAnimationFrame(hideSplash));
+};
+if (isNative()) setTimeout(firstPaint, 3500);
 
 // ---------- service worker + "new version" banner ----------
 function setupServiceWorker() {
@@ -147,6 +157,7 @@ async function render() {
   renderSync();
 
   if (!configured) {
+    firstPaint();
     nav.hidden = true;
     hideNavBar();
     main.innerHTML = `<section class="card stack"><h1>Almost there</h1>
@@ -154,6 +165,7 @@ async function render() {
     return;
   }
   if (state.user && state.loadError) {
+    firstPaint();
     nav.hidden = true;
     hideNavBar();
     main.innerHTML = `<section class="card stack"><h1>Something’s blocking your data</h1>
@@ -179,6 +191,7 @@ async function render() {
     hideNavBar();
     const m = await import('./screens/auth.js');
     m.renderAuth(main);
+    firstPaint();
     return;
   }
   if (!state.profile) {
@@ -186,6 +199,7 @@ async function render() {
     hideNavBar();
     const m = await import('./screens/onboarding.js');
     m.renderOnboarding(main, { editing: false });
+    firstPaint();
     return;
   }
 
@@ -208,6 +222,7 @@ async function render() {
   try {
     await routes[route](...routeParts().slice(1));
     markSeen(true);
+    firstPaint();
     if (FULLSCREEN.has(route)) hideNavBar();
     else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()), backLabel: backLabel(routeParts()) });
     hapticTabs(nav, onTab);
@@ -219,6 +234,7 @@ async function render() {
     if (route === 'today' && state.profile.tour === 'pending') import('./tour/tour.js').then((m) => m.maybeStartTour());
   } catch (e) {
     console.error(e);
+    firstPaint();
     hideNavBar();
     detachPull();
     main.innerHTML = `<section class="card"><h1>Something broke</h1><p class="muted">${esc(e.message)}</p></section>`;

@@ -1,9 +1,9 @@
-// The native iPhone app (Capacitor shell, docs/native-ios.md) and the web app run the same code. Everything
+// The native iPhone app (Capacitor shell, docs/ios-setup.md) and the web app run the same code. Everything
 // native goes through this file: in a browser every function here is a harmless no-op, so the web app is
 // unchanged. Plugins are reached through the Capacitor runtime the shell injects (window.Capacitor), so the
 // app still needs no build step or bundler.
 //
-// Plugins used (installed in the shell, see package.json): Haptics, LocalNotifications, StatusBar, Browser,
+// Plugins used (installed in the shell, see package.json): Haptics, LocalNotifications, StatusBar, Browser, SplashScreen, Keyboard,
 // and @capgo/capacitor-health (HealthKit; see js/native/health.js).
 
 const cap = () => (typeof window !== 'undefined' && window.Capacitor) || null;
@@ -14,10 +14,7 @@ export const isNative = () => {
   try { return !!(c && (c.isNativePlatform ? c.isNativePlatform() : c.platform && c.platform !== 'web')); } catch { return false; }
 };
 
-/**
- * A native plugin by name, or null. Tries each name in turn (a plugin's registered name can differ from its
- * package name). Never throws.
- */
+/** A native plugin by its registered name, or null. Never throws. */
 export function plugin(...names) {
   const c = cap();
   if (!c || !isNative()) return null;
@@ -105,6 +102,35 @@ export function openExternal(url) {
   const B = plugin('Browser');
   if (!B) return false;
   quiet(B.open({ url, presentationStyle: 'popover' }));
+  return true;
+}
+
+// ---------- launch splash ----------
+/** Take the launch splash down (it stays up until the app calls this: capacitor.config.json → launchAutoHide: false). */
+export function hideSplash() {
+  const S = plugin('SplashScreen');
+  if (!S) return false;
+  quiet(S.hide({ fadeOutDuration: 200 }));
+  return true;
+}
+
+// ---------- keyboard ----------
+/**
+ * The web view itself shrinks above the keyboard (capacitor.config.json → Keyboard.resize: "native"), so bottom
+ * sheets and the set entry sit on top of it; here the focused field is scrolled to the middle of what's left.
+ * The key bar above the keyboard stays on deliberately: its Done button is the only way to put away a number pad.
+ */
+export function setupKeyboard() {
+  const K = plugin('Keyboard');
+  if (!K) return false;
+  quiet(K.setAccessoryBarVisible({ isVisible: true }));
+  const reveal = () => {
+    const a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    const calm = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { a.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' }); } catch { /* old web view */ }
+  };
+  quiet(K.addListener('keyboardDidShow', () => setTimeout(reveal, 50)));
   return true;
 }
 

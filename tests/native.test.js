@@ -1,8 +1,8 @@
 // The iPhone app bridge (js/native/*): a no-op on the web; with a (fake) Capacitor shell it calls the plugins.
 // HealthKit samples become the same daily summaries the export import makes.
 import { test, eq, assert, near } from './harness.js';
-import { isNative, plugin, haptic, syncRestNotification, openExternal, REST_NOTIFICATION_ID } from '../js/native/bridge.js';
-import { localStamp, sampleToRecord, sleepRecords, totalToRecord, daysFromHealth } from '../js/native/health.js';
+import { isNative, plugin, haptic, syncRestNotification, openExternal, hideSplash, setupKeyboard, REST_NOTIFICATION_ID } from '../js/native/bridge.js';
+import { localStamp, sampleToRecord, sleepRecords, totalToRecord, daysFromHealth, healthPlugin, READ_TYPES } from '../js/native/health.js';
 import { cdnRefs, localise, COPY } from '../scripts/build-www.mjs';
 
 function fakeShell({ names = ['Haptics', 'LocalNotifications', 'Browser', 'StatusBar'], permission = 'prompt' } = {}) {
@@ -57,11 +57,28 @@ test('rest timer on the lock screen: asks once, schedules one notification, move
   eq(N().length, 6);
 });
 
-test('plugin lookup tries each name (a plugin can register under a different name)', () => {
-  fakeShell({ names: ['CapacitorHealth'] });
-  assert(plugin('Health', 'CapacitorHealth') != null);
+test('plugin lookup returns the named plugin, or null when it is missing', () => {
+  fakeShell({ names: ['Haptics'] });
+  assert(plugin('Haptics') != null);
   eq(plugin('Health'), null);
+  fakeShell({ names: ['Health'] });
+  assert(healthPlugin() != null, 'the HealthKit plugin registers as Health');
   web();
+});
+
+test('HealthKit wrist temperature and VO₂max come through daysFromHealth (the delta needs earlier nights)', () => {
+  const at = (d, h) => new Date(2026, 9, d, h).toISOString();
+  const nights = [];
+  for (let d = 1; d <= 8; d++) nights.push({ value: d === 8 ? 36.9 : 36.5, unit: 'celsius', startDate: at(d, 3), endDate: at(d, 4) });
+  nights.push({ value: 35.0, unit: 'celsius', startDate: at(8, 15), endDate: at(8, 16) }); // an afternoon reading is not overnight
+  const samples = { appleSleepingWristTemperature: nights, vo2Max: [{ value: 44.2, unit: 'mL/min/kg', startDate: at(8, 9), endDate: at(8, 9) }, { value: 45.0, unit: 'mL/min/kg', startDate: at(8, 18), endDate: at(8, 18) }] };
+  const { days } = daysFromHealth({ samples, since: '2026-10-08' });
+  eq(days.length, 1);
+  eq(days[0].wrist_temp_c, 36.9);
+  eq(days[0].wrist_temp_delta_c, 0.4, '36.9 against seven nights at 36.5');
+  near(days[0].vo2max, 44.6, 0.06);
+  assert(READ_TYPES.includes('appleSleepingWristTemperature') && READ_TYPES.includes('vo2Max'), 'both are asked for');
+  assert(!READ_TYPES.includes('walkingHeartRateAverage'), 'the plugin has no walking heart rate');
 });
 
 test('Withings sign-in opens over the app in the iPhone app', async () => {
@@ -138,4 +155,19 @@ test('HealthKit daily totals land on the right day even when buckets start at UT
   const r = totalToRecord('steps', { startDate: utcMidnight, value: 5000 });
   const local = new Date(Date.parse(utcMidnight) + 12 * 3600e3);
   eq(r.endDate.slice(0, 10), `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`);
+});
+
+test('splash and keyboard: the splash comes down on request, the keyboard key bar stays on', async () => {
+  web();
+  eq(hideSplash(), false);
+  eq(setupKeyboard(), false);
+  const calls = fakeShell({ names: ['SplashScreen', 'Keyboard'] });
+  eq(hideSplash(), true);
+  eq(setupKeyboard(), true);
+  await tickq();
+  eq(JSON.stringify(calls.filter((c) => c[0] === 'SplashScreen').map((c) => [c[1], c[2]])), JSON.stringify([['hide', { fadeOutDuration: 200 }]]));
+  const k = calls.filter((c) => c[0] === 'Keyboard').map((c) => c[1]);
+  assert(k.includes('setAccessoryBarVisible') && k.includes('addListener'), k.join());
+  eq(calls.find((c) => c[1] === 'setAccessoryBarVisible')[2].isVisible, true);
+  web();
 });
