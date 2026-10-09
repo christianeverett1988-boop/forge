@@ -19,7 +19,7 @@ service cloud.firestore {
     }
 
     function allowedCollection(col) {
-      return col in ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises'];
+      return col in ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises', 'foods', 'food_logs'];
     }
 
     function hasStandardFields(uid, id) {
@@ -34,6 +34,18 @@ service cloud.firestore {
         && (!('deleted_at' in d) || d.deleted_at is string);
     }
 
+    // foods and food_logs share these (a log entry holds a copy of the macros per serving).
+    function validFoodName(d) {
+      return d.name is string && d.name.size() >= 1 && d.name.size() <= 80;
+    }
+
+    function validMacros(d) {
+      return d.kcal is number && d.kcal >= 0 && d.kcal <= 5000
+        && d.protein_g is number && d.protein_g >= 0 && d.protein_g <= 500
+        && d.carbs_g is number && d.carbs_g >= 0 && d.carbs_g <= 500
+        && d.fat_g is number && d.fat_g >= 0 && d.fat_g <= 500;
+    }
+
     function validFor(col, id) {
       let d = request.resource.data;
       return (col != 'profile' || (id == 'main' && d.goal is string && d.weightKg is number && d.heightCm is number))
@@ -46,7 +58,13 @@ service cloud.firestore {
               && (!('duration_ms' in d) || (d.duration_ms is number && d.duration_ms >= 0))))
         && (col != 'cardio_sessions' || (d.activity is string && d.duration_min is number && d.started_at is string))
         && (col != 'programs' || (d.template is string && d.started_at is string))
-        && (col != 'exercises' || (d.name is string && d.pattern is string && d.equipment is list));
+        && (col != 'exercises' || (d.name is string && d.pattern is string && d.equipment is list))
+        && (col != 'foods' || (validFoodName(d) && validMacros(d) && d.serving is string && d.serving.size() <= 40))
+        && (col != 'food_logs' || (validFoodName(d) && validMacros(d)
+              && d.day is string && d.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+              && d.meal in ['breakfast', 'lunch', 'dinner', 'snack']
+              && d.servings is number && d.servings > 0 && d.servings <= 20
+              && (!('food_id' in d) || d.food_id is string)));
     }
 
     function serverOwned(col) {

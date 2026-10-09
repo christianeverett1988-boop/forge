@@ -5,8 +5,8 @@ import { tick } from '../ui/haptic.js';
 import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../units.js';
 import { trendChange, weeklyRate, dayKey } from '../weight/smoothing.js';
 import { weightChartSVG } from '../weight/chart.js';
-import { weightSeries } from '../derived.js';
-import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
+import { weightSeries, mySuspects } from '../derived.js';
+import { SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { goalPathCard } from './body.js';
@@ -73,7 +73,7 @@ export function renderWeight(el) {
   const latest = series.length ? series[series.length - 1] : null;
   const entries = [...state.weights].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1));
   // Days whose trend point is a scale reading (earliest Withings weigh-in): typed-in entries those days are shown but not used.
-  const sus = suspectIds(state.weights);
+  const sus = mySuspects();
   const asking = (w) => w.review || sus.has(w.id);
   const trendDays = new Map();
   for (const w of [...state.weights].filter((x) => SCALE_SOURCES.has(x.source) && !asking(x)).sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))) {

@@ -275,7 +275,7 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .stats div { display: flex; flex-direction: column; }
 .stats span { font-size: 13px; color: var(--text-2); }
 .stats b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.chart { width: 100%; height: auto; display: block; }
+.chart { width: 100%; height: auto; display: block; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .chart .grid { stroke: var(--separator); stroke-width: 1; }
 .chart .axis { fill: var(--text-2); font-size: 11px; font-family: var(--font); }
 .chart .dot { fill: var(--text-2); opacity: .7; }
@@ -537,3 +537,16 @@ body.tour-on main { padding-bottom: 360px; } /* room to scroll the last cards ab
 .ht-act span .ic { width: 22px; height: 22px; }
 .btn.small .ic, .chip-btn .ic { width: 16px; height: 16px; }
 .nav-card .chev, .card.row .chev { align-self: center; }
+
+/* v0.14.6 chart polish: unit label, bar scale, tap-to-read */
+.chart .unit { font-weight: 600; }
+.chart .bar-top { stroke: var(--accent-text); stroke-opacity: .15; stroke-width: 1; stroke-dasharray: 1 4; }
+.chart .bar-label { fill: var(--accent-text); opacity: .75; }
+.chart .scrub-line { stroke: var(--text-2); stroke-width: 1; }
+.chart .scrub-dot { fill: var(--accent-text); stroke: var(--bg); stroke-width: 2; }
+.chart-readout { min-height: 1.4em; font-variant-numeric: tabular-nums; }
+/* Saved data-check reports: the row is the box; the tick-to-compare label inside it has no box of its own. */
+.dc-saved li { padding: 0; }
+.dc-saved li > .choice { flex: 1; }
+.dc-saved .choice > span { background: none; border-radius: 0; padding-left: 56px; }
+.dc-saved .choice input:checked + span { background: var(--surface-2); }

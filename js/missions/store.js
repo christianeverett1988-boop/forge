@@ -1,5 +1,5 @@
 // Missions from live state. Everything is derived from weights, body_measures, workouts, cardio and
-// health_daily (and food_logs once they exist); the only stored state is in settings/main:
+// health_daily and food_logs; the only stored state is in settings/main:
 //   missions_started  the first local day missions counted for XP (never earlier: no retroactive XP)
 //   mission_steps     step target (default 8,000)       mission_bed   bedtime target 'HH:MM' (default 23:00)
 //   missions_seen     { day: [mission ids already shown as done] } for the last two weeks, so a check springs once

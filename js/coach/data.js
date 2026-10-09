@@ -14,7 +14,7 @@ import { PROGRAMS, recommendedId, recommendedWhy } from '../body-programs/core.j
 import { weeklyScores, longTerm } from '../health/longterm.js';
 import { longevityCards } from '../health/longevity.js';
 import { clearestChanges } from '../health/longview.js';
-import { weightSeries, myBodyMeasures } from '../derived.js';
+import { weightSeries, myBodyMeasures, foodTargets } from '../derived.js';
 
 /** The muscles today's plan trains as primary movers, in the order they first appear. */
 function planMuscles(plan) {
@@ -30,11 +30,11 @@ function planMuscles(plan) {
 // (a tap on a chip draws the screen again, and scoring takes a moment).
 let weeklyMemo = null;
 function weeklyScoresNow(day) {
-  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile];
+  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile, state.food_logs];
   if (weeklyMemo && weeklyMemo.day === day && keys.every((k, i) => weeklyMemo.keys[i] === k)) return weeklyMemo.value;
   const value = weeklyScores({
     rows: state.health_daily || [], series: weightSeries(), measures: myBodyMeasures(), workouts: state.workouts,
-    cardio: state.cardio || [], profile: state.profile || {},
+    cardio: state.cardio || [], profile: state.profile || {}, foodLogs: state.food_logs || [], targets: foodTargets(),
   }, day, 14);
   weeklyMemo = { day, keys, value };
   return value;

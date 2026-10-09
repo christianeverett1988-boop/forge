@@ -1,14 +1,13 @@
 // One body metric in detail (Body → tap a tile): latest value, this period vs. the previous one, a chart
 // over 7/30/90/365 days or everything (with the previous period dashed), training sets per week underneath
 // for muscle, and the explainer sheet ("What is this?") from data/metrics.json.
-import { myBodyMeasures } from '../derived.js';
+import { myBodyMeasures, mySuspects } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
 import { esc, $, $$, sheet, todayKey } from '../ui.js';
 import { addDays, daysBetween } from '../weight/smoothing.js';
 import { weightToDisplay } from '../units.js';
-import { lineChartSVG } from '../ui/linechart.js';
+import { lineChartSVG, bindScrub, unitOf } from '../ui/linechart.js';
 import { metricDef, metricPoints, metricEmptyChoice, dailySeries, fmtMetric, heightM, periodAverage } from '../withings/body.js';
-import { suspectIds } from '../withings/review.js';
 import { trendMetric, trendsFor } from '../health/trends.js';
 import { intel } from '../health/intel.js';
 import { fmtAmount } from '../health/insights.js';
@@ -16,6 +15,7 @@ import { weekOf } from '../workouts/awards.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { vo2Series } from '../health/longevity.js';
 import { isNative } from '../native/bridge.js';
+let unbindScrub = () => {};
 
 let range = 90; // 7 / 28 / 90 / 365 days, or 0 for everything
 let explainers = null;
@@ -59,7 +59,7 @@ export function renderMetric(el, key) {
   const u = getUnits();
   const docs = myBodyMeasures();
   const h = heightM(docs, state.profile);
-  const sus = suspectIds(state.weights);
+  const sus = mySuspects();
   // Apple Health metrics come from health_daily (one value a day); the rest from the scale (or hand-logged weights).
   // VO₂max reads the same merged Apple + scale series as the Longevity card.
   const daily = def === apple
@@ -90,7 +90,6 @@ export function renderMetric(el, key) {
   };
   const showSets = def.overlay === 'sets' || $$('input[name=sets]:checked', el).length > 0;
   const bars = showSets ? weeklySets(state.workouts) : [];
-  const fmtAxis = (v) => (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1));
 
   const wConnected = !!(state.integrations.withings && state.integrations.withings.connected);
   const choice = metricEmptyChoice(key, wConnected);
@@ -110,7 +109,8 @@ export function renderMetric(el, key) {
         <div class="seg small" role="radiogroup" aria-label="Range">
           ${[[7, '7d'], [28, '28d'], [90, '90d'], [365, '1y'], [0, 'All']].map(([d, l]) => `<label><input type="radio" name="range" value="${d}" ${range === d ? 'checked' : ''}><span>${l}</span></label>`).join('')}
         </div>
-        ${shown.length ? lineChartSVG(shown.map((p) => ({ day: p.day, v: disp(p.v) })), { prev, bars, fmt: fmtAxis, label: `${def.label} chart`, fromDay: from, toDay: end }) : '<p class="muted small">No readings in this range.</p>'}
+        ${shown.length ? lineChartSVG(shown.map((p) => ({ day: p.day, v: disp(p.v), t: fmt(p.v) })), { prev, bars, unit: unitOf(fmt), label: `${def.label} chart`, fromDay: from, toDay: end }) : '<p class="muted small">No readings in this range.</p>'}
+        ${shown.length ? '<p class="small muted chart-readout" data-readout aria-live="polite">Touch the chart to read a day.</p>' : ''}
         <p class="small muted legend"><span class="key dot"></span>readings <span class="key line"></span>7-day average ${prev.length ? '<span class="key dash"></span>previous period' : ''} ${bars.length ? '<span class="key bar"></span>training sets/week' : ''}</p>
         ${def.overlay !== 'sets' ? `<label class="g-row sw"><span class="g-text"><span>Show training sets per week</span></span><input type="checkbox" switch name="sets" ${showSets ? 'checked' : ''}></label>` : ''}
         ${trendLine ? `<p data-trend-line>${esc(trendLine)}</p>` : ''}
@@ -120,6 +120,8 @@ export function renderMetric(el, key) {
     </section>`;
 
   $('[data-explain]', el).onclick = () => openExplainer(key);
+  unbindScrub();
+  unbindScrub = bindScrub($('svg.chart', el), $('[data-readout]', el));
   $$('input[name=range]', el).forEach((r) => r.addEventListener('change', () => { range = Number(r.value); renderMetric(el, key); }));
   const sets = $('input[name=sets]', el);
   if (sets) sets.addEventListener('change', () => renderMetric(el, key));

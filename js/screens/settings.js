@@ -3,7 +3,7 @@ import { isNative } from '../native/bridge.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
-import { exportJSON, exportWeightsCSV, exportWorkoutsCSV, exportCardioCSV, exportBodyCSV } from '../export.js';
+import { exportJSON, exportWeightsCSV, exportWorkoutsCSV, exportCardioCSV, exportBodyCSV, exportFoodCSV } from '../export.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import { formatHeight, formatWeight } from '../units.js';
 import { GOALS } from '../nutrition/targets.js';
@@ -100,6 +100,7 @@ export function renderSettings(el) {
         <button class="g-row" data-export-csv><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
         <button class="g-row" data-export-workouts><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>
         <button class="g-row" data-export-cardio><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export cardio (CSV)</span></span></button>
+        <button class="g-row" data-export-food><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export food log (CSV)</span></span></button>
         <button class="g-row" data-export-body><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export body measurements (CSV)</span></span></button>
       </div>
       <p class="sec-foot">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
@@ -183,6 +184,7 @@ export function renderSettings(el) {
   $('[data-export-csv]', el).onclick = run(exportWeightsCSV);
   $('[data-export-workouts]', el).onclick = run(exportWorkoutsCSV);
   $('[data-export-cardio]', el).onclick = run(exportCardioCSV);
+  $('[data-export-food]', el).onclick = run(exportFoodCSV);
   $('[data-export-body]', el).onclick = run(exportBodyCSV);
 
   $('[data-signout]', el).onclick = async () => {
@@ -207,7 +209,7 @@ function openDeleteEverything() {
   sheet('Delete everything', (body, close) => {
     body.innerHTML = `
       <form class="stack" novalidate>
-        <p>This permanently deletes your account and all your data (profile, weigh-ins, workouts, cardio, programs, locations, custom exercises) from the cloud and from this phone. It can’t be undone.</p>
+        <p>This permanently deletes your account and all your data (profile, weigh-ins, workouts, cardio, programs, locations, custom exercises, foods and food logs) from the cloud and from this phone. It can’t be undone.</p>
         <p class="small muted">Tip: export your data first.</p>
         <label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocomplete="off" autocapitalize="characters"></label>
         <label class="field"><span>Your password</span><input name="password" type="password" autocomplete="current-password"></label>

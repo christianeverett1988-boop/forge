@@ -1,5 +1,5 @@
 // Export your data (JSON for everything, CSV per collection). Works offline from the on-device cache.
-import { COLLECTIONS, READ_ONLY_COLLECTIONS, readAll } from './db.js';
+import { COLLECTIONS, NEWER_COLLECTIONS, READ_ONLY_COLLECTIONS, readAll } from './db.js';
 import { todayKey } from './ui.js';
 import { VERSION } from './version.js';
 import { exerciseById } from './workouts/library.js';
@@ -30,7 +30,7 @@ async function deliver(filename, text, type) {
 
 export async function exportJSON() {
   const out = { app: 'forge', version: VERSION, exported_at: new Date().toISOString(), data: {} };
-  for (const col of COLLECTIONS) out.data[col] = await readAll(col);
+  for (const col of COLLECTIONS) out.data[col] = await readAll(col).catch((e) => { if (NEWER_COLLECTIONS.includes(col)) return []; throw e; });
   // Server-written (Withings body measurements, Apple Health days, connection status; never tokens).
   for (const col of READ_ONLY_COLLECTIONS) out.data[col] = await readAll(col).catch(() => []);
   await deliver(`forge-export-${todayKey()}.json`, JSON.stringify(out, null, 2), 'application/json');
@@ -75,6 +75,14 @@ export async function exportCardioCSV() {
     .map((r) => ({ ...r, distance_mi: r.distance_km ? (r.distance_km / 1.609344).toFixed(2) : '' }));
   const csv = toCSV(rows, ['day', 'started_at', 'activity', 'duration_min', 'distance_km', 'distance_mi', 'calories', 'avg_hr', 'notes', 'source', 'id']);
   await deliver(`forge-cardio-${todayKey()}.csv`, csv, 'text/csv');
+}
+
+export async function exportFoodCSV() {
+  const rows = (await readAll('food_logs').catch(() => [])).filter((r) => !r.deleted)
+    .sort((a, b) => (a.day + a.created_at < b.day + b.created_at ? -1 : 1))
+    .map((r) => ({ ...r, total_kcal: Math.round(r.kcal * r.servings), total_protein_g: Math.round(r.protein_g * r.servings * 10) / 10 }));
+  const csv = toCSV(rows, ['day', 'meal', 'name', 'servings', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'total_kcal', 'total_protein_g', 'food_id', 'source', 'id']);
+  await deliver(`forge-food-${todayKey()}.csv`, csv, 'text/csv');
 }
 
 export async function exportBodyCSV() {

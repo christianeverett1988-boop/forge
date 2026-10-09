@@ -3,7 +3,7 @@
 import { state, units as getUnits } from '../state.js';
 import { $, $$, toast, todayKey } from '../ui.js';
 import { icon, emptyState } from '../ui/icons.js';
-import { weightSeries, myBodyMeasures } from '../derived.js';
+import { weightSeries, myBodyMeasures, foodTargets } from '../derived.js';
 import { buildSummary, summaryText, isEmpty, DEFAULT_RANGE } from '../health/clinical.js';
 import { reportHtml, rangeSegHtml } from '../health/clinicalview.js';
 
@@ -14,7 +14,7 @@ export function renderReport(el) {
   const today = todayKey();
   const s = buildSummary({
     range, today, rows: state.health_daily || [], measures: myBodyMeasures(), series: weightSeries(),
-    workouts: state.workouts, cardio: state.cardio || [], profile: state.profile || {},
+    workouts: state.workouts, cardio: state.cardio || [], profile: state.profile || {}, foodLogs: state.food_logs || [], targets: foodTargets(),
   });
   const empty = isEmpty(s);
   el.innerHTML = `

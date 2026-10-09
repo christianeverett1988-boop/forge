@@ -20,6 +20,7 @@ import './withings.test.js';
 import './awards.test.js';
 import './tour.test.js';
 import './native.test.js';
+import './polish.test.js';
 import './health.test.js';
 import './shell.test.js';
 import './restyle.test.js';
@@ -32,6 +33,7 @@ import './longterm.test.js';
 import './report.test.js';
 import './bodyprograms.test.js';
 import './readiness-trends.test.js';
+import './food.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

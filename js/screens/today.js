@@ -24,6 +24,7 @@ import { programLine, completionCards, afterCompletionCards } from '../body-prog
 import { missionsCard, afterMissionsRender, badgeCelebrationCards, afterBadgeCelebrations } from '../missions/ui.js';
 import { coachData } from '../coach/data.js';
 import { availableQuestions } from '../coach/answers.js';
+import { dayTotals } from '../food/core.js';
 
 /** "Ask Coach: <first question that has an answer>", or just "Ask Coach". */
 function coachTeaser() {
@@ -36,6 +37,18 @@ import { topInsights, dismissInsight, reportFor, currentReportWeek, currentGoalP
 import { compactInsightsHtml, bindInsightCards } from '../health/cards.js';
 import { goalLine } from '../health/goalpath.js';
 import { showReportCard } from '../health/weekly.js';
+
+/** A small Food card: today's calories and protein so far, Log food, and a way into the meals. (The rings stay as they are.) */
+function foodCard(t) {
+  const tot = dayTotals(state.food_logs, todayKey());
+  const line = tot.kcal
+    ? `${tot.kcal.toLocaleString()} of ${t.calories.toLocaleString()} kcal · ${Math.round(tot.protein_g)} of ${t.proteinG} g protein`
+    : `Nothing logged yet · target ${t.calories.toLocaleString()} kcal, ${t.proteinG} g protein`;
+  return `<div class="card" data-food-card>
+    <p class="label">Food</p>
+    <p class="big-title">${esc(line)}</p>
+    <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div></div>`;
+}
 
 function workoutCard() {
   const active = activeWorkout();
@@ -235,6 +248,8 @@ export function renderToday(el) {
         </details>
       </div>
 
+      ${foodCard(t)}
+
       ${insightsBlock()}
 
       <a class="card row between center nav-card" href="#/coach" data-coach-card>
@@ -244,6 +259,7 @@ export function renderToday(el) {
     </section>`;
 
   $('[data-log]', el).onclick = openLogWeight;
+  $('[data-food-log]', el).onclick = () => import('./food.js').then((m) => m.openLogFood());
   const why = $('[data-ready-why]', el);
   if (why) why.onclick = () => {
     const list = $('[data-ready-parts]', el);

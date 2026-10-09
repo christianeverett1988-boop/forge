@@ -158,8 +158,8 @@ function activitySection({ days, workouts, cardio, from, today }) {
   };
 }
 
-function scoreSection({ rows, series, measures, workouts, cardio, profile, today, from, range }) {
-  const weekly = weeklyScores({ rows, series, measures, workouts, cardio, profile }, today, Math.ceil(range / 7)).filter((w) => w.day >= from);
+function scoreSection({ rows, series, measures, workouts, cardio, profile, foodLogs, targets, today, from, range }) {
+  const weekly = weeklyScores({ rows, series, measures, workouts, cardio, profile, foodLogs, targets }, today, Math.ceil(range / 7)).filter((w) => w.day >= from);
   if (!weekly.length) return null;
   const pillars = [];
   for (const k of Object.keys(PILLARS)) {
@@ -188,7 +188,7 @@ function notesFor({ sleep, anomalies }) {
  * section is null when it has no data. The header only ever carries age, sex and height.
  */
 export function buildSummary(ctx) {
-  const { today, rows = [], measures = [], series = [], workouts = [], cardio = [], profile = {} } = ctx;
+  const { today, rows = [], measures = [], series = [], workouts = [], cardio = [], profile = {}, foodLogs = [], targets = null } = ctx;
   const range = RANGES.includes(ctx.range) ? ctx.range : DEFAULT_RANGE;
   const from = shiftDay(today, -(range - 1));
   const days = indexDays(rows);
@@ -202,7 +202,7 @@ export function buildSummary(ctx) {
     heart: heartSection({ days, measures, profile, today, from, range }),
     sleep,
     activity: activitySection({ days, workouts, cardio, from, today }),
-    score: scoreSection({ rows, series, measures, workouts, cardio, profile, today, from, range }),
+    score: scoreSection({ rows, series, measures, workouts, cardio, profile, foodLogs, targets, today, from, range }),
     notes: notesFor({ sleep, anomalies }),
   };
 }

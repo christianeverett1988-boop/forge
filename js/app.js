@@ -119,6 +119,7 @@ const routes = {
   report: () => import('./screens/report.js').then((m) => m.renderReport(main)),
   weekly: () => import('./screens/weekly.js').then((m) => m.renderWeekly(main)),
   coach: () => import('./screens/coach.js').then((m) => m.renderCoach(main)),
+  food: () => import('./screens/food.js').then((m) => m.renderFood(main)),
   withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
   metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
   photos: (sub) => import('./screens/photos.js').then((m) => m.renderPhotos(main, sub)),
@@ -416,6 +417,13 @@ const WATCH_SERVER = [
   ['integrations', (rows) => ({ integrations: Object.fromEntries(rows.map((r) => [r.id || 'withings', r])) })],
 ];
 
+// My foods and the food log. Like the server-written ones, they are not part of "loaded": if the rules aren't
+// published yet the app still opens and the Food screen says what to do.
+const WATCH_FOOD = [
+  ['foods', (rows) => ({ foods: rows })],
+  ['food_logs', (rows) => ({ food_logs: rows })],
+];
+
 // v0.1.x stored weight inventory in pounds (dumbbells_lb); v0.2.0 stores kg like everything else.
 let dbModule = null;
 function migrateInventory(rows) {
@@ -470,12 +478,20 @@ async function boot() {
       ));
     }
     const serverErr = {};
-    const firstErr = () => Object.values(serverErr).find(Boolean) || null;
+    const errs = () => ({ ...serverErr });
     for (const [col, toPatch] of WATCH_SERVER) {
       unsubs.push(db.watch(
         col,
-        (rows) => { serverErr[col] = null; state.set({ ...toPatch(rows), serverError: firstErr() }); },
-        (err) => { serverErr[col] = err.code || 'error'; state.set({ serverError: firstErr() }); }
+        (rows) => { serverErr[col] = null; state.set({ ...toPatch(rows), serverErrors: errs() }); },
+        (err) => { serverErr[col] = err.code || 'error'; state.set({ serverErrors: errs() }); }
+      ));
+    }
+    const foodErr = {};
+    for (const [col, toPatch] of WATCH_FOOD) {
+      unsubs.push(db.watch(
+        col,
+        (rows) => { foodErr[col] = null; state.set({ ...toPatch(rows), foodError: Object.values(foodErr).find(Boolean) || null }); },
+        (err) => { foodErr[col] = err.code || 'error'; state.set({ foodError: Object.values(foodErr).find(Boolean) || null }); }
       ));
     }
     db.updateSync();
