@@ -15,11 +15,11 @@ export function longTermHtml(lt, range, today) {
     `<label><input type="radio" name="ltrange" value="${r}" ${r === range ? 'checked' : ''}><span>${r === 90 ? '90 days' : '1 year'}</span></label>`).join('')}</div>`;
   if (lt.status !== 'ok') {
     return `<div class="card stack" data-longterm><p class="label">Long term</p>
-      <p class="muted">Your long-term view starts after ${WEEKS_MIN} weeks of data (${lt.weeksSoFar} so far).</p></div>`;
+      <p class="muted">Your long-term view starts after ${WEEKS_MIN} weeks of data (${lt.weeksSoFar} of ${WEEKS_MIN} weeks so far).</p></div>`;
   }
   const pts = rolling(lt.points.map((p) => ({ day: p.day, v: p.score })), 3);
   const rows = lt.pillars.map((p) => `<li class="lt-row"><span>${esc(p.label)}</span>
-    <b class="${p.delta >= 2 ? 'good' : p.delta <= -2 ? 'warn' : 'muted'}"><span aria-hidden="true">${p.arrow}</span> ${p.delta === 0 ? 'No change' : `${sign(p.delta)}${Math.abs(p.delta)} points`}</b></li>`).join('');
+    <b class="${p.delta >= 2 ? 'good' : p.delta <= -2 ? 'warn' : 'muted'}"><span aria-hidden="true">${p.arrow}</span> ${p.delta === 0 ? 'No change' : `${sign(p.delta)}${Math.abs(p.delta)} point${Math.abs(p.delta) === 1 ? '' : 's'}`}</b></li>`).join('');
   return `<div class="card stack" data-longterm><div class="row between center"><p class="label" style="margin:0">Long term</p></div>
     ${seg}
     <div class="lt-spark" role="img" aria-label="Your weekly Forge Score over ${range === 90 ? '90 days' : 'the last year'}">${sparkSvg(pts, today, RANGES[range].days, { width: 300, height: 64 })}</div>
@@ -30,14 +30,23 @@ export function longTermHtml(lt, range, today) {
 
 const FMT_KIND = { vo2max: 'vo2', rhr_bpm: 'bpm', hrv_sdnn_ms: 'ms', visceral_fat: 'index', ffmi: 'index' };
 
+/** One plain sentence with units: "Up 0.6 ml/kg/min in 90 days, about the same". f formats a value in the metric's units. */
+export function changeLine(c, f) {
+  const n = c.ninety;
+  if (!n.enough) return n.words;
+  if (n.change == null || Number(f(Math.abs(n.change), false).replace(/,/g, '')) === 0) return 'About the same over the last 90 days.';
+  const tail = n.direction === 'flat' ? 'about the same' : n.tone === 'good' ? 'a real improvement' : n.tone === 'bad' ? 'worth keeping an eye on' : '';
+  return `${n.change > 0 ? 'Up' : 'Down'} ${f(Math.abs(n.change))} in 90 days${tail ? `, ${tail}` : ''}`;
+}
+
 /** One Longevity card. */
 function cardHtml(c, units, today) {
   const kind = FMT_KIND[c.key];
   const f = (v, unit = true) => fmtMetric(c.key, v, units, { kind, unit });
   const n = c.ninety;
-  const chg = n.change == null ? '' : `<span class="${n.tone === 'good' ? 'good' : n.tone === 'bad' ? 'warn' : 'muted'}">${Math.abs(n.change) < 0.05 ? 'No change' : `${sign(n.change)}${f(Math.abs(n.change), false)}`} in 90 days</span>`;
+  const line = changeLine(c, f);
   const subs = [];
-  if (c.band) subs.push(`${esc(c.band.label)}${c.key === 'vo2max' ? ' for your age and sex (an estimate)' : ' (Kyle 2003 bands)'}`);
+  if (c.band) subs.push(`${esc(c.band.label)}${c.key === 'vo2max' ? ' for your age and sex (an estimate)' : ' for your height and sex'}`);
   if (c.key === 'vo2max') {
     if (c.rhr) subs.push(`Resting heart rate ${fmtMetric('rhr_bpm', c.rhr.v, units, { kind: 'bpm' })}`);
     if (c.vascularAge != null) subs.push(`Vascular age ${fmtMetric('vascular_age', c.vascularAge, units, { kind: 'years' })}`);
@@ -46,8 +55,8 @@ function cardHtml(c, units, today) {
   if (c.key === 'hrv_sdnn_ms' && c.usual) subs.push(c.usual.words);
   return `<a class="card lt-card" href="${c.link}">
     <div class="row between center"><strong>${esc(c.title)}</strong><b class="lt-val">${f(c.latest.v)}</b></div>
-    <div class="lt-spark ${n.tone}">${sparkSvg(c.series, today, 90, { width: 300, height: 44 })}</div>
-    <p class="small" style="margin:0">${chg}${chg ? ' · ' : ''}<span class="muted">${esc(n.words)}</span></p>
+    ${n.enough ? `<div class="lt-spark ${n.tone}">${sparkSvg(rolling(c.series, 7), today, 90, { width: 300, height: 44 })}</div>` : ''}
+    <p class="small ${n.tone === 'good' ? 'good' : n.tone === 'bad' ? 'warn' : 'muted'}" style="margin:0">${esc(line)}</p>
     ${subs.map((s) => `<p class="small muted" style="margin:0">${s}</p>`).join('')}
     <p class="small muted" style="margin:0">${esc(c.why)}</p></a>`;
 }

@@ -75,8 +75,10 @@ export function pillarChanges(points) {
 }
 
 /** Everything the card needs: { status: 'building'|'ok', weeksSoFar, points, sentence, pillars }. */
-export function longTerm(weekly, today, range = 90) {
+export function longTerm(weekly, today, range = 90, { recentScored = false } = {}) {
   const points = inRange(weekly, today, range);
-  if (weekly.length < WEEKS_MIN || points.length < WEEKS_MIN) return { status: 'building', weeksSoFar: weekly.length };
+  // Weeks with any scored day; a partial current week counts, and so does a score already showing at the top.
+  const weeksSoFar = Math.min(WEEKS_MIN - 1, Math.max(weekly.length, recentScored ? 1 : 0));
+  if (weekly.length < WEEKS_MIN || points.length < WEEKS_MIN) return { status: 'building', weeksSoFar };
   return { status: 'ok', weeksSoFar: weekly.length, points, sentence: changeSentence(points, range), pillars: pillarChanges(points) };
 }

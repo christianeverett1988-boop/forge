@@ -94,7 +94,7 @@ test('longTerm: under 4 weeks is "building"; 4 or more is ok; 90 days drops olde
 
 test('long-term card text: building line with the count; sentence and pillar rows; no "not tracked" rows', () => {
   const b = longTermHtml(longTerm(pts([60, 61], '2026-09-26'), TODAY, 90), 90, TODAY);
-  assert(b.includes('Your long-term view starts after 4 weeks of data (2 so far).'));
+  assert(b.includes('Your long-term view starts after 4 weeks of data (2 of 4 weeks so far).'));
   const html = longTermHtml(longTerm(pts([60, 61, 63, 66, 67], '2026-09-05'), TODAY, 90), 90, TODAY);
   assert(html.includes('Up 6 points since September'));
   assert(html.includes('Body') && html.includes('Sleep') && !html.includes('Nutrition') && !html.includes('Not tracked'));
@@ -218,4 +218,20 @@ test('longevityCards: full set, with Cardio fitness sublines, FFMI value/band an
   assert(html.includes('Cardio fitness') && html.includes('Resting heart rate') && html.includes('Vascular age') && html.includes('an estimate'));
   assert(html.includes('lb')); // fat-free mass follows the unit setting
   assert(longevityHtml(cards, 'metric', TODAY).includes('72.0 kg'));
+});
+
+// ---------- round 1 review fixes ----------
+
+test('long-term building line: a score already showing counts as 1 of 4 weeks', () => {
+  assert(longTermHtml(longTerm([], TODAY, 90, { recentScored: true }), 90, TODAY).includes('(1 of 4 weeks so far)'));
+  assert(longTermHtml(longTerm([], TODAY, 90), 90, TODAY).includes('(0 of 4 weeks so far)'));
+});
+
+test('longevity card: one sentence with units, no jargon; no sparkline without a trend', () => {
+  const rows = line(60, (i) => ({ id: day(i), vo2max: 40 + (60 - i) * 0.02 })).map((p) => p.v);
+  const html = longevityHtml(longevityCards({ rows, measures: [], profile: { sex: 'male', age: 40 }, today: TODAY }), 'imperial', TODAY);
+  assert(/Up [\d.]+ ml\/kg\/min in 90 days/.test(html));
+  assert(!html.includes('Kyle') && !html.includes('Steady over'));
+  const sparse = longevityHtml(longevityCards({ rows: [{ id: day(1), vo2max: 41 }, { id: day(0), vo2max: 42 }], measures: [], profile: {}, today: TODAY }), 'imperial', TODAY);
+  assert(sparse.includes('Not enough readings yet') && !sparse.includes('<svg'));
 });
