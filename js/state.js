@@ -20,7 +20,7 @@ export const state = {
   health_daily: [], // server-written (Apple Health, W2)
   integrations: {}, // server-written status: { withings: {...} }
   serverError: null,
-  sync: navigator.onLine ? 'synced' : 'offline',
+  sync: typeof navigator === 'undefined' || navigator.onLine ? 'synced' : 'offline',
 
   set(patch) {
     Object.assign(this, patch);

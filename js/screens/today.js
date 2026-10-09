@@ -1,6 +1,6 @@
 import { state, units as getUnits } from '../state.js';
 import { esc, $, isStandalone, isIOS } from '../ui.js';
-import { formatWeight, weightToDisplay } from '../units.js';
+import { weightToDisplay, weightUnit } from '../units.js';
 import { trendChange, projectGoalDate } from '../weight/smoothing.js';
 import { sparklineSVG } from '../weight/chart.js';
 import { weightSeries, currentTargets } from '../derived.js';
@@ -154,7 +154,7 @@ export function renderToday(el) {
         <div class="row between center">
           <div>
             <p class="label">Weight trend</p>
-            <p class="hero-num" data-count>${latest ? formatWeight(latest.trend, u) : '—'}</p>
+            <p class="hero-num">${latest ? `<span data-count>${weightToDisplay(latest.trend, u).toFixed(1)}</span> <small>${weightUnit(u)}</small>` : '—'}</p>
             <p class="small ${tone}">${change == null ? 'Log a few days to see your trend' : `${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week`}</p>
           </div>
           ${sparklineSVG(series)}

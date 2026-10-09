@@ -9,7 +9,7 @@ import { loadPhotoIndex } from './ui/photos.js';
 import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
 import { hapticTabs, hapticSegments } from './ui/haptic.js';
 import { enhanceSegs } from './ui/controls.js';
-import { attachPull, detachPull } from './ui/pull.js';
+import { attachPull, detachPull, canPullSync, waitAtMost, PULL_WAIT_MS } from './ui/pull.js';
 import { call } from './functions.js';
 import { attachSwipeBack } from './ui/swipeback.js';
 import { skeletonHTML } from './ui/skeleton.js';
@@ -241,11 +241,16 @@ subscribe((patch) => {
 // ---------- pull to refresh (Today, Progress, Body) ----------
 const PULL_ROUTES = new Set(['today', 'weight', 'history', 'awards', 'score', 'body']);
 let pullRoute = null;
+let lastPullSync = 0;
 async function refreshData() {
   const w = state.integrations && state.integrations.withings;
   // Re-read the cache always; ask Withings for new weigh-ins only where that button already exists (Settings → Withings).
-  if (w && w.connected && !w.needs_reconnect && navigator.onLine) {
-    try { await call('withingsSyncNow', {}, { timeout: 130000 }); } catch (e) { toast(e.message); }
+  // The spinner waits at most PULL_WAIT_MS; a slower sync carries on in the background (toast only if it fails),
+  // and a pull won't start another one within the cooldown.
+  if (w && w.connected && !w.needs_reconnect && navigator.onLine && canPullSync(Date.now(), lastPullSync)) {
+    lastPullSync = Date.now();
+    const sync = call('withingsSyncNow', {}, { timeout: 130000 }).then(() => 'ok', (e) => { toast(e.message); return 'failed'; });
+    if ((await waitAtMost(sync, PULL_WAIT_MS)) === 'timeout') sync.then((r) => { if (r === 'ok') render(); });
   }
   resetCounters();
   await render();

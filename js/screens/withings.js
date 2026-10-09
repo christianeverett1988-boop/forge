@@ -47,13 +47,20 @@ export function renderWithings(el, sub) {
 
       ${!connected ? `
       <div class="card stack">
-        <p class="notice info small" data-one-account><b>One scale, one Forge account (for now).</b> A Withings scale can only link to a single Forge account at the moment, and this one isn’t linked to yours. You can still log your weight by hand: tap <b>Log weight</b> on Today, or <b>Progress → + Log weight</b>.</p>
-        <p>Your scale’s weigh-ins and body composition land in Forge on their own, a few minutes after you step off. Your full Withings history comes in too.</p>
-        <p class="notice info small">${EXISTING_ACCOUNT}</p>
+        <p>Your scale’s weigh-ins and body composition arrive in Forge on their own, history included.</p>
+        <p class="callout" data-one-account>${icon('info')}<span>This scale isn’t linked to your Forge account yet. You can still log your weight by hand.</span></p>
+        <p class="callout warn">${icon('warn')}<span>Log in with your <b>existing</b> Withings account. Don’t create a new one.</span></p>
         ${connectUrl ? `
-          <a class="btn" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings →</a>
+          <a class="btn primary" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings ${icon('chev')}</a>
           <p class="small muted">On the Withings page, tap <b>Log in</b> (not “Create account”), then <b>Allow</b>. When it says “Connected”, come back here.</p>`
-        : `<button class="btn" data-connect ${busy === 'connect' ? 'disabled' : ''}>${busy === 'connect' ? 'Preparing…' : 'Connect Withings'}</button>`}
+        : `<button class="btn primary" data-connect ${busy === 'connect' ? 'disabled' : ''}>${busy === 'connect' ? 'Preparing…' : 'Connect Withings'}</button>`}
+        <details class="learn-more small"><summary>Learn more</summary>
+          <div class="stack">
+            <p class="small muted"><b>One scale, one Forge account (for now).</b> A Withings scale can only link to a single Forge account at the moment. To log by hand, tap <b>Log weight</b> on Today, or <b>Progress → + Log weight</b>.</p>
+            <p class="small muted">Weigh-ins land a few minutes after you step off, and your full Withings history comes in too.</p>
+            <p class="small muted">${EXISTING_ACCOUNT}</p>
+          </div>
+        </details>
       </div>` : `
       ${w.needs_reconnect ? `<div class="notice warn">Withings stopped accepting Forge’s sign-in. <button class="link" data-connect>Connect again</button> (${EXISTING_ACCOUNT})</div>` : ''}
       ${connectUrl && w.needs_reconnect ? `<a class="btn" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings →</a>` : ''}

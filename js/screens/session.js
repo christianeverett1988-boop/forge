@@ -318,7 +318,7 @@ function exerciseMenu(i, el) {
           <button class="btn ghost grow" data-a="up" ${i === 0 ? 'disabled' : ''}>Move up</button>
           <button class="btn ghost grow" data-a="down" ${i === L().exercises.length - 1 ? 'disabled' : ''}>Move down</button>
         </div>
-        <button class="btn ghost" data-a="dropset">Remove last unfinished set</button>
+        <button class="btn ghost" data-a="dropset">Remove last open set</button>
         <button class="btn danger-ghost" data-a="remove">Remove exercise</button>
       </div>`;
     body.addEventListener('click', (e) => {

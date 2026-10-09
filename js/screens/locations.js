@@ -64,15 +64,17 @@ export function renderLocations(el) {
       };
       const rows = presetPickerRows(state.locations);
       body.innerHTML = `
-        <div class="choices">
+        <div class="pick-group">
           ${rows.map(({ preset, addAnother }) => `
             <button class="pick" type="button" data-preset="${esc(preset.key)}">
-              <b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
-              <small>${esc(presetDescription(preset, { inLocations: true }))}</small>
+              <span class="pick-text"><b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
+              <small>${esc(presetDescription(preset, { inLocations: true }))}</small></span>
+              <span class="chev" aria-hidden="true">${icon('chev')}</span>
             </button>`).join('')}
           <button class="pick" type="button" data-custom>
-            <b>Custom (start empty)</b>
-            <small>Name it and pick your own equipment.</small>
+            <span class="pick-text"><b>Custom (start empty)</b>
+            <small>Name it and pick your own equipment.</small></span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </button>
         </div>`;
       $$('[data-preset]', body).forEach((b) =>

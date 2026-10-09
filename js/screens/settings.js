@@ -71,7 +71,7 @@ export function renderSettings(el) {
       <p class="sec-foot">Coach audio mixes with your music and is silent when your ringer switch is off.</p>
       <div class="stack" data-photos hidden>
         <p class="small"><b>Demo photos</b> <span class="muted" data-photo-status></span></p>
-        <button class="btn ghost" data-photo-dl>Download all demo photos</button>
+        <button class="btn ghost" data-photo-dl>Download demo photos</button>
       </div>
 
       <p class="sec-title">Connections</p>
@@ -130,9 +130,9 @@ export function renderSettings(el) {
     const box = $('[data-photos]', el);
     if (!box || !st.total) return;
     box.hidden = false;
-    $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline`;
+    $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline${st.saved >= st.total ? '' : ` · ≈ ${st.mb.toFixed(1)} MB to download`}`;
     const btn = $('[data-photo-dl]', el);
-    btn.textContent = st.saved >= st.total ? 'All demo photos saved' : `Download all demo photos (≈ ${st.mb.toFixed(1)} MB)`;
+    btn.textContent = st.saved >= st.total ? 'All demo photos saved' : 'Download demo photos';
     btn.disabled = st.saved >= st.total;
   };
   paintPhotos();

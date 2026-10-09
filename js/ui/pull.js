@@ -15,6 +15,20 @@ export function pullState(dy) {
   return { offset, progress: Math.min(1, offset / PULL_THRESHOLD), ready: offset >= PULL_THRESHOLD };
 }
 
+export const PULL_SYNC_COOLDOWN_MS = 2 * 60 * 1000; // a pull never asks Withings again within this long
+export const PULL_WAIT_MS = 8000; // the spinner never waits longer than this for a sync
+
+/** May a pull start a Withings sync now? `last` is when the previous pull-started sync began (ms) or 0. Pure. */
+export function canPullSync(now, last, cooldown = PULL_SYNC_COOLDOWN_MS) {
+  return !last || now - last >= cooldown || now < last;
+}
+
+/** Resolves with the promise's value, or 'timeout' after `ms`, whichever is first. The promise keeps running. */
+export function waitAtMost(promise, ms) {
+  let t;
+  return Promise.race([promise, new Promise((r) => { t = setTimeout(() => r('timeout'), ms); })]).finally(() => clearTimeout(t));
+}
+
 let teardown = null;
 
 /** Attach to the current screen. `refresh()` returns a promise; routes without pull-to-refresh call detachPull(). */

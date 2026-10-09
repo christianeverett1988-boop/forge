@@ -66,6 +66,37 @@ test('pull to refresh: resistance, threshold and cap', () => {
   eq(pullState(10000).progress, 1);
 });
 
+test('pull sync cooldown: one Withings sync per pull window, spinner wait is capped', async () => {
+  const { canPullSync, waitAtMost, PULL_SYNC_COOLDOWN_MS, PULL_WAIT_MS } = await import('../js/ui/pull.js');
+  assert(canPullSync(1000, 0), 'first pull syncs');
+  assert(!canPullSync(1000 + 30000, 1000), 'a second pull 30 s later does not');
+  assert(!canPullSync(1000 + PULL_SYNC_COOLDOWN_MS - 1, 1000));
+  assert(canPullSync(1000 + PULL_SYNC_COOLDOWN_MS, 1000), 'after the cooldown it may');
+  assert(canPullSync(500, 1000), 'a clock that went backwards does not lock it out');
+  assert(PULL_WAIT_MS <= 10000);
+  eq(await waitAtMost(Promise.resolve('ok'), 50), 'ok');
+  eq(await waitAtMost(new Promise(() => {}), 10), 'timeout');
+});
+
+test('metric weight falls back to hand-logged weigh-ins; empty state leads with Log weight', async () => {
+  const { metricPoints, metricEmptyChoice } = await import('../js/withings/body.js');
+  const weights = [
+    { id: 'a', kg: 90, day: '2026-01-02', measured_at: '2026-01-02T08:00:00.000Z' },
+    { id: 'b', kg: 91, day: '2026-01-01', measured_at: '2026-01-01T08:00:00.000Z' },
+    { id: 'c', kg: 70, day: '2026-01-03', deleted: true },
+    { id: 'd', kg: 50, day: '2026-01-04', review: true },
+  ];
+  const pts = metricPoints([], 'weight_kg', { weights });
+  eq(pts.map((p) => p.v).join(), '91,90');
+  eq(metricPoints([], 'fat_ratio_pct', { weights }).length, 0, 'only weight falls back');
+  const scale = [{ day: '2026-02-01', measured_at: '2026-02-01T07:00:00.000Z', metrics: { weight_kg: 80 } }];
+  eq(metricPoints(scale, 'weight_kg', { weights }).map((p) => p.v).join(), '80', 'scale readings win');
+  eq(metricEmptyChoice('weight_kg', false).primary.label, 'Log weight');
+  eq(metricEmptyChoice('weight_kg', false).secondary.label, 'Connect Withings');
+  eq(metricEmptyChoice('fat_ratio_pct', false).primary.label, 'Connect Withings');
+  eq(metricEmptyChoice('fat_ratio_pct', true).primary.label, 'Open data check');
+});
+
 test('no emoji or text glyphs used as icons in js/screens (SVG icons from js/ui/icons.js instead)', () => {
   const GLYPH = /\p{Extended_Pictographic}|[☰❚✕›‹⇄⏱✓✗▶⤴⋯]/u;
   const ALLOW = new Set([]); // the share card canvas is js/ui/sharecard.js and may keep emoji

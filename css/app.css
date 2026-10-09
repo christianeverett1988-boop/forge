@@ -109,6 +109,7 @@ input[switch] { accent-color: var(--accent); flex: none; width: auto; min-height
   background: var(--text-1); color: var(--bg);
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
   text-decoration: none; cursor: pointer;
+  white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
   transition: transform var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out);
 }
 .btn svg { width: 20px; height: 20px; flex: none; }
@@ -173,10 +174,22 @@ input[type=date] { -webkit-appearance: none; appearance: none; }
 .seg[data-thumb] input:checked + span { background: transparent; color: var(--text-1); }
 
 /* tap-to-pick rows (no radio/check marker) */
-.pick { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; min-height: 56px; justify-content: center;
-  padding: var(--s-3) 20px; border-radius: var(--r-lg); background: var(--surface-1); border: 0; color: inherit; font: inherit; }
+.pick-group { background: var(--surface-2); border-radius: var(--r-xl); overflow: hidden; }
+.pick { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); width: 100%; text-align: left; min-height: 60px;
+  padding: var(--s-3) var(--s-4) var(--s-3) 20px; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.pick + .pick::before { content: ""; position: absolute; top: 0; left: 20px; right: 0; height: .5px; background: var(--separator); }
+.pick:active { background: var(--surface-3); }
+.pick-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pick b { font-weight: 600; }
 .pick small { color: var(--text-2); font-size: 15px; }
+.pick .chev { color: var(--text-3); display: inline-flex; flex: none; }
+.pick .chev svg { width: 18px; height: 18px; }
+
+/* inline callout: an icon and a sentence, no box (never a box inside a card) */
+.callout { display: flex; gap: var(--s-2); align-items: flex-start; color: var(--text-2); font-size: 15px; line-height: 1.4; }
+.callout svg { width: 20px; height: 20px; flex: none; margin-top: 1px; color: var(--accent-text); }
+.callout.warn svg { color: var(--warn); }
+.learn-more summary { color: var(--accent-text); min-height: 44px; display: flex; align-items: center; cursor: pointer; }
 
 /* big tappable choice rows */
 .choices { display: flex; flex-direction: column; gap: var(--s-2); }
@@ -242,7 +255,8 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .big small { font-size: 15px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
 /* Hero metric: the one number on a card that gets the gradient and a soft glow. */
 .hero-num {
-  font: 700 56px/1 var(--num); letter-spacing: -0.035em; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font: 700 48px/1 var(--num); letter-spacing: -0.035em; font-variant-numeric: tabular-nums;
   background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 18px var(--accent-glow));
 }

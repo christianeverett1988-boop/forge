@@ -79,6 +79,28 @@ export function dailySeries(points) {
   return [...byDay.values()].sort((a, b) => (a.day < b.day ? -1 : 1));
 }
 
+/** Hand-logged weigh-ins as metric points, for people with no scale readings in body_measures (weight only). */
+export function weightFallbackPoints(weights) {
+  return (weights || [])
+    .filter((w) => !w.deleted && !w.review && Number.isFinite(w.kg) && w.day)
+    .map((w) => ({ at: w.measured_at || `${w.day}T08:00:00`, day: w.day, v: w.kg }))
+    .sort((a, b) => (a.at < b.at ? -1 : 1));
+}
+
+/** Points for one metric; weight falls back to the weights you logged when the scale sent nothing. */
+export function metricPoints(docs, key, { height = null, weights = [] } = {}) {
+  const pts = metricSeries(docs, key, { height });
+  return !pts.length && key === 'weight_kg' ? weightFallbackPoints(weights) : pts;
+}
+
+/** What the empty Metric screen offers. Weight can be logged by hand, so that comes first and Withings is secondary. */
+export function metricEmptyChoice(key, withingsConnected) {
+  if (key === 'weight_kg') return { primary: { href: '#/weight', label: 'Log weight' }, secondary: withingsConnected ? null : { href: '#/withings', label: 'Connect Withings' } };
+  return withingsConnected
+    ? { primary: { href: '#/withings/check', label: 'Open data check' }, secondary: null }
+    : { primary: { href: '#/withings', label: 'Connect Withings' }, secondary: null };
+}
+
 /** Latest value and the change over `days` (vs. the value on or before that day). */
 export function latestAndChange(points, days = 30) {
   if (!points.length) return null;

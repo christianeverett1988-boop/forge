@@ -58,7 +58,7 @@ export function renderScore(el) {
       <p class="big-title">${s.trackedCount > 0 ? `Based on ${s.trackedCount} of 5 parts so far` : 'Your score starts soon'}</p>
       <p class="muted">Forge scores five things: your body, recovery, sleep, training and (soon) food. It shows a number once at least ${s.minPillars} of them have data, so a score is never built from just one or two.</p>
       <ul class="reasons"><li>Log your weight a few times, or connect your Withings scale.</li><li>Finish a couple of workouts.</li>${apple ? '' : '<li>Add Apple Health for recovery and sleep.</li>'}</ul>
-      ${apple ? '' : '<a class="btn bigbtn" href="#/apple">Add Apple Health for Recovery and Sleep</a>'}
+      ${apple ? '' : '<p class="small muted">Apple Health adds your recovery and sleep.</p><a class="btn bigbtn" href="#/apple">Add Apple Health</a>'}
     </div>`;
 
   const movers = s.movers.length ? `
