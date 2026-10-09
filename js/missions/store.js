@@ -10,7 +10,7 @@ import { streak } from '../workouts/awards.js';
 import {
   DEFAULTS, indexDays, missionsFor, missionXP, weekDots, allDone, dayXP, localDay, shiftDay, MISSION_XP, ALL_DONE_XP,
 } from './core.js';
-import { missionBadges, newMissionBadges } from './badges.js';
+import { missionBadges, newMissionBadges, currentStreak } from './badges.js';
 
 const XP_BADGE = 100;
 export const today = () => localDay(Date.now());
@@ -57,6 +57,21 @@ export function todayMissions() {
 /** Rolling week for the Awards screen. */
 export function weekProgress() {
   return weekDots(today(), liveIndex(), { targets: targets() }, startedDay());
+}
+
+/** XP earned in the last 7 days (never before missions started): mission XP plus 100 per mission badge, as bonusXP sums it. */
+export function weekXP(badges = extraBadges()) {
+  const start = startedDay();
+  if (!start) return 0;
+  const week = shiftDay(today(), -6);
+  const from = week > start ? week : start;
+  const fromBadges = badges.filter((b) => b.earned && b.earned.at.slice(0, 10) >= from).length * XP_BADGE;
+  return missionXP(from, today(), liveIndex(), { targets: targets() }) + fromBadges;
+}
+
+/** What Coach needs: today's missions, the rolling week, the XP earned in it, and the weigh-in streak in days. */
+export function missionsSummary() {
+  return { started: !!startedDay(), today: todayMissions(), week: weekProgress(), weekXP: weekXP(), streak: currentStreak([...liveIndex().weigh], today()) };
 }
 
 /** Mission badges (streaks, body composition), keeping any already saved in awards_seen. */

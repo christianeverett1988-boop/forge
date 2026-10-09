@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.3 — Coach answers for missions, body programs and long-term health (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+Still no AI: every answer is rule-based, from your own data, and reuses the existing helpers (missions core/store, body-programs core/store, `longTerm` and `longevityCards`).
+
+- **"How are my missions going?"** (only after missions have started): today's missions done out of the total and which are left, "N of the last 7 days complete" (fewer days right after starting), the weigh-in streak in days, and "You earned N XP from missions this week" (mission and mission-badge XP from the last 7 days, never before missions started: the same sums Today uses, from `weekXP` in `missions/store.js`). The second line no longer repeats the headline: "Still to do: …" or "All done today."
+- **Pace text can't contradict the goal.** On Coach and `#/program`, a weekly pace outside the safe range that would round into it (0.46 lb shown as "0.5" next to "safe pace: 0.5–1.6 lb") now shows more decimals ("0.46"). New `paceNumber` in `body-programs/core.js`.
+- **"How's my program going?"** (only while a body program runs): week N of M, this week's goals in the same words as `#/program` (the cut's pace line carries the safe pace), and weeks fully hit so far. With nothing running it becomes **"Which program should I start?"**: the recommended program, what it is, and a one-line why. A cut is never suggested when the safety checks block it.
+- **"How's my long-term health?"** (only when a Longevity card has data): the 90-day Forge Score sentence and the up-to-three Longevity metrics with the clearest change, each in the card's own plain sentence with units. Clearest = the change measured in multiples of that metric's noise floor, so bpm and ml/kg/min compare fairly (`clearestChanges` in `longview.js`).
+- **The chip list stays short.** At most 8 questions show. When more apply they are ordered by relevance: a running program and started missions move to the top, everything else keeps its place, and the least relevant fall off the end.
+- **No action buttons on the new answers.** The issue asked for links to `#/program` and Awards "if the action system supports links". Coach actions are accept/reject cards that run a function, so there is no link type and they are left out. Adding one is a small follow-up.
+- New helpers: `currentStreak` (`missions/badges.js`), `missionsSummary` (`missions/store.js`), `recommendedWhy` (`body-programs/core.js`).
+- New tests in `tests/coach-v0143.test.js`: each answer with full, partial and empty data, the visibility rules, and the ordering cap. One older coach test now expects the seven original chips with no missions, program or Longevity data.
+
 ## 0.14.2 — YMCA machine demo figures + goal-path date range year (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

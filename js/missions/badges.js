@@ -45,6 +45,15 @@ export function streakDays(days) {
   return first;
 }
 
+/** Weigh-in days in a row ending today. A day without a weigh-in yet doesn't break it: it still counts back from yesterday. */
+export function currentStreak(days, today) {
+  const have = new Set(days);
+  let day = have.has(today) ? today : shiftDay(today, -1);
+  let n = 0;
+  while (have.has(day) && n < 4000) { n++; day = shiftDay(day, -1); }
+  return n;
+}
+
 const BASE_DAYS = 14;
 const NOW_DAYS = 7;
 const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;

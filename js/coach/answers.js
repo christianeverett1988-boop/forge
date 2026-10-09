@@ -205,10 +205,80 @@ export function strongerAnswer(d) {
   return out;
 }
 
+// ---- 8. How are my missions going? ----
+const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+const dot = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
+const missionsOn = (d) => !!(d.missions && d.missions.started);
+export function missionsAnswer(d) {
+  if (!missionsOn(d)) return null;
+  const m = d.missions;
+  const t = m.today || { list: [], done: 0, total: 0 };
+  const left = t.list.filter((x) => !x.done).map((x) => x.label);
+  const lines = [];
+  if (!t.total) lines.push('No missions today.');
+  else if (!left.length) lines.push('All done today.');
+  else lines.push(`Still to do: ${left.join(', ')}.`);
+  const counted = (m.week || []).filter((x) => x.counted);
+  const full = counted.filter((x) => x.all).length;
+  if (counted.length) lines.push(counted.length === 7 ? `${full} of the last 7 days complete.` : `${full} of the ${plural(counted.length, 'day')} since you started complete.`);
+  lines.push(m.streak > 0 ? `Weigh-in streak: ${plural(m.streak, 'day')}.` : 'No weigh-in streak yet. A weigh-in today starts one.');
+  lines.push(`You earned ${m.weekXP || 0} XP from missions this week.`);
+  const headline = !t.total ? 'No missions today.' : !left.length ? 'All of today’s missions are done.' : `${t.done} of ${t.total} missions done today.`;
+  return { id: 'missions', headline, lines: lines.slice(0, 4), why: 'Missions come from your own weigh-ins, workouts, steps and sleep. The week is the last 7 days, counted from the day you started missions.' };
+}
+
+// ---- 9. How's my program going? / Which program should I start? ----
+const programRunning = (d) => !!(d.program && d.program.status && !d.program.status.finished);
+export const programLabel = (d) => (programRunning(d) ? 'How’s my program going?' : 'Which program should I start?');
+export function programAnswer(d) {
+  const p = d.program;
+  if (!p) return null;
+  const st = p.status;
+  if (st && !st.finished) {
+    const cur = st.weeks.find((w) => w.state === 'current') || st.weeks[0];
+    // Same words as #/program: each goal's label and progress text (the cut's pace goal carries the safe pace).
+    // Four lines fit, so the optional steps goal (hidden without Apple Health anyway) goes first when there are too many.
+    const goals = cur.goals.filter((g) => g.id !== 'steps' || cur.goals.length <= 3);
+    const lines = [`Week ${st.weekNo} of ${st.def.weeks}. ${plural(st.weeksHit, 'week')} fully hit so far.`, ...goals.map((g) => dot(`${g.label}: ${g.text}`))];
+    return {
+      id: 'program', headline: `${st.def.name}: ${st.goalsDone} of ${st.goalsTotal} goals so far.`, lines: lines.slice(0, 4),
+      why: 'Each week runs from the day you started and is judged on your own weigh-ins, workouts and smoothed weight trend.',
+    };
+  }
+  const r = p.recommended;
+  if (!r) return null;
+  return {
+    id: 'program', headline: `Start ${r.name}.`,
+    lines: [`${r.weeks} weeks. ${r.blurb}`, r.plain, dot(`Why this one: ${r.why}`), 'Pick it on the Programs card on the Body tab.'],
+    why: 'Matched to the goal in your profile. Only one program runs at a time and you can end it whenever you like.',
+  };
+}
+
+// ---- 10. How's my long-term health? ----
+export function longtermAnswer(d) {
+  const l = d.longterm;
+  if (!l || !l.hasCards) return null;
+  const lines = [];
+  if (l.sentence) lines.push(dot(`Forge Score over 90 days: ${lower(l.sentence)}`));
+  for (const c of l.clear || []) lines.push(dot(`${c.title}: ${lower(c.line)}`));
+  if (!(l.clear || []).length) lines.push('Not enough readings yet for a 90-day trend on your Longevity cards.');
+  if (lines.length < 2) lines.push('More readings will sharpen the picture.');
+  return {
+    id: 'longterm', headline: 'Here is how your long-term health looks.', lines: lines.slice(0, 4),
+    why: 'Theil–Sen trends over 90 days, compared only with your own past.', note: MEDICAL,
+  };
+}
+
 /** True when there are no weigh-ins and no workouts yet: the Coach screen shows its starter card. */
 export const needsStarter = (d) => !(d.weights && d.weights.length) && !d.hasTraining;
 
-/** Questions in display order. label is a string or (data) → string. */
+/** At most this many chips show; when more apply, the most relevant ones win. */
+export const MAX_QUESTIONS = 8;
+
+/**
+ * Questions in display order. label is a string or (data) → string. rank (optional, data → number) moves a question
+ * up while it is active, and only matters when more than MAX_QUESTIONS apply: lower comes first, default is its place in this list.
+ */
 export const QUESTIONS = [
   { id: 'week', label: weekLabel, answer: weekAnswer },
   { id: 'goal', label: 'Am I on track for my goal?', answer: goalAnswer },
@@ -217,14 +287,20 @@ export const QUESTIONS = [
   { id: 'recovered', label: 'Am I recovered?', answer: recoveredAnswer },
   { id: 'score', label: 'What’s my Forge Score made of?', answer: scoreAnswer },
   { id: 'stronger', label: 'Am I getting stronger?', answer: strongerAnswer },
+  { id: 'missions', label: 'How are my missions going?', answer: missionsAnswer, rank: (d) => (missionsOn(d) ? -1 : null) },
+  { id: 'program', label: programLabel, answer: programAnswer, rank: (d) => (programRunning(d) ? -2 : null) },
+  { id: 'longterm', label: 'How’s my long-term health?', answer: longtermAnswer },
 ];
 
 /** The questions that have data behind them right now: [{ id, label, answer }], answers already worked out. */
 export function availableQuestions(data, today) {
   const out = [];
-  for (const q of QUESTIONS) {
+  QUESTIONS.forEach((q, i) => {
     const a = q.answer(data, today);
-    if (a) out.push({ id: q.id, label: typeof q.label === 'function' ? q.label(data) : q.label, answer: a });
-  }
-  return out;
+    if (!a) return;
+    const r = q.rank ? q.rank(data) : null;
+    out.push({ id: q.id, label: typeof q.label === 'function' ? q.label(data) : q.label, answer: a, order: r == null ? i : r });
+  });
+  if (out.length <= MAX_QUESTIONS) return out.map(({ order, ...q }) => q);
+  return out.sort((a, b) => a.order - b.order).slice(0, MAX_QUESTIONS).map(({ order, ...q }) => q);
 }
