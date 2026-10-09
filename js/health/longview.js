@@ -4,10 +4,20 @@ import { rolling } from '../ui/linechart.js';
 import { sparkSvg } from './cards.js';
 import { fmtMetric } from '../withings/body.js';
 import { RANGES, WEEKS_MIN } from './longterm.js';
+import { addDays } from '../weight/smoothing.js';
 
 export const EMPTY_LONGEVITY = 'Longevity cards appear when your watch or scale sends VO₂max, resting heart rate, HRV or body composition.';
 
-const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
+/** Rolling mean that keeps only points with a full `n`-day window behind them (no partial-window hook at the left edge).
+ * Falls back to the raw points when too little is left to draw a line. */
+export function smoothFull(points, n) {
+  if (!points.length) return points;
+  const from = addDays(points[0].day, n - 1);
+  const full = rolling(points, n).filter((p) => p.day >= from);
+  return full.length >= 2 ? full : points;
+}
+
+const sign =(n) => (n > 0 ? '+' : n < 0 ? '−' : '');
 
 /** The Long term card. lt: result of longTerm(); range: 90 | 365. */
 export function longTermHtml(lt, range, today) {
@@ -17,7 +27,7 @@ export function longTermHtml(lt, range, today) {
     return `<div class="card stack" data-longterm><p class="label">Long term</p>
       <p class="muted">Your long-term view starts after ${WEEKS_MIN} weeks of data (${lt.weeksSoFar} of ${WEEKS_MIN} weeks so far).</p></div>`;
   }
-  const pts = rolling(lt.points.map((p) => ({ day: p.day, v: p.score })), 3);
+  const pts = smoothFull(lt.points.map((p) => ({ day: p.day, v: p.score })), 21);
   const rows = lt.pillars.map((p) => `<li class="lt-row"><span>${esc(p.label)}</span>
     <b class="${p.delta >= 2 ? 'good' : p.delta <= -2 ? 'warn' : 'muted'}"><span aria-hidden="true">${p.arrow}</span> ${p.delta === 0 ? 'No change' : `${sign(p.delta)}${Math.abs(p.delta)} point${Math.abs(p.delta) === 1 ? '' : 's'}`}</b></li>`).join('');
   return `<div class="card stack" data-longterm><div class="row between center"><p class="label" style="margin:0">Long term</p></div>
@@ -55,7 +65,7 @@ function cardHtml(c, units, today) {
   if (c.key === 'hrv_sdnn_ms' && c.usual) subs.push(c.usual.words);
   return `<a class="card lt-card" href="${c.link}">
     <div class="row between center"><strong>${esc(c.title)}</strong><b class="lt-val">${f(c.latest.v)}</b></div>
-    ${n.enough ? `<div class="lt-spark ${n.tone}">${sparkSvg(rolling(c.series, 7), today, 90, { width: 300, height: 44 })}</div>` : ''}
+    ${n.enough ? `<div class="lt-spark ${n.tone}">${sparkSvg(smoothFull(c.series, 7), today, 90, { width: 300, height: 44 })}</div>` : ''}
     <p class="small ${n.tone === 'good' ? 'good' : n.tone === 'bad' ? 'warn' : 'muted'}" style="margin:0">${esc(line)}</p>
     ${subs.map((s) => `<p class="small muted" style="margin:0">${s}</p>`).join('')}
     <p class="small muted" style="margin:0">${esc(c.why)}</p></a>`;

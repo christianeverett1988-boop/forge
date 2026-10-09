@@ -5,7 +5,7 @@ import { sampleDays, weeklyScores, changeSentence, pillarChanges, longTerm, chan
 import {
   vo2Series, vo2Band, ninetyDay, trendWords, hrvVsUsual, ffmiOf, ffmiBand, longevityCards, goodWay,
 } from '../js/health/longevity.js';
-import { longTermHtml, longevityHtml, EMPTY_LONGEVITY } from '../js/health/longview.js';
+import { smoothFull, longTermHtml, longevityHtml, EMPTY_LONGEVITY } from '../js/health/longview.js';
 import { MIN_POINTS } from '../js/health/trends.js';
 
 const TODAY = '2026-10-10';
@@ -234,4 +234,11 @@ test('longevity card: one sentence with units, no jargon; no sparkline without a
   assert(!html.includes('Kyle') && !html.includes('Steady over'));
   const sparse = longevityHtml(longevityCards({ rows: [{ id: day(1), vo2max: 41 }, { id: day(0), vo2max: 42 }], measures: [], profile: {}, today: TODAY }), 'imperial', TODAY);
   assert(sparse.includes('Not enough readings yet') && !sparse.includes('<svg'));
+});
+
+test('smoothFull drops the partial-window points at the left edge', () => {
+  const pts = Array.from({ length: 20 }, (_, i) => ({ day: `2026-09-${String(i + 1).padStart(2, '0')}`, v: i % 2 ? 60 : 50 }));
+  const out = smoothFull(pts, 7);
+  assert(out.length === 14 && out[0].day === '2026-09-07', 'starts at the first full window');
+  assert(smoothFull(pts.slice(0, 7), 7).length === 7, 'too little left: raw points kept');
 });
