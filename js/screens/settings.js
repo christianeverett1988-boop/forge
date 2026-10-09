@@ -11,6 +11,7 @@ import { unlockAudio, coach, sfx, beep } from '../ui/sound.js';
 import { hapticSupport } from '../ui/haptic.js';
 import { icon } from '../ui/icons.js';
 import { photoSettingsHtml, bindPhotoSettings } from '../photos/settings.js';
+import { missionSettings, setMissionSetting } from '../missions/store.js';
 
 function withingsLine() {
   const w = state.integrations && state.integrations.withings;
@@ -35,6 +36,7 @@ export function renderSettings(el) {
   const sfxOn = st.sfx !== false;
   const hapOn = st.haptics !== false;
   const hapSupport = hapticSupport();
+  const ms = missionSettings();
   const nav = (href, ic, title, sub, attrs = '') => `
         <a class="g-row" href="${href}" ${attrs}><span class="g-ic">${icon(ic)}</span><span class="g-text"><span>${title}</span><small>${sub}</small></span><span class="chev">${icon('chev')}</span></a>`;
   el.innerHTML = `
@@ -73,6 +75,13 @@ export function renderSettings(el) {
       <div class="stack" data-photos hidden>
         <p class="small"><b>Demo photos</b> <span class="muted" data-photo-status></span></p>
         <button class="btn ghost" data-photo-dl>Download demo photos</button>
+      </div>
+
+      <p class="sec-title">Missions</p>
+      <div class="group">
+        <div class="g-row static ms-set"><span class="g-text"><span>Steps target</span><small>A daily mission with Apple Health.</small></span>
+          <div class="ms-stepper"><button type="button" data-steps="-500" aria-label="500 fewer steps">−</button><output data-steps-val aria-live="polite">${ms.steps.toLocaleString()}</output><button type="button" data-steps="500" aria-label="500 more steps">+</button></div></div>
+        <label class="g-row ms-set"><span class="g-text"><span>Bedtime</span><small>In bed by this time counts.</small></span><input type="time" name="mission_bed" value="${esc(ms.bed.padStart(5, '0'))}"></label>
       </div>
 
       <p class="sec-title">Connections</p>
@@ -126,6 +135,17 @@ export function renderSettings(el) {
     if (e.target.checked) setTimeout(() => sfx.charge(0.5), 50);
   });
   $('input[name=haptics]', el).addEventListener('change', (e) => patch('settings', 'main', { haptics: e.target.checked }));
+
+  // Missions: the steps target moves in steps of 500 (2,000 to 30,000); the bedtime is a time input.
+  let stepsNow = ms.steps;
+  $$('[data-steps]', el).forEach((b) => b.addEventListener('click', () => {
+    stepsNow = Math.min(30000, Math.max(2000, stepsNow + Number(b.dataset.steps)));
+    $('[data-steps-val]', el).textContent = stepsNow.toLocaleString();
+    setMissionSetting('mission_steps', stepsNow);
+  }));
+  $('input[name=mission_bed]', el).addEventListener('change', (e) => {
+    if (/^\d{2}:\d{2}$/.test(e.target.value)) setMissionSetting('mission_bed', e.target.value);
+  });
 
   // Demo photos: only shown once the photo script has added some.
   const paintPhotos = async () => {

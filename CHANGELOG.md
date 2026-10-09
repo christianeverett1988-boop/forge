@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.0 — Daily missions, weigh-in streaks and body-comp badges (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Today's missions.** A compact card under the workout card with up to four real actions: Weigh in, Train or move (a workout, or 20+ min of cardio; on a rest day "a 20-min walk counts"), Steps, and In bed on time. Steps and bedtime only show if you have Apple Health data. Each is +20 XP, and finishing them all is +30 more; when you do, the card shrinks to one line.
+- **Protein hit** is built but hidden: it switches on by itself once food logs exist.
+- **XP and level.** Mission XP counts in your total and level, from the day you first open this version (nothing retroactive).
+- **Seven new badges.** Weigh-in streaks (7, 30, 100 days) and, with a Withings scale, body fat down 1, 2 and 5 points and lean mass +1 kg (shown as 2.2 lb if you use lb). What you already have is saved quietly.
+- **Awards** shows this week's missions as dots. **Settings → Missions** sets your steps target and bedtime.
+- Derived from data you already have; the only new stored values are in `settings/main`. See `docs/missions.md`.
+
 ## 0.10.1 — Consistency and polish (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

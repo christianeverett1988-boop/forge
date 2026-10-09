@@ -20,6 +20,7 @@ import './restyle.test.js';
 import './trends.test.js';
 import './photos.test.js';
 import './coach.test.js';
+import './missions.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

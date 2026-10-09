@@ -1,0 +1,115 @@
+// Missions from live state. Everything is derived from weights, body_measures, workouts, cardio and
+// health_daily (and food_logs once they exist); the only stored state is in settings/main:
+//   missions_started  the first local day missions counted for XP (never earlier: no retroactive XP)
+//   mission_steps     step target (default 8,000)       mission_bed   bedtime target 'HH:MM' (default 23:00)
+//   missions_seen     { day: [mission ids already shown as done] } for the last two weeks, so a check springs once
+import { state, units as getUnits } from '../state.js';
+import { patch } from '../db.js';
+import { currentTargets } from '../derived.js';
+import { streak } from '../workouts/awards.js';
+import {
+  DEFAULTS, indexDays, missionsFor, missionXP, weekDots, allDone, dayXP, localDay, shiftDay, MISSION_XP, ALL_DONE_XP,
+} from './core.js';
+import { missionBadges } from './badges.js';
+
+const XP_BADGE = 100;
+export const today = () => localDay(Date.now());
+
+export function missionSettings() {
+  const st = state.settings || {};
+  return {
+    steps: Number.isFinite(st.mission_steps) && st.mission_steps > 0 ? st.mission_steps : DEFAULTS.steps,
+    bed: typeof st.mission_bed === 'string' && /^\d{1,2}:\d{2}$/.test(st.mission_bed) ? st.mission_bed : DEFAULTS.bed,
+  };
+}
+export const startedDay = () => (state.settings && state.settings.missions_started) || null;
+
+/** Food logging is optional: the protein mission exists only once there are logs (state.food_logs). */
+const foodLogs = () => (state.food_logs && state.food_logs.length ? state.food_logs : null);
+
+const liveIndex = () => indexDays({
+  weights: state.weights, bodyMeasures: state.body_measures, workouts: state.workouts, cardio: state.cardio,
+  healthDaily: state.health_daily, foodLogs: foodLogs(),
+});
+
+function targets() {
+  const s = missionSettings();
+  const t = foodLogs() ? currentTargets() : null;
+  return { steps: s.steps, bed: s.bed, proteinG: t ? t.proteinG : 0 };
+}
+
+/** The plan has nothing left for today: the weekly goal was already met before today, and nothing is done yet today. */
+function restDayToday() {
+  const goal = (state.profile && state.profile.trainingDays) || 3;
+  const st = streak(state.workouts, state.cardio || [], goal);
+  return st.thisWeek.done >= goal;
+}
+
+/** Today's missions with totals: { list, done, total, xp, bonus, all }. */
+export function todayMissions() {
+  const day = today();
+  const idx = liveIndex();
+  const list = missionsFor(day, idx, { targets: targets(), restDay: restDayToday() });
+  const all = allDone(list);
+  return { day, list, done: list.filter((m) => m.done).length, total: list.length, xp: dayXP(list), bonus: ALL_DONE_XP, all, started: !!startedDay() };
+}
+
+/** Rolling week for the Awards screen. */
+export function weekProgress() {
+  return weekDots(today(), liveIndex(), { targets: targets() }, startedDay());
+}
+
+/** Mission badges (streaks, body composition), keeping any already saved in awards_seen. */
+export function extraBadges() {
+  const idx = liveIndex();
+  return missionBadges({ weighDays: [...idx.weigh], bodyMeasures: state.body_measures || [], seen: (state.settings && state.settings.awards_seen) || {}, units: getUnits() });
+}
+
+/**
+ * XP from outside workouts: missions since missions_started, plus +100 for each mission badge earned on or
+ * after that day (badges you already had on the day this shipped are seeded without XP).
+ */
+export function bonusXP(badges = extraBadges()) {
+  const start = startedDay();
+  if (!start) return 0;
+  const idx = liveIndex();
+  const fromBadges = badges.filter((b) => b.earned && b.earned.at.slice(0, 10) >= start).length * XP_BADGE;
+  return missionXP(start, today(), idx, { targets: targets() }) + fromBadges;
+}
+
+/** Options that awardsFor needs to include missions: { extraBadges, bonusXP }. */
+export function awardOpts() {
+  const badges = extraBadges();
+  return { extraBadges: badges, bonusXP: bonusXP(badges) };
+}
+
+/** First run: remember today as the day missions started counting. A no-op once saved. */
+export function ensureStarted() {
+  if (!state.settings || state.settings.missions_started) return;
+  patch('settings', 'main', { missions_started: today() });
+}
+
+export function setMissionSetting(key, value) {
+  patch('settings', 'main', { [key]: value });
+}
+
+/** Ids already shown as done today (so only a newly finished mission animates). */
+export function seenToday() {
+  const seen = (state.settings && state.settings.missions_seen) || {};
+  return new Set(seen[today()] || []);
+}
+
+/** Remember today's done missions; keeps the last 14 days. Writes only when something changed. */
+export function rememberDone(ids) {
+  if (!state.settings) return;
+  const day = today();
+  const seen = (state.settings.missions_seen) || {};
+  const have = new Set(seen[day] || []);
+  if (ids.every((id) => have.has(id))) return;
+  const keep = shiftDay(day, -14);
+  const next = Object.fromEntries(Object.entries(seen).filter(([d]) => d >= keep));
+  next[day] = [...new Set([...have, ...ids])];
+  patch('settings', 'main', { missions_seen: next });
+}
+
+export { MISSION_XP, ALL_DONE_XP };

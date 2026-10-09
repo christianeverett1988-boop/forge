@@ -11,7 +11,7 @@ export const XP = {
   week: 100, // +100 for the workout that hits your weekly goal
   badge: 100, // +100 per badge
 };
-export const XP_RULES = '+10 per working set (up to 40), +25 per exercise with 2 or more working sets, +50 per PR (up to +200 a workout), +100 for the workout that hits your weekly goal, and +100 per badge.';
+export const XP_RULES = '+10 per working set (up to 40), +25 per exercise with 2 or more working sets, +50 per PR (up to +200 a workout), +100 for the workout that hits your weekly goal, and +100 per badge. Daily missions add +20 each, and +30 more when you finish all of a day’s missions.';
 
 const workingSets = (it) => (it.sets || []).filter((s) => s.done && !s.warmup).length;
 /** A finished workout only counts (XP, training days, streaks, badges) if it has a working set. */
@@ -213,9 +213,11 @@ export function weeklyBonusIds(list, cardioList, goal) {
  * workout that unlocked them, total XP and level.
  *   opts.seen          settings/main.awards_seen ({ id: ISO date }): badges stay earned once seen
  *   opts.exerciseById  for Full House (primary muscles); without it Full House is never unlocked
+ *   opts.extraBadges   badges decided elsewhere (js/missions/badges.js), listed after the rest: [{ id, name, how, earned }]
+ *   opts.bonusXP       XP from outside workouts (daily missions and their badges), added to the total and the level
  * Returns { total, level, perWorkout: Map(id → { xp, badges: [ids], at }), badges: [{ id, name, how, earned }] }
  */
-export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exerciseById = null } = {}) {
+export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exerciseById = null, extraBadges = [], bonusXP = 0 } = {}) {
   const list = finished(workouts);
   const cardioList = liveCardio(cardio).sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
   const t = { workouts: 0, prs: 0, maxPrsInWorkout: 0, volumeKg: 0, maxVolumeKg: 0, bestStreak: 0, early: 0, late: 0, level: 1, xp: 0, fullHouse: false, deloads: 0, comebacks: 0 };
@@ -284,12 +286,12 @@ export function awardsFor(workouts, cardio = [], goal = 3, { seen = {}, exercise
     earned[id] = { at: date, workoutId: null };
     kept++;
   }
-  const total = t.xp + kept * XP.badge;
+  const total = t.xp + kept * XP.badge + (bonusXP || 0);
   return {
     total,
     level: levelFor(total),
     perWorkout,
-    badges: BADGES.map((b) => ({ id: b.id, name: b.name, how: b.how, earned: earned[b.id] || null })),
+    badges: [...BADGES.map((b) => ({ id: b.id, name: b.name, how: b.how, earned: earned[b.id] || null })), ...extraBadges.map((b) => ({ ...b, extra: true }))],
   };
 }
 
@@ -315,7 +317,8 @@ export function workoutAwards(workouts, cardio, goal, workoutId, now = Date.now(
   const idx = list.findIndex((w) => w.id === workoutId);
   let before = list.slice(0, idx).reduce((n, w) => n + a.perWorkout.get(w.id).xp.total, 0);
   // Kept badges (earned before, no longer unlocked by history) count toward the level before, by date.
-  for (const b of a.badges) if (b.earned && !b.earned.workoutId && b.earned.at < mine.at) before += XP.badge;
+  for (const b of a.badges) if (b.earned && !b.extra && !b.earned.workoutId && b.earned.at < mine.at) before += XP.badge;
+  before += opts.bonusXP || 0; // mission XP isn't tied to a workout: it counts toward the level you started from
   const lvBefore = levelFor(before);
   const lvAfter = levelFor(before + mine.xp.total);
   const byId = Object.fromEntries(a.badges.map((b) => [b.id, b]));

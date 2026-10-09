@@ -30,6 +30,9 @@ const ICONS = {
   return: '<path d="M12.5 4a8.5 8.5 0 1 1-8.5 8.5h3.2a5.3 5.3 0 1 0 5.3-5.3V11L6.7 5.6 12.5.2z"/>',
   sunrise: '<path d="M5.5 17a6.5 6.5 0 0 1 13 0z M1 18.5h22V21H1z M11 4.5h2V10h-2z M2.8 9.2l1.5-1.5 3.3 3.3-1.5 1.5z M16.4 11l3.3-3.3 1.5 1.5-3.3 3.3z"/>',
   moon: '<path d="M14.5 2a10.2 10.2 0 1 0 7.6 15.4A8.2 8.2 0 0 1 14.5 2z M19 2.5l.9 1.9 1.9.9-1.9.9L19 8.1l-.9-1.9-1.9-.9 1.9-.9z"/>',
+  scale: '<path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M12 6a5.5 5.5 0 0 0-5.5 4.6h11A5.5 5.5 0 0 0 12 6z" fill-rule="evenodd"/>',
+  drop: '<path d="M12 1.5c3.2 4.4 7 8.3 7 12.8a7 7 0 0 1-14 0c0-4.5 3.8-8.4 7-12.8z"/>',
+  plus: '<path d="M9.5 2h5v7.5H22v5h-7.5V22h-5v-7.5H2v-5h7.5z"/>',
   strike: `<g transform="rotate(-32 11 12) translate(-2 -1)"><path d="${HAMMER}"/></g><path d="M18.5 16.5l1.1 2.3 2.4 1.1-2.4 1.1-1.1 2.4-1.1-2.4-2.3-1.1 2.3-1.1z M21.5 10.5l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7z"/>`,
 };
 
@@ -57,6 +60,13 @@ export const BADGE_ART = {
   dawn: { tier: 1, shape: 'diamond', icon: 'sunrise' },
   night: { tier: 2, shape: 'diamond', icon: 'moon' },
   lv11: { tier: 3, shape: 'diamond', icon: 'strike', n: '11' },
+  wi7: { tier: 1, shape: 'flame', icon: 'scale', n: '7' },
+  wi30: { tier: 2, shape: 'flame', icon: 'scale', n: '30' },
+  wi100: { tier: 3, shape: 'flame', icon: 'scale', n: '100' },
+  bf1: { tier: 1, shape: 'round', icon: 'drop', n: '−1' },
+  bf2: { tier: 2, shape: 'round', icon: 'drop', n: '−2' },
+  bf5: { tier: 3, shape: 'round', icon: 'drop', n: '−5' },
+  lean1: { tier: 2, shape: 'shield', icon: 'plus', n: '+1 kg' },
 };
 export const TIER_NAMES = { 1: 'Ember', 2: 'Steel', 3: 'Gold', 4: 'White heat' };
 
@@ -96,9 +106,10 @@ function ensureSprite() {
  * One badge as SVG markup.
  *   earned  false → grey silhouette   shine  true → a light sweeps across once (new badges)
  */
-export function badgeSVG(id, { earned = true, shine = false, size = 64, label = '' } = {}) {
+export function badgeSVG(id, { earned = true, shine = false, size = 64, label = '', units = 'imperial' } = {}) {
   ensureSprite();
-  const a = BADGE_ART[id] || { tier: 1, shape: 'round', icon: 'spark' };
+  const a = { ...(BADGE_ART[id] || { tier: 1, shape: 'round', icon: 'spark' }) };
+  if (id === 'lean1') a.n = units === 'metric' ? '+1 kg' : '+2 lb'; // the 1 kg goal, in the user's units
   const m = METAL[a.tier];
   const d = SHAPES[a.shape];
   const icon = ICONS[a.icon] || ICONS.spark;

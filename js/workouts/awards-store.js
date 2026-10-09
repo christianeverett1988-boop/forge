@@ -4,10 +4,11 @@ import { state } from '../state.js';
 import { patch } from '../db.js';
 import { awardsFor, workoutAwards, unseenBadges } from './awards.js';
 import { exerciseById } from './library.js';
+import { awardOpts } from '../missions/store.js';
 
 export const goalDays = () => (state.profile && state.profile.trainingDays) || 3;
 const seenNow = () => (state.settings && state.settings.awards_seen) || null;
-const opts = () => ({ seen: seenNow() || {}, exerciseById });
+const opts = () => ({ seen: seenNow() || {}, exerciseById, ...awardOpts() });
 
 /** XP, level and badges for the current history. */
 export const myAwards = () => awardsFor(state.workouts, state.cardio || [], goalDays(), opts());
@@ -21,7 +22,7 @@ export function syncBadges({ exceptWorkoutId = null } = {}) {
   if (!state.settings) return; // settings not loaded yet
   const seen = seenNow();
   const workouts = exceptWorkoutId ? state.workouts.filter((w) => w.id !== exceptWorkoutId) : state.workouts;
-  const list = awardsFor(workouts, state.cardio || [], goalDays(), { seen: seen || {}, exerciseById }).badges;
+  const list = awardsFor(workouts, state.cardio || [], goalDays(), { seen: seen || {}, exerciseById, extraBadges: awardOpts().extraBadges }).badges;
   const add = unseenBadges(list, seen || {});
   if (!seen) patch('settings', 'main', { awards_seen: add || {} });
   else if (add) patch('settings', 'main', { awards_seen: { ...seen, ...add } });

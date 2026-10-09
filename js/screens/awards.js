@@ -1,12 +1,13 @@
 // Progress → Awards: your level and XP, the weekly streak (with this week's days and the monthly freeze),
 // and badges. Derived from history (js/workouts/awards.js); earned badges are also kept in
 // settings/main.awards_seen so they never disappear.
-import { state } from '../state.js';
+import { state, units as getUnits } from '../state.js';
 import { esc } from '../ui.js';
 import { streak, LEVELS, xpForLevel, XP_RULES } from '../workouts/awards.js';
 import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
 import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
 import { icon, emptyState } from '../ui/icons.js';
+import { missionWeekHtml } from '../missions/ui.js';
 
 const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
 
@@ -41,6 +42,8 @@ export function renderAwards(el) {
         </details>
       </div>
 
+      ${missionWeekHtml()}
+
       <div class="card aw-streak">
         <div class="row between center">
           <div><p class="label">Weekly streak</p><p class="aw-big">${icon('flame', { filled: true })} ${st.current} ${st.current === 1 ? 'week' : 'weeks'}</p></div>
@@ -56,7 +59,7 @@ export function renderAwards(el) {
         <ul class="aw-badges">
           ${bs.map((b) => `
             <li class="${b.earned ? 'on' : ''}">
-              ${badgeSVG(b.id, { earned: !!b.earned, shine: !!b.earned && Date.now() - Date.parse(b.earned.at) < RECENT, size: 76, label: `${b.name}${b.earned ? '' : ' (locked)'}` })}
+              ${badgeSVG(b.id, { earned: !!b.earned, shine: !!b.earned && Date.now() - Date.parse(b.earned.at) < RECENT, size: 76, units: getUnits(), label: `${b.name}${b.earned ? '' : ' (locked)'}` })}
               <span class="aw-tier">${TIER_NAMES[BADGE_ART[b.id].tier]}</span>
               <b>${esc(b.name)}</b>
               <small class="muted">${b.earned ? `Earned ${when(b.earned.at)}` : esc(b.how)}</small>
