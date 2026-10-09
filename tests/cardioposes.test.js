@@ -88,7 +88,8 @@ test('cardio figures: the cycle is steady and loops without a jump', () => {
 
 test('cardio figures: cameras — side view for the machines, 3/4 front for the rope and the boxing', () => {
   for (const id of MACHINES) assert(tplOf(id).cam.yaw <= 30, `${id} yaw ${tplOf(id).cam.yaw}`);
-  for (const id of [...ROPES, ...BOXING]) assert(tplOf(id).cam.yaw >= 30 && tplOf(id).cam.yaw <= 60, `${id} yaw ${tplOf(id).cam.yaw}`);
+  for (const id of BOXING) assert(tplOf(id).cam.yaw >= 30 && tplOf(id).cam.yaw <= 60, `${id} yaw ${tplOf(id).cam.yaw}`);
+  for (const id of ROPES) assert(tplOf(id).cam.yaw >= 85 && tplOf(id).cam.yaw <= 95, `${id} is seen from the front (yaw ${tplOf(id).cam.yaw})`);
 });
 
 test('cardio figures: nothing goes through the floor', () => {
@@ -144,10 +145,26 @@ test('treadmill: walking cycle — the feet swap, the stance foot runs backward 
   assert(f(90, 'N').stance && !f(90, 'F').stance, 'one foot on, one swinging');
   assert(!f(270, 'N').stance && f(270, 'F').stance, 'then they swap');
   assert(f(10, 'N').s > f(170, 'N').s + 0.4, 'the stance foot goes backward along the belt');
-  assert(f(270, 'N').h > 0.07, 'the swing foot clears the belt');
+  assert(f(270, 'N').h > 0.04, 'the swing foot clears the belt');
   const ys = poses(tpl, 72).map((j) => j.pelvis[1] - C.tmSurfaceY(j.pelvis[0]));
   assert(Math.max(...ys) - Math.min(...ys) > 0.02 && Math.max(...ys) - Math.min(...ys) < 0.07, 'a small bob');
-  for (const j of poses(tpl, 72)) for (const S of SIDES) assert(dist(j['hip' + S], j['ankle' + S]) < 0.84, 'soft knees');
+  for (const j of poses(tpl, 72)) for (const S of SIDES) assert(dist(j['hip' + S], j['ankle' + S]) < 0.88, 'the leg never over-reaches');
+});
+
+test('treadmill: it reads as a walk — the stance leg is nearly straight at mid-stance, and the walker never sits back into a squat', () => {
+  const tpl = tplOf('treadmill_incline_walk');
+  const knee = (j, S) => {
+    const u = sub(j['hip' + S], j['knee' + S]);
+    const v = sub(j['ankle' + S], j['knee' + S]);
+    return (Math.acos(dot(u, v) / Math.hypot(...u) / Math.hypot(...v)) * 180) / Math.PI;
+  };
+  // Near foot mid-stance at 90°, far foot at 270°.
+  for (const [ph, S, other] of [[90, 'N', 'F'], [270, 'F', 'N']]) {
+    const j = at(tpl, [ph])[0];
+    assert(knee(j, S) >= 160, `stance knee ${S} is ${knee(j, S).toFixed(0)}° at mid-stance`);
+    assert(knee(j, other) > 125 && knee(j, other) < knee(j, S), `swing knee ${other} is bent more (${knee(j, other).toFixed(0)}°)`);
+  }
+  for (const j of poses(tpl, 72)) for (const S of SIDES) assert(knee(j, S) >= 135, `knee ${S} is ${knee(j, S).toFixed(0)}° — too deep for a walk`);
 });
 
 test('treadmill: an upright with handrails; the hands stay on the rails', () => {
@@ -402,6 +419,22 @@ test('jump rope: the feet are in the air exactly when the rope passes under them
   assert(Math.max(...poses(dbl).map((j) => j.P.air)) > Math.max(...poses(single).map((j) => j.P.air)) + 0.03, 'double-unders hop higher');
   for (const tpl of [single, dbl]) for (const j of poses(tpl, 72)) assert(Math.min(j.toeN[1], j.toeF[1]) >= -0.001 && Math.min(j.toeN[1], j.toeF[1]) < j.P.air + 0.03, 'toes leave the floor with the hop');
   assert(dbl.rig.hands.x === single.rig.hands.x && repLength(phases(dbl)) > 0, 'same grip');
+});
+
+test('jump rope: seen from the front, the rope never sticks out sideways past the hands (no hula hoop)', () => {
+  for (const id of ROPES) {
+    const tpl = tplOf(id);
+    const cam = camera({ ...tpl.cam, scale: 1, x: 0, ground: 0 }); // metres on screen
+    for (const j of poses(tpl, 144)) {
+      const hx = [cam(j.gripN)[0], cam(j.gripF)[0]];
+      const lo = Math.min(...hx) - 0.04;
+      const hi = Math.max(...hx) + 0.04;
+      for (const p of C.ropePoints(j)) {
+        const x = cam(p)[0];
+        assert(x >= lo && x <= hi, `${id} the rope sticks out sideways at ψ=${(j.P.psi / rad(1)).toFixed(0)} (${x.toFixed(3)} vs hands ${lo.toFixed(3)}…${hi.toFixed(3)})`);
+      }
+    }
+  }
 });
 
 test('jump rope: the hands are at the hips, wide apart, and stay with the rope ends', () => {

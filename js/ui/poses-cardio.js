@@ -4,7 +4,7 @@
 // the machine's own geometry, so they stay on the belt, pedals, plates, steps and handles in every frame. The machine
 // shapes come from `prims(j)` (rig.js cardioProps); figure.js draws them behind or in front of the body.
 //
-// Cardio machines use a side view; the rope and boxing use a 3/4 front view so the arcs and punches read.
+// Cardio machines use a side view; the boxing uses a 3/4 front view so the punches read, and the rope a front view so its arcs read.
 import { T } from './poses-lib.js';
 import { BODY } from './rig.js';
 
@@ -32,7 +32,7 @@ const foot = (S, p) => ({ ['fx' + S]: p[0], ['fy' + S]: p[1] - BODY.ankleY });
 const loop = (secs, ph0, o) => T({ ...o, cycle: true, first: 'up', tempo: { con: secs, top: 0, ecc: 0, pause: 0, lin: true }, slow: { con: secs * 1.6, top: 0, ecc: 0, pause: 0, lin: true }, a: { ph: ph0 }, b: { ph: ph0 + 360 } });
 
 // ---------------- treadmill: incline walk, hands on the rails ----------------
-export const TM = { th: 10, h0: 0.22, s0: -0.95, s1: 0.95, stride: 0.28, lift: 0.1, hip: 0.8, rail: { x0: 0.3, x1: 1.0, y: 1.2, z: 0.27 }, footZ: 0.12 };
+export const TM = { th: 10, h0: 0.22, s0: -0.95, s1: 0.95, stride: 0.25, lift: 0.05, hip: 0.91, bob: 0.025, rail: { x0: 0.2, x1: 1.0, y: 1.35, z: 0.27 }, footZ: 0.12 };
 const tmU = [Math.cos(TM.th * R), Math.sin(TM.th * R)];
 const tmN = [-tmU[1], tmU[0]];
 /** A point on the belt (s metres along it, h above it, z across). */
@@ -48,8 +48,8 @@ export const tmFoot = (ph, S) => {
 };
 export const tmAnkle = (ph, S) => { const f = tmFoot(ph, S); return tmPoint(f.s, SOLE + f.h, sgn(S) * TM.footZ); };
 const tmDrive = (P) => {
-  const pel = tmPoint(0, TM.hip - 0.015 * Math.cos(2 * P.ph * R));
-  return { ph: P.ph, px: pel[0], py: pel[1], trunk: 8, head: -4, fa: 90 + TM.th, ...foot('N', tmAnkle(P.ph, 'N')), ...foot('F', tmAnkle(P.ph, 'F')) };
+  const pel = tmPoint(0, TM.hip - TM.bob * Math.cos(2 * P.ph * R));
+  return { ph: P.ph, px: pel[0], py: pel[1], trunk: 6, head: -3, fa: 90 + TM.th, ...foot('N', tmAnkle(P.ph, 'N')), ...foot('F', tmAnkle(P.ph, 'F')) };
 };
 const tmPrims = (j) => {
   const { ph } = j.P;
@@ -319,6 +319,8 @@ const bagPrims = (j) => {
 
 const CYCLE_BASE = { floor: true };
 const boxCam = { yaw: 38, pitch: 6 };
+// The rope turns in the front-back plane, so it is drawn from almost straight on: an arch over the head, a U under the feet, always hand to hand.
+export const ropeCam = { yaw: 88, pitch: 6 };
 const sideCam = { yaw: 14, pitch: 6 };
 const BOXER = { root: 'pelvis', legs: 'ik', feet: { z: 0.14, kneesOut: 0.3 }, arms: 'ik', hands: { x: 0.3, y: 1.4, z: BOX.handZ }, pole: [0.2, -0.8, 0.8] };
 
@@ -350,12 +352,12 @@ export const CARDIO = {
   }),
 
   jump_rope: loop(0.7, 180, {
-    ...CYCLE_BASE, cam: boxCam, gear: ['cardio'], drive: jumpDrive(1, 0.1, 0.05), prims: ropePrims,
+    ...CYCLE_BASE, cam: ropeCam, gear: ['cardio'], drive: jumpDrive(1, 0.1, 0.05), prims: ropePrims,
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.1, kneesOut: 0.15 }, arms: 'ik', hands: { x: ROPE.handX, y: ROPE.handY, z: ROPE.handZ }, pole: [0, -0.7, 0.9] },
   }),
   // Two turns of the rope in one higher hop.
   jump_rope_double_under: loop(0.9, 180, {
-    ...CYCLE_BASE, cam: boxCam, gear: ['cardio'], drive: jumpDrive(2, 0.2, 0.07), prims: ropePrims,
+    ...CYCLE_BASE, cam: ropeCam, gear: ['cardio'], drive: jumpDrive(2, 0.2, 0.07), prims: ropePrims,
     rig: { root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.1, kneesOut: 0.15 }, arms: 'ik', hands: { x: ROPE.handX, y: ROPE.handY, z: ROPE.handZ }, pole: [0, -0.7, 0.9] },
   }),
 
