@@ -441,12 +441,12 @@ async function boot() {
       ));
     }
     const serverErr = {};
-    const firstErr = () => Object.values(serverErr).find(Boolean) || null;
+    const errs = () => ({ ...serverErr });
     for (const [col, toPatch] of WATCH_SERVER) {
       unsubs.push(db.watch(
         col,
-        (rows) => { serverErr[col] = null; state.set({ ...toPatch(rows), serverError: firstErr() }); },
-        (err) => { serverErr[col] = err.code || 'error'; state.set({ serverError: firstErr() }); }
+        (rows) => { serverErr[col] = null; state.set({ ...toPatch(rows), serverErrors: errs() }); },
+        (err) => { serverErr[col] = err.code || 'error'; state.set({ serverErrors: errs() }); }
       ));
     }
     const foodErr = {};

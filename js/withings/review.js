@@ -25,11 +25,39 @@ const usable = (weights) => weights
   .map((w) => ({ ...w, at: w.measured_at || `${w.day}T12:00:00` }))
   .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)); // newest first
 
-/** Ids of scale weigh-ins that probably aren't you. weights: the weights collection (deleted ones ignored). */
-export function suspects(weights, tol = SUSPECT_TOL) {
-  const list = usable(weights);
+const ANCHOR_DAYS = 14; // a typed-in or confirmed weight only anchors the walk if it's this close to the newest reading
+
+/**
+ * Where "your weight" starts, newest end of the walk. In order of trust:
+ *   1. weights you typed in or confirmed ("That's me") within 14 days of the newest reading (older ones may be
+ *      far from today's weight: someone who lost 20 kg since onboarding must not be flagged);
+ *   2. your profile weight (from onboarding or Edit profile): the newest 10 readings within 15% of it, or the
+ *      profile weight itself if none are;
+ *   3. the median of the newest 10 readings (fine unless someone else used the scale most recently).
+ * Returns a kg value or null. Pure.
+ */
+export function seedWeight(list, profileKg = null, tol = SUSPECT_TOL) {
+  if (!list.length) return null;
+  const newest = Date.parse(list[0].at);
+  const recent = (w) => !Number.isFinite(newest) || newest - Date.parse(w.at) <= ANCHOR_DAYS * 864e5;
+  const anchors = list.filter((w) => (!isScale(w) || confirmed(w)) && recent(w)).slice(0, 10).map((w) => w.kg);
+  if (anchors.length) return median(anchors);
+  if (Number.isFinite(profileKg) && profileKg > 0) {
+    const near = list.filter((w) => w.review !== true && Math.abs(w.kg - profileKg) / profileKg <= tol).slice(0, 10).map((w) => w.kg);
+    return near.length ? median(near) : profileKg;
+  }
   const seed = list.filter((w) => w.review !== true).slice(0, 10).map((w) => w.kg);
-  const acc = seed.length ? [median(seed)] : [];
+  return seed.length ? median(seed) : null;
+}
+
+/**
+ * Ids of scale weigh-ins that probably aren't you. weights: the weights collection (deleted ones ignored);
+ * profileKg: your profile weight, used to start the walk when nothing recent is typed in or confirmed.
+ */
+export function suspects(weights, tol = SUSPECT_TOL, profileKg = null) {
+  const list = usable(weights);
+  const seed = seedWeight(list, profileKg, tol);
+  const acc = seed != null ? [seed] : [];
   const out = new Set();
   for (const w of list) {
     if (!isScale(w) || confirmed(w) || !acc.length) { acc.push(w.kg); continue; }
@@ -40,10 +68,10 @@ export function suspects(weights, tol = SUSPECT_TOL) {
   return out;
 }
 
-let memo = { weights: null, ids: new Set() };
-/** suspects(), cached for the same weights array (state.weights is replaced on every change). */
-export function suspectIds(weights) {
-  if (memo.weights !== weights) memo = { weights, ids: suspects(weights) };
+let memo = { weights: null, profileKg: null, ids: new Set() };
+/** suspects(), cached for the same weights array and profile weight (state.weights is replaced on every change). */
+export function suspectIds(weights, profileKg = null) {
+  if (memo.weights !== weights || memo.profileKg !== profileKg) memo = { weights, profileKg, ids: suspects(weights, SUSPECT_TOL, profileKg) };
   return memo.ids;
 }
 
@@ -51,8 +79,8 @@ export function suspectIds(weights) {
  * The review queue, newest first: weigh-ins Withings couldn't match to you (needs_review) plus suspects.
  * Each item: { id, kg (null if the reading has no weight), measured_at, day, hasBody, hasWeight, reason }.
  */
-export function reviewQueue(weights, bodyDocs = []) {
-  const ids = suspectIds(weights);
+export function reviewQueue(weights, bodyDocs = [], profileKg = null) {
+  const ids = suspectIds(weights, profileKg);
   const byId = new Map();
   for (const d of bodyDocs) {
     if (d.deleted || !d.needs_review) continue;
@@ -84,8 +112,8 @@ export function byDay(queue) {
  * A cutoff (kg) between the suspects lighter than you and your lightest accepted weigh-in, or null when
  * there's no clean gap. Readings under it are offered as one "Not me" action.
  */
-export function suggestCutoff(weights) {
-  const ids = suspectIds(weights);
+export function suggestCutoff(weights, profileKg = null) {
+  const ids = suspectIds(weights, profileKg);
   const live = weights.filter((w) => !w.deleted && Number.isFinite(w.kg));
   const mine = live.filter((w) => !ids.has(w.id) && w.review !== true).map((w) => w.kg);
   const light = live.filter((w) => ids.has(w.id)).map((w) => w.kg);

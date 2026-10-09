@@ -1,4 +1,4 @@
-# Forge levels (v0.3.2)
+# Forge levels
 
 30 unique names, no metal tiers repeated. They follow the forge from first spark to finished, unbreakable metal.
 

@@ -3,7 +3,9 @@
 // "safe to cancel Withings+?" verdict). Everything here is read from users/{uid}/integrations/withings and
 // body_measures, which only Cloud Functions write.
 import { state, units as getUnits } from '../state.js';
-import { esc, $, $$, sheet, toast, formatDay } from '../ui.js';
+import { esc, $, $$, sheet, toast, formatDay, todayKey } from '../ui.js';
+import { serverErrorText, errorFor } from '../ui/errors.js';
+import { fieldStatus } from '../health/status.js';
 import { reviewBodyMeasure, bulkNotMe, putMany, readAll, newRecord } from '../db.js';
 import { formatWeight, weightToDisplay, weightFromInput, weightUnit } from '../units.js';
 import { classify, verdict, compare, STATE_LABEL, median, yearRows, backfillYears } from '../withings/check.js';
@@ -30,9 +32,10 @@ export function renderWithings(el, sub) {
   const w = W();
   const u = getUnits();
   const connected = !!(w && w.connected);
-  const review = reviewQueue(state.weights, state.body_measures);
+  const profileKg = (state.profile && state.profile.weightKg) || null;
+  const review = reviewQueue(state.weights, state.body_measures, profileKg);
   const days = byDay(review);
-  const suggested = suggestCutoff(state.weights);
+  const suggested = suggestCutoff(state.weights, profileKg);
   const cutDisp = cutoffInput != null ? cutoffInput : suggested != null ? niceCutoff(suggested, u) : null;
   const cutKg = cutDisp != null ? weightFromInput(String(cutDisp), u) : null;
   const under = underCutoff(review, cutKg);
@@ -40,10 +43,11 @@ export function renderWithings(el, sub) {
   const years = backfillYears(bf);
   const csvCount = state.weights.filter((x) => x.source === 'withings_csv').length;
 
+  const readErr = errorFor(state.serverErrors, ['body_measures', 'integrations']);
   el.innerHTML = `
     <section class="stack">
       <h1>Withings</h1>
-      ${state.serverError ? `<div class="notice warn">Forge can’t read Withings data yet (${esc(state.serverError)}). If you just updated, publish the new <code>firestore.rules</code> (DEPLOY.md → Withings).</div>` : ''}
+      ${readErr ? `<div class="notice warn">${esc(serverErrorText(readErr, 'Withings'))}</div>` : ''}
 
       ${!connected ? `
       <div class="card stack">
@@ -296,6 +300,14 @@ function refreshCsvAccounted(el) {
   }, () => {});
 }
 
+/** One line on the Apple Health bridge for the data check (watch data comes from there, not from Withings). */
+function appleLine() {
+  const st = fieldStatus(state.health_daily || [], todayKey());
+  if (!st.lastDay) return 'Watch data (HRV, sleep, resting heart rate, wrist temperature) comes from Apple Health. Not set up yet.';
+  const on = st.fields.filter((f) => f.lastDay).length;
+  return `Watch data comes from Apple Health: ${on} of ${st.fields.length} kinds received, latest day ${formatDay(st.lastDay, { month: 'short', day: 'numeric' })}.`;
+}
+
 function renderCheck(el) {
   const w = W();
   const u = getUnits();
@@ -367,13 +379,14 @@ function renderCheck(el) {
 
       <div class="card">
         <p class="label">Apple Health</p>
-        <p class="small muted">Watch data (HRV, sleep, resting heart rate, wrist temperature) arrives with the next update (W2).</p>
+        <p class="small muted" data-apple-line>${appleLine()}</p>
+        <a class="link small" href="#/apple">Apple Health status ${icon('chev')}</a>
       </div>
 
       <div class="card stack">
         <p class="label">Saved reports</p>
         <div class="row gap"><input name="label" value="${beforeNov ? 'subscribed' : 'after cancelling'}" maxlength="40" aria-label="Report name" class="grow"><button class="btn small" data-save ${busy === 'save' ? 'disabled' : ''}>Save report</button></div>
-        ${history.length ? `<ul class="list">${history.map((h, i) => `
+        ${history.length ? `<ul class="list dc-saved">${history.map((h, i) => `
           <li><label class="choice check small"><input type="checkbox" name="cmp" value="${i}" ${sel.includes(i) ? 'checked' : ''}><span>${esc(h.label)}<small>${when(h.saved_at)}</small></span></label></li>`).join('')}</ul>
           <p class="small muted">Tick two to compare.</p>` : '<p class="small muted">None yet.</p>'}
         ${cmp ? `<ul class="list dc-cmp">${cmp.map((c) => `<li class="${c.lost ? 'dc-lost' : c.changed ? 'dc-changed' : ''}"><span>${esc(c.label)}</span><small>${esc(STATE_LABEL[c.before].split(' ')[0])} ${c.before_count} → ${esc(STATE_LABEL[c.after].split(' ')[0])} ${c.after_count}${c.lost ? ' · lost' : ''}</small></li>`).join('')}</ul>
