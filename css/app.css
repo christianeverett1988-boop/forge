@@ -1,6 +1,7 @@
 /* Forge base styles. Colours, radii, spacing and type come from css/tokens.css; motion from css/motion.css. */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; } /* a class that sets display must not beat the hidden attribute */
 body {
   margin: 0;
   background: var(--bg);

@@ -152,6 +152,11 @@ test('every input / select / textarea font size in the CSS is at least 16px', ()
   assert(checked >= 1, 'found no input font sizes to check');
 });
 
+test('CSS: a global [hidden] rule beats class rules that set display', () => {
+  const css = readFileSync(new URL('../css/app.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert(/(^|\n)\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css), 'css/app.css needs [hidden] { display: none !important }');
+});
+
 test('shell: no spinner, no floating sync pill, manifest has id and a maskable icon', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert(!/class="loading"/.test(html), 'spinner markup left in index.html');
