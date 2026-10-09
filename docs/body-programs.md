@@ -30,7 +30,7 @@ Code: `js/body-programs/` (`core.js` is pure; `store.js` reads state; `ui.js` dr
   the band is the pace × 0.5 to × 1.5, never above the safety caps (1%/week, or 1.5% with the profile's fast-pace
   override). Shown in the user's units, e.g. "losing 0.5–1.5 lb a week". Too slow and too fast both miss.
   The cut can't start when the safety checks say no deficit (under 18, underweight).
-- **Protein** isn't a goal. The food log hasn't merged (#33): `weekGoals` in `core.js` has a comment where a
+- **Protein** isn't a goal yet. The food log exists (v0.14.5) but isn't wired into programs: `weekGoals` in `core.js` has a comment where a
   `protein` goal goes (use `idx.protein` and `targets.proteinG`, as the missions do).
 
 ## Flow

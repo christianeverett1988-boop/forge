@@ -254,3 +254,106 @@ test('exactly what the sync writes (functions/test fixture): "That\'s me", soft-
   await assertSucceeds(updateDoc(doc(alice, 'users/alice/body_measures/w_11'), { deleted: true, deleted_at: t, updated_at: t }));
   await assertSucceeds(updateDoc(doc(alice, 'users/alice/weights/w_11'), { deleted: true, deleted_at: t, updated_at: t }));
 });
+
+// ---- v0.11.0: foods (My foods) and food_logs ----
+const food = (uid, id, extra = {}) => rec(uid, id, { name: 'Greek yoghurt', kcal: 130, protein_g: 17, carbs_g: 6, fat_g: 4, serving: '1 cup', ...extra });
+const foodLog = (uid, id, extra = {}) => rec(uid, id, {
+  day: '2026-10-09', meal: 'lunch', name: 'Greek yoghurt', kcal: 130, protein_g: 17, carbs_g: 6, fat_g: 4, servings: 1.5, ...extra,
+});
+const T9 = '2026-10-09T00:00:00Z';
+const defined = (d) => Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined));
+
+test('foods and food_logs: the owner can create, read, update, tombstone and delete', async () => {
+  const db = as('alice');
+  const f = doc(db, 'users/alice/foods/f1');
+  await assertSucceeds(setDoc(f, food('alice', 'f1')));
+  await assertSucceeds(getDoc(f));
+  await assertSucceeds(updateDoc(f, { kcal: 140, updated_at: T9 }));
+  await assertSucceeds(updateDoc(f, { deleted: true, deleted_at: T9, updated_at: T9 }));
+  await assertSucceeds(deleteDoc(f));
+  const l = doc(db, 'users/alice/food_logs/l1');
+  await assertSucceeds(setDoc(l, foodLog('alice', 'l1', { food_id: 'f1' })));
+  await assertSucceeds(setDoc(doc(db, 'users/alice/food_logs/l2'), foodLog('alice', 'l2'))); // quick add: no food_id
+  await assertSucceeds(updateDoc(l, { servings: 2, updated_at: T9 }));
+  await assertSucceeds(updateDoc(l, { deleted: true, deleted_at: T9, updated_at: T9 }));
+  await assertSucceeds(getDocs(collection(db, 'users/alice/food_logs')));
+  await assertSucceeds(deleteDoc(l));
+});
+
+test('foods and food_logs: another uid, and signed-out visitors, get nothing', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users/alice/foods/f1'), food('alice', 'f1'));
+    await setDoc(doc(ctx.firestore(), 'users/alice/food_logs/l1'), foodLog('alice', 'l1'));
+  });
+  const bob = as('bob');
+  const anon = env.unauthenticatedContext().firestore();
+  for (const path of ['users/alice/foods/f1', 'users/alice/food_logs/l1']) {
+    await assertFails(getDoc(doc(bob, path)));
+    await assertFails(deleteDoc(doc(bob, path)));
+    await assertFails(updateDoc(doc(bob, path), { kcal: 1, updated_at: T9 }));
+    await assertFails(getDoc(doc(anon, path)));
+  }
+  await assertFails(getDocs(collection(bob, 'users/alice/foods')));
+  await assertFails(getDocs(collection(bob, 'users/alice/food_logs')));
+  await assertFails(setDoc(doc(bob, 'users/alice/foods/f2'), food('alice', 'f2')));
+  await assertFails(setDoc(doc(bob, 'users/alice/food_logs/l2'), foodLog('alice', 'l2')));
+  await assertFails(setDoc(doc(bob, 'users/bob/foods/f3'), food('alice', 'f3'))); // user_id must be the writer
+  await assertFails(setDoc(doc(anon, 'users/alice/foods/f4'), food('alice', 'f4')));
+});
+
+test('foods: wrong types and out-of-range values are denied', async () => {
+  const db = as('alice');
+  const bad = [
+    { name: '' }, { name: 'x'.repeat(81) }, { name: 5 }, { name: undefined },
+    { kcal: -1 }, { kcal: 5001 }, { kcal: '130' }, { kcal: undefined },
+    { protein_g: -1 }, { protein_g: 501 }, { carbs_g: -0.1 }, { carbs_g: 501 }, { fat_g: -1 }, { fat_g: 501 }, { fat_g: '4' },
+    { serving: 'x'.repeat(41) }, { serving: 3 }, { serving: undefined },
+  ];
+  let i = 0;
+  for (const extra of bad) {
+    const id = `b${i++}`;
+    await assertFails(setDoc(doc(db, `users/alice/foods/${id}`), defined(food('alice', id, extra))));
+  }
+  // The limits themselves are fine.
+  await assertSucceeds(setDoc(doc(db, 'users/alice/foods/ok1'), food('alice', 'ok1', { name: 'x'.repeat(80), kcal: 5000, protein_g: 500, carbs_g: 500, fat_g: 500, serving: 'x'.repeat(40) })));
+  await assertSucceeds(setDoc(doc(db, 'users/alice/foods/ok2'), food('alice', 'ok2', { name: 'x', kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, serving: '' })));
+  // An update that breaks a rule is denied too.
+  await assertFails(updateDoc(doc(db, 'users/alice/foods/ok1'), { kcal: 5001, updated_at: T9 }));
+});
+
+test('food_logs: wrong types and out-of-range values are denied', async () => {
+  const db = as('alice');
+  const bad = [
+    { day: '2026-10-9' }, { day: '10/09/2026' }, { day: 20261009 }, { day: '2026-10-09T10:00' }, { day: undefined },
+    { meal: 'brunch' }, { meal: 'Lunch' }, { meal: undefined },
+    { name: '' }, { name: 'x'.repeat(81) }, { kcal: -1 }, { kcal: 5001 }, { kcal: '130' },
+    { protein_g: 501 }, { carbs_g: -1 }, { fat_g: 501 },
+    { servings: 0 }, { servings: -1 }, { servings: 20.5 }, { servings: '1' }, { servings: undefined },
+    { food_id: 7 }, { food_id: null },
+  ];
+  let i = 0;
+  for (const extra of bad) {
+    const id = `b${i++}`;
+    await assertFails(setDoc(doc(db, `users/alice/food_logs/${id}`), defined(foodLog('alice', id, extra))));
+  }
+  await assertSucceeds(setDoc(doc(db, 'users/alice/food_logs/ok1'), foodLog('alice', 'ok1', { servings: 20, kcal: 5000, meal: 'snack', food_id: 'f1' })));
+  await assertSucceeds(setDoc(doc(db, 'users/alice/food_logs/ok2'), foodLog('alice', 'ok2', { servings: 0.25, kcal: 0, meal: 'breakfast' })));
+  await assertSucceeds(setDoc(doc(db, 'users/alice/food_logs/ok3'), foodLog('alice', 'ok3', { meal: 'dinner' })));
+  await assertFails(updateDoc(doc(db, 'users/alice/food_logs/ok1'), { servings: 21, updated_at: T9 }));
+  await assertFails(updateDoc(doc(db, 'users/alice/food_logs/ok1'), { meal: 'brunch', updated_at: T9 }));
+});
+
+test('foods and food_logs: created_at and user_id cannot change, standard fields cannot be removed', async () => {
+  const db = as('alice');
+  for (const [col, d] of [['foods', food('alice', 'x1')], ['food_logs', foodLog('alice', 'x1')]]) {
+    const ref = doc(db, `users/alice/${col}/x1`);
+    await setDoc(ref, d);
+    await assertFails(updateDoc(ref, { created_at: '2020-01-01T00:00:00Z' }));
+    await assertFails(updateDoc(ref, { user_id: 'bob' }));
+    await assertFails(updateDoc(ref, { source: deleteField() }));
+    await assertFails(updateDoc(ref, { deleted: deleteField() }));
+    await assertFails(updateDoc(ref, { kcal: deleteField() }));
+    await assertFails(updateDoc(ref, { name: deleteField() }));
+    await assertFails(setDoc(doc(db, `users/alice/${col}/other`), { ...d, id: 'x1' })); // id must match the path
+  }
+});

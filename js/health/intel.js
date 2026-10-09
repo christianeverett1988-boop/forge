@@ -3,7 +3,7 @@
 import { state, units } from '../state.js';
 import { todayKey } from '../ui.js';
 import { patch, put, newRecord } from '../db.js';
-import { weightSeries, myBodyMeasures } from '../derived.js';
+import { weightSeries, myBodyMeasures, foodTargets } from '../derived.js';
 import { heightM } from '../withings/body.js';
 import { buildSeries, allTrends } from './trends.js';
 import { detectAnomalies } from './anomalies.js';
@@ -47,7 +47,7 @@ export function dismissInsight(id) {
 export function reportFor(weekStart) {
   return weeklyReport({
     weekStart, today: todayKey(), series: weightSeries(), measures: myBodyMeasures(), rows: state.health_daily || [],
-    workouts: state.workouts, cardio: state.cardio || [], profile: state.profile || {},
+    workouts: state.workouts, cardio: state.cardio || [], profile: state.profile || {}, foodLogs: state.food_logs || [], targets: foodTargets(),
   });
 }
 export const currentReportWeek = () => reportWeekFor(todayKey());

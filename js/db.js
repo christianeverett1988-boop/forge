@@ -16,7 +16,10 @@ import { db, auth } from './firebase.js';
 import { state } from './state.js';
 
 // Every collection the app writes. Export, delete-everything and firestore.rules use this list.
-export const COLLECTIONS = ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises'];
+export const COLLECTIONS = ['profile', 'settings', 'locations', 'weights', 'workouts', 'cardio_sessions', 'programs', 'exercises', 'foods', 'food_logs'];
+// Added after the first release. Until firestore.rules is republished they can't be read, so export and
+// delete-everything treat "permission denied" on these as empty instead of failing.
+export const NEWER_COLLECTIONS = ['foods', 'food_logs'];
 
 // Written only by Cloud Functions (Withings sync; Apple Health from W2). The app reads them, includes them
 // in exports and in delete-everything, and may only mark a record deleted (a tombstone the sync respects)
@@ -178,7 +181,10 @@ export async function deleteAllUserData() {
     await call('withingsDisconnect', { deleteData: true, deleteApple: true }); // Withings data and Apple Health data
   }
   for (const col of COLLECTIONS) {
-    const snap = await getDocs(collection(db, 'users', uid(), col));
+    const snap = await getDocs(collection(db, 'users', uid(), col)).catch((e) => {
+      if (NEWER_COLLECTIONS.includes(col)) return { docs: [] }; // rules not republished: nothing could have been saved there
+      throw e;
+    });
     for (let i = 0; i < snap.docs.length; i += 400) {
       const batch = writeBatch(db);
       snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));

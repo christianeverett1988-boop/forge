@@ -1,7 +1,7 @@
 // Weekly report (W2b): one Monday–Sunday week (your local calendar) worked out on the phone from data
 // already in Firestore. Nothing is stored. Pure functions, no DOM; rules are written down in docs/trends.md.
 import { shiftDay, indexDays, mean, sd, GET, windowValues } from './metrics.js';
-import { forgeScore } from './score.js';
+import { forgeScore, foodDays } from './score.js';
 import { goodDirection, buildSeries, TREND_METRICS } from './trends.js';
 import { dayKey } from '../weight/smoothing.js';
 import { MAX_LOSS_PCT } from '../nutrition/targets.js';
@@ -40,10 +40,10 @@ const delta = (a, b) => (a != null && b != null ? a - b : null);
 
 /**
  * ctx: { weekStart (a Monday), today, series (weight [{day,kg,trend}]), measures (body_measures), rows (health_daily),
- * workouts, cardio, profile }. Returns the report object (see docs/trends.md).
+ * workouts, cardio, profile, foodLogs, targets ({ calories, proteinG }) }. Returns the report object (see docs/trends.md).
  */
 export function weeklyReport(ctx) {
-  const { weekStart, today, series = [], measures = [], rows = [], workouts = [], cardio = [], profile = {} } = ctx;
+  const { weekStart, today, series = [], measures = [], rows = [], workouts = [], cardio = [], profile = {}, foodLogs = [], targets = null } = ctx;
   const days = weekDays(weekStart);
   const prevDays = weekDays(shiftWeek(weekStart, -1));
   const end = days[6];
@@ -52,7 +52,7 @@ export function weeklyReport(ctx) {
   const goal = profile.goal || 'health';
 
   // Forge Score, this week vs last
-  const sc = (t) => forgeScore({ rows, series, measures, workouts, cardio, profile, today: t });
+  const sc = (t) => forgeScore({ rows, series, measures, workouts, cardio, profile, foodLogs, targets, today: t });
   const sNow = sc(end);
   const sPrev = sc(prevEnd);
   const score = {
@@ -109,8 +109,16 @@ export function weeklyReport(ctx) {
   const best = cands.length && cands[0].z >= NOTABLE_Z ? cands[0] : null;
   const worst = cands.length && cands[cands.length - 1].z <= -NOTABLE_Z && cands[cands.length - 1] !== best ? cands[cands.length - 1] : null;
 
-  const hasData = tNow.workouts > 0 || tNow.cardioMin > 0 || weighIns > 0 || rec.hrv.n + rec.rhr.n + rec.sleep.n > 0;
-  const report = { weekStart, weekEnd: end, days, partial: end >= today, hasData, score, weight, comp, training, recovery: rec, steps, best, worst, goal };
+  // Nutrition: averages are over the days you logged, not all seven (an unlogged day is unknown, not zero).
+  const fd = foodDays(foodLogs);
+  const eaten = days.map((d) => fd.get(d)).filter(Boolean);
+  const nutrition = eaten.length ? {
+    daysLogged: eaten.length, avgKcal: mean(eaten.map((f) => f.kcal)), avgProtein: mean(eaten.map((f) => f.protein_g)),
+    targetKcal: targets ? targets.calories : null, targetProtein: targets ? targets.proteinG : null,
+  } : null;
+
+  const hasData = tNow.workouts > 0 || tNow.cardioMin > 0 || weighIns > 0 || rec.hrv.n + rec.rhr.n + rec.sleep.n > 0 || !!nutrition;
+  const report = { weekStart, weekEnd: end, days, partial: end >= today, hasData, score, weight, comp, training, nutrition, recovery: rec, steps, best, worst, goal };
   report.suggestion = suggest(report);
   return report;
 }

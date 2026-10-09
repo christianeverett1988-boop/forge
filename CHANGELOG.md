@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.5 — Food logging, part 1 (2026-10-09)
+
+_Built as 0.11.0 (PR #33) and rebased onto 0.14.4; everything in 0.12.0–0.14.4 is kept._
+
+**`firestore.rules` changed. Publish the rules BEFORE you open this version: `firebase deploy --only firestore:rules` (DEPLOY.md, "If an update changes `firestore.rules`").** No Cloud Functions or `config.js` changes. Until the rules are published the app still opens, but the Food screen says food isn't switched on and nothing can be saved there.
+
+- **Food, under Today.** A new Food card on Today shows calories and protein so far, with **Log food** and **See meals**. The Food screen shows today's calories and protein (large) and carbs and fat against your daily targets, then Breakfast, Lunch, Dinner and Snacks. Arrows move between days. There is no new tab.
+- **Log food is fast.** The sheet opens with your recent foods on top: tap the food, tap Add (three taps in all). Servings start at 1 and the meal is pre-picked by the time of day. Search covers My foods and your recent entries, all on the phone.
+- **Quick add** for "about 600": just calories, protein if you know it.
+- **My foods:** save, edit and delete the things you eat often. Each entry keeps its own copy of the numbers, so editing a food never changes what you logged before.
+- **Copy yesterday** on an empty meal, and tap an entry to change servings or meal or delete it.
+- **Forge Score:** the Nutrition part (15%) now counts days logged, calories within 10% of target and protein at target. It switches on once you've logged food on 3 of the last 7 days; until then it stays "not tracked yet".
+- **Weekly report:** a Nutrition card (days logged, average calories and protein against target) and one line in the shared text.
+- **Your data:** foods and food logs are in the JSON export, a new "Export food log (CSV)" in Settings, and Delete everything.
+- Under the hood: new `foods` and `food_logs` collections (types and ranges checked in `firestore.rules`, covered by the rules tests), `js/food/search.js` as the single place USDA search plugs into in part 2, and `docs/food.md`. Adaptive TDEE is not in this version (TODO in `docs/food.md`).
+
 ## 0.14.4 — Figures for cardio machines, jump rope and boxing (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
