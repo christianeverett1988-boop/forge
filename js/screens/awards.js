@@ -7,7 +7,7 @@ import { streak, LEVELS, xpForLevel, XP_RULES } from '../workouts/awards.js';
 import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
 import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
 import { progressTabs } from './progress.js';
-import { icon } from '../ui/icons.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
 
@@ -54,6 +54,7 @@ export function renderAwards(el) {
 
       <div class="card">
         <div class="row between center"><p class="label">Badges</p><span class="small muted">${got.length} of ${bs.length}</span></div>
+        ${got.length ? '' : emptyState({ icon: 'medal', title: 'No badges yet', text: 'Finish a workout and your first badge unlocks.', action: { href: '#/train', label: 'Start a workout' } })}
         <ul class="aw-badges">
           ${bs.map((b) => `
             <li class="${b.earned ? 'on' : ''}">

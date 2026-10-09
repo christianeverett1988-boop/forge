@@ -8,7 +8,7 @@ import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
 import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
-import { icon } from '../ui/icons.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', withings_csv: 'Withings (export)', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
@@ -99,7 +99,7 @@ export function renderWeight(el) {
         <p class="small muted legend"><span class="key dot"></span>weigh-ins <span class="key line"></span>trend ${goalKg ? '<span class="key dash"></span>goal' : ''}</p>
         ${projection ? `<p class="small">${projection.reached ? 'You’ve reached your goal weight.' : `At your current pace you’ll reach ${formatWeight(goalKg, u, 0)} around <b>${formatDay(projection.day, { month: 'short', day: 'numeric', year: 'numeric' })}</b>.`}</p>` : ''}
         ${!projection && goalKg && series.length >= 2 ? '<p class="small muted">A goal date appears once your trend has about a week of data and is moving toward your goal.</p>' : ''}
-      </div>` : '<div class="card empty">No weigh-ins yet. Log your first one.</div>'}
+      </div>` : `<div class="card">${emptyState({ icon: 'scale', title: 'No weigh-ins yet', text: 'Log your first weight and your trend starts here.', action: { attr: 'data-log-empty', label: 'Log weight' } })}</div>`}
 
       ${entries.length ? `
       <h2>History</h2>
@@ -115,6 +115,8 @@ export function renderWeight(el) {
     </section>`;
 
   $('[data-log]', el).onclick = openLogWeight;
+  const logEmpty = $('[data-log-empty]', el);
+  if (logEmpty) logEmpty.onclick = openLogWeight;
   const all = $('[data-all]', el);
   if (all) all.onclick = () => { showAll = true; renderWeight(el); };
   $$('input[name=range]', el).forEach((r) =>

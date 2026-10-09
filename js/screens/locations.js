@@ -7,7 +7,7 @@ import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRo
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
 import { navBar, screenNav } from '../ui/navbar.js';
-import { icon } from '../ui/icons.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 const INVENTORY = [
   ['dumbbells_kg', 'Dumbbell pairs', 'dumbbells'],
@@ -38,6 +38,7 @@ export function renderLocations(el) {
             <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}
       </ul>
+      ${state.locations.length ? '' : emptyState({ icon: 'pin', title: 'No locations yet', text: 'Add where you train so workouts match the equipment you have.', action: { attr: 'data-add-empty', label: 'Add a location' } })}
       <button class="btn ghost" data-add>+ Add a location</button>
     </section>`;
 
@@ -47,6 +48,8 @@ export function renderLocations(el) {
       renderLocations(el);
     })
   );
+  const addEmpty = $('[data-add-empty]', el);
+  if (addEmpty) addEmpty.onclick = () => $('[data-add]', el).click();
   $('[data-add]', el).onclick = () =>
     sheet('Add a location', (body, close) => {
       let creating = false; // a quick double-tap must not make two locations

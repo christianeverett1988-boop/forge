@@ -1,12 +1,12 @@
 /* Apple Health, Readiness and Forge Score (v0.5.0). Big tap targets, safe areas, calm motion. */
 
 /* ---------- Readiness card on Today ---------- */
-.ready-card { border-left: 5px solid var(--rc, var(--line)); gap: 10px; }
+.ready-card { gap: var(--s-3); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc, transparent) 30%, transparent), 0 0 44px color-mix(in srgb, var(--rc, transparent) 14%, transparent); }
 .ready-card.green { --rc: var(--ready-green); }
 .ready-card.amber { --rc: var(--ready-amber); }
 .ready-card.red { --rc: var(--ready-red); }
 .ready-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ready-pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; }
+.ready-pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
 .ready-pill::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 10px var(--rc); }
 .ready-why { font-size: 17px; line-height: 1.35; }
 .ready-do { font-size: 14px; color: var(--muted); }
@@ -26,16 +26,17 @@
 
 /* ---------- Score card on Today and the Score screen ---------- */
 .score-card { display: grid; grid-template-columns: 84px 1fr auto; gap: 14px; align-items: center; }
-.score-card .chev { font-size: 24px; color: var(--muted); }
+.score-card .chev { color: var(--text-3); }
 .score-mini { width: 84px; height: 84px; position: relative; }
 .score-mini svg, .score-hero svg { display: block; width: 100%; height: 100%; }
-.score-mini b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.score-mini b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 28px var(--num); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .sc-track { fill: none; stroke: var(--surface-2); }
+.sc-hero .sc-arc { filter: drop-shadow(0 0 8px var(--accent-glow)); }
 .sc-arc { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s var(--ease-out); stroke-dashoffset: var(--off); }
 .sc-pre .sc-arc { stroke-dashoffset: var(--c); transition: none; }
 .score-hero { position: relative; width: 212px; height: 212px; margin: 4px auto 0; }
 .score-hero .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.score-hero .num b { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.score-hero .num b { font: 700 72px/1 var(--num); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 16px var(--accent-glow)); }
 .score-hero .num small { color: var(--muted); font-weight: 600; margin-top: 4px; }
 .score-days { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
 .score-days span { flex: 1; border-radius: 4px 4px 2px 2px; background: var(--surface-2); min-height: 4px; position: relative; }

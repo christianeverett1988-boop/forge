@@ -1,18 +1,23 @@
 // Shared bits for the score rings (Today card, Score screen). The ring fills from empty unless reduced motion is on.
 import { reducedMotion } from '../ui/motion.js';
 
-/** Colour for a 0–100 value: green when strong, lime when good, amber when middling, orange when low. */
-export const scoreColor = (v) => (v == null ? '#4a525c' : v >= 80 ? '#6ee7a8' : v >= 60 ? '#c6ff3d' : v >= 40 ? '#ffc857' : '#ff7a45');
+/** Colour token for a 0–100 value: good when strong, accent when fine, warn when middling, ember when low. */
+export const scoreColor = (v) => (v == null ? 'var(--surface-3)' : v >= 80 ? 'var(--good)' : v >= 60 ? 'var(--accent-text)' : v >= 40 ? 'var(--warn)' : 'var(--ember)');
 
-/** A ring as SVG. value 0–100 (or null for an empty ring). */
+let gradId = 0;
+/** A ring as SVG. value 0–100 (or null for an empty ring). A strong ring gets the accent gradient stroke and a soft glow. */
 export function ringSvg(value, { size = 100, stroke = 10 } = {}) {
   const r = size / 2 - stroke / 2;
   const c = 2 * Math.PI * r;
   const v = value == null ? 0 : Math.max(0, Math.min(100, value)) / 100;
-  return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true"><g transform="rotate(-90 ${size / 2} ${size / 2})">
+  const hero = value != null && value >= 60;
+  const id = `sc-g${++gradId}`;
+  const defs = hero ? `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient></defs>` : '';
+  const paint = hero ? `stroke:url(#${id})` : `stroke:${scoreColor(value)}`;
+  return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true" class="${hero ? 'sc-hero' : ''}">${defs}<g transform="rotate(-90 ${size / 2} ${size / 2})">
     <circle class="sc-track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"/>
-    <circle class="sc-arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" stroke="${scoreColor(value)}"
-      stroke-dasharray="${c.toFixed(1)}" style="--c:${c.toFixed(1)};--off:${(c * (1 - v)).toFixed(1)}"/></g></svg>`;
+    <circle class="sc-arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="${paint};--c:${c.toFixed(1)};--off:${(c * (1 - v)).toFixed(1)}"
+      stroke-dasharray="${c.toFixed(1)}"/></g></svg>`;
 }
 
 /** Fill the rings under `root` from empty (skipped with reduced motion). */

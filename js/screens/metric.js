@@ -9,6 +9,7 @@ import { weightToDisplay } from '../units.js';
 import { lineChartSVG } from '../ui/linechart.js';
 import { metricDef, metricSeries, dailySeries, fmtMetric, heightM, periodAverage } from '../withings/body.js';
 import { weekOf } from '../workouts/awards.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 let range = 90;
 let explainers = null;
@@ -84,7 +85,7 @@ export function renderMetric(el, key) {
         <p class="small muted legend"><span class="key dot"></span>readings <span class="key line"></span>7-day average ${prev.length ? '<span class="key dash"></span>previous period' : ''} ${bars.length ? '<span class="key bar"></span>training sets/week' : ''}</p>
         ${def.overlay !== 'sets' ? `<label class="choice check small"><input type="checkbox" name="sets" ${showSets ? 'checked' : ''}><span>Show training sets per week</span></label>` : ''}
         <p class="small muted">Last reading ${new Date(last.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${daily.length.toLocaleString()} days with readings</p>
-      </div>` : `<div class="card empty">No ${esc(def.label.toLowerCase())} readings yet.${state.integrations.withings && state.integrations.withings.connected ? ' The data check shows whether Withings sends this one.' : ' Connect Withings in Settings to bring them in.'}</div>`}
+      </div>` : `<div class="card">${emptyState({ icon: 'scale', title: `No ${esc(def.label.toLowerCase())} readings yet`, text: state.integrations.withings && state.integrations.withings.connected ? 'The data check shows whether Withings sends this one.' : 'Connect Withings to bring your readings in.', action: state.integrations.withings && state.integrations.withings.connected ? { href: '#/withings/check', label: 'Open data check' } : { href: '#/withings', label: 'Connect Withings' } })}</div>`}
       ${key === 'bmi' ? '<p class="small muted">BMI ignores muscle. Look at FFMI and FMI too.</p>' : ''}
     </section>`;
 

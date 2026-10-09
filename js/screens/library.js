@@ -8,7 +8,7 @@ import { MUSCLES, MUSCLE_LABELS } from '../workouts/recovery.js';
 import { PATTERN_LABELS, equipmentText } from './picker.js';
 import { openHowTo } from './session.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
-import { icon } from '../ui/icons.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 let q = '';
 let pattern = '';
@@ -43,6 +43,7 @@ export function renderLibrary(el) {
             <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}
       </ul>
+      ${list.length ? '' : emptyState({ icon: 'search', title: 'No exercises found', text: 'Try a different word, or add your own exercise.', action: { attr: 'data-new-empty', label: 'Add a custom exercise' } })}
       <p class="small muted">Library curated for this app. Step-by-step instructions from free-exercise-db by Yuhonas (public domain, Unlicense).</p>
     </section>`;
 
@@ -56,6 +57,8 @@ export function renderLibrary(el) {
   $('[data-here]', el).addEventListener('change', (e) => { hereOnly = e.target.checked; renderLibrary(el); });
   $$('[data-id]', el).forEach((li) => li.addEventListener('click', () => openDetail(li.dataset.id)));
   $('[data-new]', el).onclick = () => openCustomForm();
+  const newEmpty = $('[data-new-empty]', el);
+  if (newEmpty) newEmpty.onclick = () => openCustomForm();
 }
 
 function toggleSetting(key, id) {

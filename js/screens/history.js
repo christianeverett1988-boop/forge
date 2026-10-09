@@ -9,7 +9,7 @@ import { dayKey, addDays } from '../weight/smoothing.js';
 import { softDelete } from '../db.js';
 import { CARDIO_TYPES } from './tools.js';
 import { progressTabs } from './progress.js';
-import { icon } from '../ui/icons.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 let trendId = null;
 
@@ -144,7 +144,7 @@ export function renderHistory(el) {
           <small class="muted">${formatDay(dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(state.locations.find((l) => l.id === r.w.location_id)?.name || '')} · ${(r.w.exercises || []).reduce((n, it) => n + it.sets.filter((s) => s.done && !s.warmup).length, 0)} sets${(r.w.prs || []).length ? ` · ${icon('trophy')} ${r.w.prs.length}` : ''}</small></div><span class="chev" aria-hidden="true">${icon('chev')}</span></li>` : `
         <li class="tap" data-c="${esc(r.c.id)}"><div><b>${esc(CARDIO_TYPES[r.c.activity] || r.c.activity)}</b>
           <small class="muted">${formatDay(r.c.day || dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${r.c.duration_min} min${r.c.calories ? ` · ${r.c.calories} kcal` : ''} · Manual</small></div><span class="chev" aria-hidden="true">${icon('chev')}</span></li>`).join('')}</ul>`
-        : '<div class="card empty">No sessions yet.</div>'}
+        : `<div class="card">${emptyState({ icon: 'chart', title: 'No workouts yet', text: 'Finish a workout and it shows up here, with your records.', action: { href: '#/train', label: 'Start your first workout' } })}</div>`}
     </section>`;
 
   const sel = $('[data-trend]', el);

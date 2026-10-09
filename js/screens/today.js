@@ -154,7 +154,7 @@ export function renderToday(el) {
         <div class="row between center">
           <div>
             <p class="label">Weight trend</p>
-            <p class="big" data-count>${latest ? formatWeight(latest.trend, u) : '—'}</p>
+            <p class="hero-num" data-count>${latest ? formatWeight(latest.trend, u) : '—'}</p>
             <p class="small ${tone}">${change == null ? 'Log a few days to see your trend' : `${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week`}</p>
           </div>
           ${sparklineSVG(series)}
@@ -169,7 +169,7 @@ export function renderToday(el) {
       <div class="card">
         <p class="label">Daily targets</p>
         <div class="target-hero">
-          <div class="big"><span data-count>${t.calories.toLocaleString()}</span><small>kcal</small></div>
+          <div class="hero-num"><span data-count>${t.calories.toLocaleString()}</span> <small>kcal</small></div>
           <div class="macros">
             <div><b>${t.proteinG} g</b><span>Protein</span></div>
             <div><b>${t.carbG} g</b><span>Carbs</span></div>
