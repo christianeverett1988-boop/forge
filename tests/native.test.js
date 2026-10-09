@@ -116,3 +116,26 @@ test('www build: finds the Firebase files the app imports and points them at the
   for (const skip of ['functions', 'tests', 'notes', 'docs']) assert(!COPY.includes(skip), `${skip} stays out of the app`);
   web();
 });
+
+test('rest notification: a quick start-then-skip never leaves a stale notification', async () => {
+  const calls = fakeShell();
+  const p1 = syncRestNotification(Date.now() + 120000);
+  const p2 = syncRestNotification(null); // skipped before the first call finished
+  await Promise.all([p1, p2]);
+  const N = calls.filter((c) => c[0] === 'LocalNotifications').map((c) => c[1]).filter((m) => m === 'schedule' || m === 'cancel');
+  assert(N[N.length - 1] !== 'schedule', `left scheduled: ${N.join()}`);
+  // and the other way round: a skip then a new rest ends with exactly that rest scheduled
+  const end = Date.now() + 60000;
+  await Promise.all([syncRestNotification(null), syncRestNotification(end)]);
+  const last = calls.filter((c) => c[0] === 'LocalNotifications' && c[1] === 'schedule').pop();
+  assert(last && Math.abs(last[2].notifications[0].schedule.at.getTime() - end) < 1000, 'the newest rest is the one scheduled');
+  await syncRestNotification(null);
+  web();
+});
+
+test('HealthKit daily totals land on the right day even when buckets start at UTC midnight', () => {
+  const utcMidnight = '2026-10-08T00:00:00Z'; // 8 pm Oct 7 in New York, but the bucket is Oct 8
+  const r = totalToRecord('steps', { startDate: utcMidnight, value: 5000 });
+  const local = new Date(Date.parse(utcMidnight) + 12 * 3600e3);
+  eq(r.endDate.slice(0, 10), `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`);
+});

@@ -69,9 +69,20 @@ async function notifications() {
  * Keep one "Rest's over" notification in step with the rest timer: scheduled for `endMs` (ms since epoch), or
  * cancelled when endMs is null (rest stopped, paused or over). Same end time → nothing to do.
  */
-export async function syncRestNotification(endMs, { title = 'Rest’s over', body = 'Time for your next set.' } = {}) {
-  if (!isNative()) return false;
+let wanted = { end: null, title: '', body: '' }; // the latest request; calls run one at a time and apply it
+let chain = Promise.resolve(true);
+
+export function syncRestNotification(endMs, { title = 'Rest’s over', body = 'Time for your next set.' } = {}) {
+  if (!isNative()) return Promise.resolve(false);
   const end = Number.isFinite(endMs) && endMs > Date.now() + 2000 ? Math.round(endMs / 1000) * 1000 : null;
+  wanted = { end, title, body };
+  // One at a time, each applying the newest request, so a quick skip after a start can't leave a stale notification.
+  chain = chain.then(() => applyRest(), () => applyRest());
+  return chain;
+}
+
+async function applyRest() {
+  const { end, title, body } = wanted;
   if (end === scheduledEnd) return true;
   const N = await notifications();
   if (!N) return false;
@@ -79,7 +90,7 @@ export async function syncRestNotification(endMs, { title = 'Rest’s over', bod
     if (scheduledEnd != null) await N.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
     scheduledEnd = null;
     if (end != null) {
-      await N.schedule({ notifications: [{ id: REST_NOTIFICATION_ID, title, body, schedule: { at: new Date(end), allowWhileIdle: true }, sound: 'default' }] });
+      await N.schedule({ notifications: [{ id: REST_NOTIFICATION_ID, title, body, schedule: { at: new Date(end), allowWhileIdle: true } }] });
       scheduledEnd = end;
     }
     return true;

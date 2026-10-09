@@ -60,12 +60,14 @@ export function sleepRecords(s) {
   return r ? [r] : [];
 }
 
-/** A daily total → one record ending at that day's 23:59 local, from a single source (HealthKit's own sum). */
+/** A daily total → one record ending at that day's 23:59 local, from a single source (HealthKit's own sum).
+ * The day is taken from the middle of the bucket. */
 export function totalToRecord(dataType, agg) {
   const v = Number(agg && agg.value);
   if (!SUM_TYPES[dataType] || !Number.isFinite(v) || v <= 0) return null;
-  const start = new Date(agg.startDate);
-  if (Number.isNaN(start.getTime())) return null;
+  const s0 = new Date(agg.startDate);
+  if (Number.isNaN(s0.getTime())) return null;
+  const start = new Date(s0.getTime() + 12 * 3600 * 1000); // the bucket's middle: right day even if it's anchored at UTC midnight
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 0);
   return { type: SUM_TYPES[dataType], value: String(v), unit: agg.unit || '', startDate: localStamp(start), endDate: localStamp(end), sourceName: 'HealthKit' };
 }
@@ -101,7 +103,7 @@ export async function readHealthDays({ since, now = new Date(), limit = 20000 } 
   const range = { startDate: startDate.toISOString(), endDate: new Date(now).toISOString() };
   const samples = {};
   for (const t of [...Object.keys(SAMPLE_TYPES), 'sleep']) {
-    try { samples[t] = (await H.readSamples({ dataType: t, ...range, limit, ascending: true })).samples || []; } catch { samples[t] = []; }
+    try { samples[t] = (await H.readSamples({ dataType: t, ...range, limit, ascending: false })).samples || []; } catch { samples[t] = []; }
   }
   const totals = {};
   for (const t of Object.keys(SUM_TYPES)) {

@@ -42,7 +42,8 @@ export async function nativeHealthSync({ onText = () => {} } = {}) {
   const last = lastNative();
   const since = last ? shiftDay(new Date(last).toLocaleDateString('en-CA'), -3) : shiftDay(todayKey(), -(IMPORT_DAYS - 1));
   onText('Reading Apple Health on this phone…');
-  const { days } = await readHealthDays({ since });
+  const { days, records } = await readHealthDays({ since });
+  if (!records) throw new Error('Apple Health shared nothing with Forge. On your iPhone: Settings → Health → Data Access & Devices → Forge → Turn On All. Then try again.');
   let sent = 0;
   for (let i = 0; i < days.length; i += CHUNK) {
     onText(`Saving ${days.length} daily summaries…`);
@@ -53,10 +54,15 @@ export async function nativeHealthSync({ onText = () => {} } = {}) {
   return sent;
 }
 
-/** Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old. */
+let autoFailedAt = 0;
+/**
+ * Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old.
+ * Not while you're reading by hand, and after a failure not again for 6 h (the button still works).
+ */
 export async function autoHealthSync() {
-  if (!isNative() || !state.user || !lastNative() || Date.now() - lastNative() < AUTO_EVERY_MS) return 0;
-  try { return await nativeHealthSync(); } catch { return 0; }
+  if (!isNative() || !state.user || nativeState || !lastNative()) return 0;
+  if (Date.now() - lastNative() < AUTO_EVERY_MS || Date.now() - autoFailedAt < AUTO_EVERY_MS) return 0;
+  try { return await nativeHealthSync(); } catch { autoFailedAt = Date.now(); return 0; }
 }
 
 function nativeCard() {
