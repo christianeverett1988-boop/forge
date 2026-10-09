@@ -8,7 +8,7 @@ export const TAB_ORDER = ['today', 'train', 'body', 'weight', 'settings'];
 export const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
   history: 'weight', awards: 'weight', score: 'weight',
-  locations: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
+  locations: 'settings', report: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
   metric: 'body', photos: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
   coach: 'today',
 };

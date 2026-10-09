@@ -1,0 +1,47 @@
+// Settings → Your data → Health summary for your doctor (#/report). Built on this phone from data Forge already
+// has; nothing is uploaded. "Print or save as PDF" uses the browser's print sheet (on iPhone: Share → Save to Files).
+import { state, units as getUnits } from '../state.js';
+import { $, $$, toast, todayKey } from '../ui.js';
+import { icon, emptyState } from '../ui/icons.js';
+import { weightSeries, myBodyMeasures } from '../derived.js';
+import { buildSummary, summaryText, isEmpty, DEFAULT_RANGE } from '../health/clinical.js';
+import { reportHtml, rangeSegHtml } from '../health/clinicalview.js';
+
+let range = DEFAULT_RANGE;
+
+export function renderReport(el) {
+  const u = getUnits();
+  const today = todayKey();
+  const s = buildSummary({
+    range, today, rows: state.health_daily || [], measures: myBodyMeasures(), series: weightSeries(),
+    workouts: state.workouts, cardio: state.cardio || [], profile: state.profile || {},
+  });
+  const empty = isEmpty(s);
+  el.innerHTML = `
+    <section class="stack report">
+      <div class="rp-tools stack">
+        <h1>Health summary</h1>
+        <p class="muted">A one-to-two page summary for your doctor or dietitian, made on this phone. Nothing is uploaded or sent anywhere.</p>
+        ${rangeSegHtml(range)}
+        ${empty ? '' : `<div class="row gap rp-actions">
+          <button class="btn primary grow" data-print>${icon('download')}Print or save as PDF</button>
+          <button class="btn ghost grow" data-share>${icon('share')}Share as text</button></div>`}
+      </div>
+      ${empty
+        ? `<div class="card" data-empty>${emptyState({ icon: 'heart', title: 'Nothing to summarise yet', text: `There is no data in the last ${range === 365 ? 'year' : `${range} days`}. Weigh in, train, or connect Apple Health or your scale and this fills in.`, action: { href: '#/weight', label: 'Log a weigh-in' } })}</div>`
+        : `<div class="rp-page stack">${reportHtml(s, u, today)}</div>`}
+    </section>`;
+
+  $$('input[name=rprange]', el).forEach((r) => r.addEventListener('change', () => { range = Number(r.value); renderReport(el); }));
+  const print = $('[data-print]', el);
+  if (print) print.onclick = () => window.print();
+  const share = $('[data-share]', el);
+  if (share) share.onclick = async () => {
+    const text = summaryText(s, u, today);
+    const copy = async () => {
+      try { await navigator.clipboard.writeText(text); toast('Copied to your clipboard'); } catch { toast('Couldn’t copy. Try again.'); }
+    };
+    if (!navigator.share) { await copy(); return; }
+    try { await navigator.share({ title: 'Forge health summary', text }); } catch (e) { if (e && e.name !== 'AbortError') await copy(); }
+  };
+}

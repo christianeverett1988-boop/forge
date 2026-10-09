@@ -95,6 +95,7 @@ const routes = {
   apple: () => import('./screens/apple.js').then((m) => m.renderApple(main)),
   score: () => import('./screens/score.js').then((m) => m.renderScore(main)),
   trends: () => import('./screens/trends.js').then((m) => m.renderTrends(main)),
+  report: () => import('./screens/report.js').then((m) => m.renderReport(main)),
   weekly: () => import('./screens/weekly.js').then((m) => m.renderWeekly(main)),
   coach: () => import('./screens/coach.js').then((m) => m.renderCoach(main)),
   withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
