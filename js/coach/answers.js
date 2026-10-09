@@ -102,6 +102,12 @@ export function weightAnswer(d) {
 }
 
 // ---- 4. What should I train today? ----
+export function recoveredPhrase(low) {
+  if (low < FRESH_PCT) return `the lowest is ${low}% recovered`;
+  if (low >= 100) return 'fully recovered';
+  return `all ${Math.min(95, Math.floor(low / 5) * 5)}%+ recovered`;
+}
+
 export function trainAnswer(d) {
   const plan = d.plan;
   if (!plan || !plan.exercises || !plan.exercises.length) return null;
@@ -115,7 +121,7 @@ export function trainAnswer(d) {
     const low = Math.min(...works.map((m) => rec[m]));
     const names = works.map((m) => MUSCLE_LABELS[m].toLowerCase());
     const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
-    lines.push(`Today works ${list} (${low >= FRESH_PCT ? `all ${Math.floor(low / 5) * 5}%+ recovered` : `the lowest is ${low}% recovered`}).`);
+    lines.push(`Today works ${list} (${recoveredPhrase(low)}).`);
   }
   const r = d.readiness;
   if (r && r.status === 'ok' && !r.stale) {

@@ -52,7 +52,7 @@ export function renderCoach(el) {
         <div class="card stack" data-empty>
           <p class="big-title">Coach needs a few weigh-ins or a workout first</p>
           <p class="muted">Once there is something to look at, you can ask Coach how your week is going, whether you are on track, and what to train.</p>
-          <div class="row gap"><button class="btn grow" data-log>${icon('scale')}Log weight</button><a class="btn ghost grow" href="#/train">${icon('dumbbell')}Start workout</a></div>
+          <div class="row gap"><button class="btn grow" data-log>${icon('scale')}Log weight</button><a class="btn ghost grow" href="#/train">Train</a></div>
         </div>` : `
         <p class="muted">Ask me about your numbers. Every answer comes from your own data, and I show you how I got it.</p>`}
       ${empty && !qs.length ? '' : `

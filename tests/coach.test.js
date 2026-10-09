@@ -2,7 +2,7 @@
 // modules, and actions that only call existing functions. Synthetic data only.
 import { readFileSync, readdirSync } from 'node:fs';
 import { test, eq, assert } from './harness.js';
-import { weekLabel, needsStarter, weekAnswer, goalAnswer, weightAnswer, weightLabel, trainAnswer, recoveredAnswer, scoreAnswer, strongerAnswer, availableQuestions, QUESTIONS, MEDICAL as COACH_MEDICAL } from '../js/coach/answers.js';
+import { weekLabel, recoveredPhrase, needsStarter, weekAnswer, goalAnswer, weightAnswer, weightLabel, trainAnswer, recoveredAnswer, scoreAnswer, strongerAnswer, availableQuestions, QUESTIONS, MEDICAL as COACH_MEDICAL } from '../js/coach/answers.js';
 import { runAction } from '../js/coach/actions.js';
 import { liftChanges } from '../js/coach/lifts.js';
 import { dailyWeights, smooth, trendChange } from '../js/weight/smoothing.js';
@@ -390,4 +390,15 @@ test('readiness: sleep times read "1 h", "45 min" and "1 h 5 min"', () => {
   eq(fmtH(45), '45 min');
   eq(fmtH(65), '1 h 5 min');
   eq(fmtH(119.6), '2 h');
+});
+
+test('coach train: recovered wording never says 100%+', () => {
+  eq(recoveredPhrase(100), 'fully recovered');
+  eq(recoveredPhrase(87), 'all 85%+ recovered');
+  eq(recoveredPhrase(60), 'the lowest is 60% recovered');
+  eq(recoveredPhrase(99), 'all 95%+ recovered');
+  const rec = Object.fromEntries(SHOW_MUSCLES.map((m) => [m, 100]));
+  const plan = { label: 'Lower', exercises: [{}], est_minutes: 40, location: { name: 'Home gym' }, deload: false };
+  const a = trainAnswer({ ...build({ plan }), recovery: rec, planMuscles: ['quads', 'glutes'] }, TODAY);
+  assert(a.lines.join(' | ').includes('Today works quads and glutes (fully recovered)'), a.lines.join(' | '));
 });
