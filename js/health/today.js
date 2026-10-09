@@ -6,7 +6,7 @@ import { fatigueAt } from '../workouts/recovery.js';
 import { exerciseById } from '../workouts/library.js';
 import { readiness, loadFromFatigue } from './readiness.js';
 import { forgeScore } from './score.js';
-import { weightSeries, myBodyMeasures } from '../derived.js';
+import { weightSeries, myBodyMeasures, foodTargets } from '../derived.js';
 
 const OVERRIDE = 'forge.readiness.override';
 
@@ -26,11 +26,11 @@ let scoreMemo = null;
 /** The Forge Score from everything in state (Apple Health days, weight trend, body measures, workouts). */
 export function currentScore() {
   const day = todayKey();
-  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile];
+  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile, state.food_logs];
   if (scoreMemo && scoreMemo.day === day && keys.every((k, i) => scoreMemo.keys[i] === k)) return scoreMemo.value;
   const value = forgeScore({
     rows: state.health_daily || [], series: weightSeries(), measures: myBodyMeasures(), workouts: state.workouts,
-    cardio: state.cardio || [], profile: state.profile || {}, today: day,
+    cardio: state.cardio || [], profile: state.profile || {}, foodLogs: state.food_logs || [], targets: foodTargets(), today: day,
   });
   scoreMemo = { day, keys, value };
   return value;

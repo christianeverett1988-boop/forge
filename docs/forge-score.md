@@ -8,7 +8,7 @@ Sources: where a number comes from a published guideline it says so. **Forge def
 
 - Each day gets a score from 0 to 100. The app shows the **average of the last 7 days**.
 - Five pillars, each the weighted mean of its components. Pillar weights (shown in the app): **Body 25%, Recovery 20%, Sleep 15%, Training 25%, Nutrition 15%**.
-- A component without enough data is left out, and so is a pillar with no components. The remaining weights are scaled up to add to 100% (never scored as zero). **Nutrition** is "not tracked yet" until food logging (Checkpoint C), so for now its 15% is shared among the pillars that have data (Body 29.4%, Recovery 23.5%, Sleep 17.6%, Training 29.4% when all four are present).
+- A component without enough data is left out, and so is a pillar with no components. The remaining weights are scaled up to add to 100% (never scored as zero). **Nutrition** is "not tracked yet" until you have logged food on 3 of the last 7 days; until then its 15% is shared among the pillars that have data (Body 29.4%, Recovery 23.5%, Sleep 17.6%, Training 29.4% when all four are present).
 - **No overall score from fewer than 3 pillars.** Body + Training alone (no Watch data) isn't a picture of you, so Forge shows "Based on 2 of 5 parts" and an invitation to add Apple Health instead of a number.
 - **What moved it** compares each component's average over the last 7 days with the 7 days before, weights the change by how much that component counts in the whole score, and shows the top 3.
 
@@ -61,7 +61,15 @@ Equal weights. All windows end on the day being scored.
 
 ## Nutrition (15%)
 
-Not tracked yet. It lights up with food logging: days logged ÷ 7, calories within ±10% of target, protein at or above target (1.6–2.2 g/kg, brief §5.4).
+Uses the food log (`docs/food.md`). **It only counts once at least 3 of the 7 days ending on the day scored have food logged** (a day counts if its entries add up to more than 0 kcal); before that it stays "not tracked yet". Targets are the daily calories and protein shown on Today. Without a profile (no targets) only the first component is scored.
+
+| Component | Input | Points | Source |
+|---|---|---|---|
+| **Days logged** | Logged days out of the last 7 | `[0,0] [7,100]` | Brief B.9 |
+| **Calories near target** | Per logged day, \|eaten ÷ target − 1\|; the component is the mean over logged days | `[0.1,100] [0.3,0]`: within ±10% = 100, 30% off = 0 | Brief B.9 (±10%); the slide to 0 is a Forge default |
+| **Protein** | Per logged day, protein ÷ target; mean over logged days | `[0.5,0] [1,100]`: at or over target = 100 | Brief B.9 (protein ≥ target; the target is 1.6–2.2 g/kg, brief §5.4); the slide is a Forge default |
+
+Only logged days are judged, so a day you didn't log never counts as "0 kcal"; "Days logged" is what rewards logging. A day with only a snack logged does count as logged, which can pull "Calories near target" down. That is deliberate: partial logging should look partial.
 
 ## Readiness (Green / Amber / Red)
 

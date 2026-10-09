@@ -100,7 +100,7 @@ export function renderScore(el) {
       <div class="pillar-grid">${s.pillars.map(tile).join('')}</div>
       <div data-detail-slot>${open ? detail(s.pillars.find((p) => p.key === open)) : ''}</div>
       ${hasData ? `<p class="small muted tcenter" style="text-align:center" data-based-on>Based on ${s.trackedCount} of 5 parts</p>` : ''}
-      ${s.notTracked.includes('nutrition') ? `<p class="small muted"><b>Nutrition: not tracked yet.</b> Its 15% is shared among the ${s.trackedCount} part${s.trackedCount === 1 ? '' : 's'} with data until food logging arrives, so nothing is counted against you.</p>` : ''}
+      ${s.notTracked.includes('nutrition') ? `<p class="small muted"><b>Nutrition: not tracked yet.</b> It lights up once you have logged food on 3 of the last 7 days. Until then its 15% is shared among the ${s.trackedCount} part${s.trackedCount === 1 ? '' : 's'} with data, so nothing is counted against you.</p>` : ''}
       <div data-longterm-slot>${longTermHtml(longTerm(weekly(), todayKey(), ltRange, { recentScored: hasData }), ltRange, todayKey())}</div>
       ${longevityHtml(longevityCards({ rows: state.health_daily || [], measures: myBodyMeasures(), profile: state.profile || {}, today: todayKey() }), units(), todayKey())}
       <details class="card">

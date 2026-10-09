@@ -18,6 +18,9 @@ export const state = {
   exercises: [], // custom exercises
   body_measures: [], // server-written (Withings)
   health_daily: [], // server-written (Apple Health, W2)
+  foods: [], // My foods (v0.11.0)
+  food_logs: [], // what you ate (v0.11.0)
+  foodError: null, // set when the food collections can't be read (rules not published yet); the rest of the app still works
   integrations: {}, // server-written status: { withings: {...} }
   serverError: null,
   sync: typeof navigator === 'undefined' || navigator.onLine ? 'synced' : 'offline',
@@ -31,7 +34,7 @@ export const state = {
     this.set({
       user, loaded: notLoaded(), loadError: null, profile: null, settings: null,
       locations: [], weights: [], workouts: [], cardio: [], programs: [], exercises: [],
-      body_measures: [], health_daily: [], integrations: {}, serverError: null,
+      body_measures: [], health_daily: [], integrations: {}, serverError: null, foods: [], food_logs: [], foodError: null,
     });
   },
 };

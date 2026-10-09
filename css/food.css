@@ -1,0 +1,31 @@
+/* Food logging (v0.11.0): totals meters, meals, the Log food sheet. Colours come from tokens only. */
+.meter-row { display: flex; flex-direction: column; gap: var(--s-2); }
+.meter-row.big .meter { height: 12px; }
+.meter-val { font-size: 17px; font-variant-numeric: tabular-nums; }
+.meter { height: 8px; border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--accent); }
+.meter.over i { background: var(--warn); }
+.food-minor { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
+@media (prefers-reduced-motion: no-preference) {
+  .meter i { transition: width .35s ease; }
+}
+
+.food-meal { display: flex; flex-direction: column; gap: var(--s-2); }
+.food-meal-head { min-height: 44px; }
+.food-meal-head h2 { margin: 0; }
+.small-btn { min-height: 44px; padding: 0 var(--s-3); font-size: 15px; }
+.food-none { cursor: default; }
+.food-results { max-height: 38vh; overflow-y: auto; }
+.food-results li.picked { background: var(--accent-tint); }
+
+/* Servings stepper and meal chips: 44px+ targets for one-handed use. */
+.stepper { display: inline-flex; align-items: center; gap: var(--s-2); }
+.stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; background: var(--surface-3); color: var(--text-1); border: 0; }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+.chip-btn { min-height: 44px; padding: 0 var(--s-1); border: 0; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.chip-btn.on { background: var(--accent-tint); color: var(--text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 55%, transparent); }
+
+/* The picked food and its Add button stay at the bottom of the sheet while you scroll the list. */
+.food-dock { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-3); margin: 0 calc(var(--s-3) * -1); border-radius: var(--r-lg); background: var(--surface-2); }
+.food-dock[hidden], [data-quick][hidden] { display: none; }
