@@ -1,5 +1,5 @@
 // Today rings (brief §10): Training days this week, Weekly sets (Push / Pull / Legs) and Recovery.
-// Pure functions; js/ui/rings.js draws them. Food rings join here with Checkpoint C.
+// Pure functions; js/ui/rings.js draws them. Calories and protein (today) join when you pass `food`.
 import { streak, weekOf } from './awards.js';
 import { doneSets, recoveryPct, fatigueAt } from './recovery.js';
 
@@ -38,7 +38,7 @@ export function weeklySets(workouts, exerciseById, now = Date.now()) {
  * The three rings, each { key, label, value (0..1+), done, goal, text }.
  *   profile: { trainingDays, experience }; deload: this is a deload week (smaller sets target)
  */
-export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseById, now = Date.now(), deload = false }) {
+export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseById, now = Date.now(), deload = false, food = null }) {
   const goalDays = profile.trainingDays || 3;
   const st = streak(workouts, cardio, goalDays, now);
   // Deload week: half the usual sets (the generator halves sets on a deload), so the ring can still close.
@@ -50,7 +50,7 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
   const active = workouts.filter((w) => !w.deleted && (w.status === 'done' || w.status === 'active'));
   const rec = recoveryPct(fatigueAt(active, exerciseById, now));
   const fresh = Math.round(MAJOR.reduce((n, m) => n + (rec[m] ?? 100), 0) / MAJOR.length);
-  return [
+  const out = [
     { key: 'training', label: 'Training', value: st.thisWeek.done / goalDays, done: st.thisWeek.done, goal: goalDays, text: `${st.thisWeek.done}/${goalDays} days` },
     {
       key: 'sets', label: deload ? 'Weekly sets · deload' : 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
@@ -58,4 +58,11 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
     },
     { key: 'recovery', label: 'Recovery', value: fresh / 100, done: fresh, goal: 100, text: `${fresh}% fresh` },
   ];
+  // Today's food: calories in vs target, then protein. food: { kcal, protein_g, targetKcal, targetProtein }.
+  if (food && food.targetKcal > 0) {
+    const n = (v) => Math.round(v).toLocaleString('en-US');
+    out.push({ key: 'calories', label: 'Calories today', value: food.kcal / food.targetKcal, done: food.kcal, goal: food.targetKcal, text: `${n(food.kcal)} of ${n(food.targetKcal)} kcal` });
+    if (food.targetProtein > 0) out.push({ key: 'protein', label: 'Protein today', value: food.protein_g / food.targetProtein, done: food.protein_g, goal: food.targetProtein, text: `${n(food.protein_g)} of ${n(food.targetProtein)} g` });
+  }
+  return out;
 }

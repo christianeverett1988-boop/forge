@@ -43,6 +43,17 @@ test('rings: training days vs goal, sets capped per group, recovery average', ()
   eq(none.map((r) => r.text).join(' | '), '0/3 days | 0/10 push · 0/10 pull · 0/10 legs | 100% fresh');
 });
 
+test('rings: calories and protein join when food is passed (US-style numbers), and cap nothing', () => {
+  const food = { kcal: 1850, protein_g: 120.4, targetKcal: 2200, targetProtein: 160 };
+  const r = todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food });
+  eq(r.map((x) => x.key).join(), 'training,sets,recovery,calories,protein');
+  eq(r[3].text, '1,850 of 2,200 kcal');
+  eq(r[4].text, '120 of 160 g');
+  near(r[3].value, 1850 / 2200, 1e-9);
+  assert(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW }).length === 3, 'no food: three rings as before');
+  eq(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food: { ...food, kcal: 2500 } })[3].value > 1, true, 'over target reads above 1');
+});
+
 test('rings: cardio counts as a training day', () => {
   const [tr] = todayRings({ workouts: [], cardio: [{ started_at: at(6) }], profile: { trainingDays: 3 }, exerciseById: byId, now: NOW });
   eq(tr.done, 1);

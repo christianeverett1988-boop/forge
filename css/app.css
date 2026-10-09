@@ -439,7 +439,7 @@ body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
 /* ---------- Today rings ---------- */
 .rings { display: grid; grid-template-columns: 148px 1fr; gap: var(--s-4); align-items: center; }
 .rings-svg { display: block; overflow: visible; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 18%, transparent)); }
-.ring-track, .ring-arc { fill: none; stroke-width: 13; }
+.ring-track, .ring-arc { fill: none; stroke-width: 13; } /* thinner inline when five rings are drawn */
 .ring-track { opacity: 0.16; }
 .ring-arc { stroke-linecap: round; stroke-dashoffset: var(--off); transition: stroke-dashoffset 1s var(--ease-out); }
 .rings-pre .ring-arc { stroke-dashoffset: var(--c); transition: none; }

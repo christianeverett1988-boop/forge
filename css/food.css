@@ -7,6 +7,15 @@
 .meter { height: 8px; border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
 .meter i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--accent); }
 .meter.over i { background: var(--warn); }
+/* Today's Food card: a calories ring with protein inside it, big tabular numbers, two big buttons. */
+.food-card-top { display: flex; align-items: center; gap: var(--s-4); }
+.food-card-ring { flex: none; display: block; overflow: visible; }
+.food-card-text { min-width: 0; }
+.food-card-kcal { margin: 0; font-variant-numeric: tabular-nums; }
+.food-card-kcal b { font-size: 32px; line-height: 1.1; letter-spacing: -.02em; }
+.food-card-kcal small { color: var(--text-2); font-size: 15px; }
+.food-card .small { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .food-card-ring circle + circle { transition: stroke-dashoffset .6s ease; } }
 .food-minor { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
 @media (prefers-reduced-motion: no-preference) {
   .meter i { transition: width .35s ease; }

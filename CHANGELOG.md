@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.2 — Camera fix for the iPhone app, and Food gets a real home on Today (2026-10-09)
+
+Part 1 of the audit in issue #57. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.
+
+- **Camera fix (iPhone app):** `Info.plist` now has `NSCameraUsageDescription`. Without it iOS closes the app the moment "Take photo" opens the camera. The words: "Forge uses the camera for your progress photos and meal photos. Photos stay on this iPhone unless you choose to analyse a meal." No `NSPhotoLibraryAddUsageDescription`: nothing saves straight into Photos (exports, the zip and the time-lapse go through the share sheet or a download), so a test now pins that it stays absent until a flow needs it. **Christian: run Refresh Forge once** to get this on your phone.
+- **Food card moved up:** it now sits right under the workout card instead of at the very bottom. A calories ring with protein inside it, "1,850 of 2,200 kcal", kcal left (or over), protein, **Log food** (one tap to the sheet) and **See meals**.
+- **Calories and protein on the Today rings:** two new rings (today's calories vs target, today's protein vs target) join Training, Weekly sets and Recovery. The five rings are thinner so they fit the same circle. They never burst.
+- **Tour:** a new "Log your food" step spotlights the real Food card (9 steps).
+- Tests: Info.plist keys, the food rings, the tour step.
+
 ## 0.15.1 — One-click weekly refresh for the iPhone app (2026-10-09)
 
 A free Apple ID signs the iPhone app for 7 days only. This makes the weekly re-install one double-click, and Forge tells you when it's due. The web app is unchanged. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.

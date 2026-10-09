@@ -1,5 +1,6 @@
 // The iPhone app bridge (js/native/*): a no-op on the web; with a (fake) Capacitor shell it calls the plugins.
 // HealthKit samples become the same daily summaries the export import makes.
+import { readFileSync } from 'node:fs';
 import { test, eq, assert, near } from './harness.js';
 import { isNative, plugin, haptic, syncRestNotification, openExternal, hideSplash, setupKeyboard, REST_NOTIFICATION_ID } from '../js/native/bridge.js';
 import { localStamp, sampleToRecord, sleepRecords, totalToRecord, daysFromHealth, healthPlugin, READ_TYPES } from '../js/native/health.js';
@@ -320,4 +321,17 @@ test('expiry reminder: boot never asks for permission; it only schedules when al
   await scheduleExpiryReminder(null);
   assert(calls.some((c) => c[1] === 'cancel') && !calls.some((c) => c[1] === 'schedule'));
   web();
+});
+
+// ---------- iPhone permissions (Info.plist) ----------
+const plist = readFileSync(new URL('../ios/App/App/Info.plist', import.meta.url), 'utf8');
+const plistString = (key) => (plist.match(new RegExp('<key>' + key + '</key>\\s*<string>([^<]*)</string>')) || [])[1];
+
+test('Info.plist: the camera key exists with the agreed words (without it iOS closes the app when the camera opens)', () => {
+  eq(plistString('NSCameraUsageDescription'), 'Forge uses the camera for your progress photos and meal photos. Photos stay on this iPhone unless you choose to analyse a meal.');
+  assert(plistString('NSHealthShareUsageDescription'), 'HealthKit text is still there');
+});
+
+test('Info.plist: no Photos-library key until a flow really saves to Photos (exports use the share sheet or a download)', () => {
+  eq(plistString('NSPhotoLibraryAddUsageDescription'), undefined);
 });

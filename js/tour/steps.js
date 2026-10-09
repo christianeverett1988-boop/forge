@@ -26,6 +26,11 @@ export const TOUR_STEPS = [
     body: 'Forge picks a workout for you each day. Tap Start to begin, or See plan to look at it first.',
   },
   {
+    id: 'food', route: 'today', target: '[data-tour="food"]',
+    title: 'Log your food',
+    body: 'Your calories and protein for today live here. Tap Log food to add a meal in a couple of taps, or See meals to look at what you’ve eaten.',
+  },
+  {
     id: 'weight', route: 'today', target: '.weight-card [data-log]',
     title: 'Log your weight',
     body: 'Tap Log weight to add your weight by hand. The Withings scale can only link to one Forge account for now, so type your weight in here instead. A few times a week is plenty.',
