@@ -14,6 +14,7 @@ import { intel } from '../health/intel.js';
 import { fmtAmount } from '../health/insights.js';
 import { weekOf } from '../workouts/awards.js';
 import { icon, emptyState } from '../ui/icons.js';
+import { vo2Series } from '../health/longevity.js';
 
 let range = 90; // 7 / 28 / 90 / 365 days, or 0 for everything
 let explainers = null;
@@ -59,9 +60,11 @@ export function renderMetric(el, key) {
   const h = heightM(docs, state.profile);
   const sus = suspectIds(state.weights);
   // Apple Health metrics come from health_daily (one value a day); the rest from the scale (or hand-logged weights).
+  // VO₂max reads the same merged Apple + scale series as the Longevity card.
   const daily = def === apple
     ? (intel().series.get(key) || []).map((p) => ({ ...p, at: `${p.day}T12:00:00` }))
-    : dailySeries(metricPoints(docs, key, { height: h, weights: state.weights.filter((w) => !sus.has(w.id)) }));
+    : key === 'vo2max' ? vo2Series(state.health_daily || [], docs).map((p) => ({ day: p.day, v: p.v, at: `${p.day}T12:00:00` }))
+      : dailySeries(metricPoints(docs, key, { height: h, weights: state.weights.filter((w) => !sus.has(w.id)) }));
   const fmt = (v, o = {}) => fmtMetric(key, v, u, { ...o, kind: def.kind });
   // The same trend the Trends screen uses: Theil–Sen slope, Mann–Kendall significance, noise floor.
   const tr = trendMetric(key) ? trendsFor(daily, key, todayKey())[28] : null;
@@ -110,7 +113,7 @@ export function renderMetric(el, key) {
         <p class="small muted legend"><span class="key dot"></span>readings <span class="key line"></span>7-day average ${prev.length ? '<span class="key dash"></span>previous period' : ''} ${bars.length ? '<span class="key bar"></span>training sets/week' : ''}</p>
         ${def.overlay !== 'sets' ? `<label class="g-row sw"><span class="g-text"><span>Show training sets per week</span></span><input type="checkbox" switch name="sets" ${showSets ? 'checked' : ''}></label>` : ''}
         ${trendLine ? `<p data-trend-line>${esc(trendLine)}</p>` : ''}
-        <p class="small muted">Last reading ${def === apple ? new Date(last.at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : new Date(last.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${daily.length.toLocaleString()} days with readings</p>
+        <p class="small muted">Last reading ${def === apple || key === 'vo2max' ? new Date(last.at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : new Date(last.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${daily.length.toLocaleString()} days with readings</p>
       </div>` : `<div class="card">${emptyState({ icon: def === apple ? 'heart' : 'scale', title: `No ${esc(def.label.toLowerCase())} readings yet`, ...emptyText })}${def !== apple && choice.secondary ? `<a class="link" href="${choice.secondary.href}">${choice.secondary.label}</a>` : ''}</div>`}
       ${key === 'bmi' ? '<p class="small muted">BMI ignores muscle. Look at FFMI and FMI too.</p>' : ''}
     </section>`;
