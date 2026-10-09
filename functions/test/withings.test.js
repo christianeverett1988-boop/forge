@@ -837,3 +837,17 @@ test('runTask: a backfill task without a numeric year/end (queued by v0.4.0) is 
   assert.equal(calls, 0);
   assert.equal(q.tasks.length, 0);
 });
+
+// v0.14.6: year windows stop one second before New Year (Withings' enddate is inclusive).
+import { yearWindow as yw } from '../src/sync.js';
+test('yearWindow: a reading at exactly 00:00:00 on Jan 1 belongs to the new year only', () => {
+  const far = Date.UTC(2030, 0, 1) / 1000;
+  const newYear = Date.UTC(2025, 0, 1) / 1000;
+  const y24 = yw(2024, far);
+  const y25 = yw(2025, far);
+  assert.equal(y24.end, newYear - 1);
+  assert.equal(y25.start, newYear);
+  const inWin = (w, t) => t >= w.start && t <= w.end;
+  assert.equal([y24, y25].filter((w) => inWin(w, newYear)).length, 1);
+  assert.equal(yw(2026, Date.UTC(2026, 5, 1) / 1000).end, Date.UTC(2026, 5, 1) / 1000, 'a pinned end inside the year still wins');
+});

@@ -144,7 +144,9 @@ export const HARD_FLOOR_YEAR = 2005;
 /** [startdate, enddate) in epoch seconds for calendar year `y`, clipped to the run's pinned end. */
 export function yearWindow(y, end) {
   const start = Date.UTC(y, 0, 1) / 1000;
-  const stop = Math.min(Date.UTC(y + 1, 0, 1) / 1000, end);
+  // Withings treats enddate as inclusive, so stop one second before next year: a reading at exactly 00:00:00 on
+  // Jan 1 then belongs to the new year only, and per-year counts can't include it twice.
+  const stop = Math.min(Date.UTC(y + 1, 0, 1) / 1000 - 1, end);
   return { start, end: stop };
 }
 

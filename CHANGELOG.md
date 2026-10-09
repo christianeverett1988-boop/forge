@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.6 — Polish: readable charts, plain-words errors, steadier family-weigh-in check (2026-10-09)
+
+Merge after 0.14.5 (food logging). **Cloud Functions changed** (one line, the history-import year windows): deploy with `firebase deploy --only functions` when convenient. Nothing breaks before you do. No `firestore.rules` or `config.js` changes.
+
+- **Body metric charts:**
+  - axis numbers are round (146, 148, 150… or 26.5, 27.0…) with the unit above them;
+  - the training-set bars have a scale ("36 sets" at their top line);
+  - touch or drag across a chart to read that day's value.
+- **Errors in plain words:** the Withings and Apple Health screens no longer show "(permission-denied)". They say what's wrong and what to do.
+- **Data check:** the Apple Health card shows what's actually arriving (it still said "arrives with the next update"), with a link to Apple Health status. Saved reports are one box per row, not a box inside a box.
+- **"Is this you?" check:** starts from a weight you typed in or confirmed in the last 6 months, or from your profile weight, before falling back to the newest readings. So a run of a child's weigh-ins right after yours can no longer flip it.
+- **History import:** yearly windows now stop one second before New Year, so a reading at exactly midnight on Jan 1 can't be counted in two years.
+- **docs/levels.md:** the title no longer says v0.3.2.
+
 ## 0.14.4 — Figures for cardio machines, jump rope and boxing (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
