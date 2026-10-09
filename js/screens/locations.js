@@ -3,7 +3,7 @@
 import { state, units as getUnits } from '../state.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
-import { EQUIPMENT_GROUPS } from '../workouts/equipment.js';
+import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRows } from '../workouts/equipment.js';
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
 
@@ -44,22 +44,46 @@ export function renderLocations(el) {
     })
   );
   $('[data-add]', el).onclick = () =>
-    sheet('New location', (body, close) => {
-      body.innerHTML = `
-        <form class="stack" novalidate>
-          <label class="field"><span>Name</span><input name="name" placeholder="e.g. LA Fitness" maxlength="40"></label>
-          <button class="btn" type="submit">Create</button>
-        </form>`;
-      const form = $('form', body);
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = form.name.value.trim();
-        if (!name) return;
-        const rec = put('locations', newRecord({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 }));
+    sheet('Add a location', (body, close) => {
+      const openEditor = (rec) => {
         close();
         editingId = rec.id;
         renderLocations(el);
-      });
+      };
+      const rows = presetPickerRows(state.locations);
+      body.innerHTML = `
+        <div class="choices">
+          ${rows.map(({ preset, addAnother }) => `
+            <button class="pick" type="button" data-preset="${esc(preset.key)}">
+              <b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
+              <small>${esc(presetDescription(preset))}</small>
+            </button>`).join('')}
+          <button class="pick" type="button" data-custom>
+            <b>Custom (start empty)</b>
+            <small>Name it and pick your own equipment.</small>
+          </button>
+        </div>`;
+      $$('[data-preset]', body).forEach((b) =>
+        b.addEventListener('click', () => {
+          const { preset } = rows.find((r) => r.preset.key === b.dataset.preset);
+          openEditor(put('locations', newRecord(locationFromPreset(preset, state.locations.length === 0))));
+        })
+      );
+      $('[data-custom]', body).onclick = () => {
+        body.innerHTML = `
+          <form class="stack" novalidate>
+            <label class="field"><span>Name</span><input name="name" placeholder="e.g. LA Fitness" maxlength="40"></label>
+            <button class="btn" type="submit">Create</button>
+          </form>`;
+        const form = $('form', body);
+        form.name.focus();
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const name = form.name.value.trim();
+          if (!name) return;
+          openEditor(put('locations', newRecord({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 })));
+        });
+      };
     });
 }
 

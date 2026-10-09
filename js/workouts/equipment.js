@@ -103,6 +103,29 @@ export const LOCATION_PRESETS = [
   { key: 'travel', name: 'Travel / no equipment', equipment: [], weight_inventory: {} },
 ];
 
+/** The friendly line under each preset (onboarding and the Locations picker share it). */
+export function presetDescription(preset) {
+  if (preset.key === 'home') return 'Dumbbells (5 and 30 lb), kettlebells, band, jump rope, ab wheel, push-up handles, Peloton. Edit any time in Settings → Locations.';
+  if (preset.key === 'ymca') return `Standard gym setup (${preset.equipment.length} items). Turn off anything your branch doesn’t have.`;
+  return 'Bodyweight only';
+}
+
+/** The record fields for a new location made from a preset. Copies, so edits never touch the preset. */
+export function locationFromPreset(preset, isDefault) {
+  return {
+    name: preset.name,
+    preset: preset.key,
+    equipment: [...preset.equipment],
+    weight_inventory: Object.fromEntries(Object.entries(preset.weight_inventory).map(([k, v]) => [k, [...v]])),
+    is_default: isDefault,
+  };
+}
+
+/** Rows for the "+ Add a location" picker: every preset, marked "Add another" if the user already has one. */
+export function presetPickerRows(locations) {
+  return LOCATION_PRESETS.map((preset) => ({ preset, addAnother: locations.some((l) => l.preset === preset.key) }));
+}
+
 // One item can stand in for another (e.g. an adjustable bench works as a flat bench).
 export const EQUIPMENT_SATISFIES = {
   adjustable_dumbbells: ['dumbbells'],

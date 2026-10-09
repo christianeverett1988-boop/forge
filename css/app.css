@@ -129,6 +129,13 @@ input[type=date] { -webkit-appearance: none; appearance: none; }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); }
 .seg.small span { min-height: 32px; font-size: 13px; }
 
+/* tap-to-pick rows (no radio/check marker) */
+.pick { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; min-height: 56px; justify-content: center;
+  padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: inherit; font: inherit; }
+.pick b { font-weight: 600; }
+.pick small { color: var(--muted); font-size: 14px; }
+.pick:focus-visible { outline: 2px solid var(--accent); }
+
 /* big tappable choice rows */
 .choices { display: flex; flex-direction: column; gap: 8px; }
 .choice { position: relative; display: block; }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 — Add a location from a preset (2026-10-09)
+
+No Cloud Functions, `firestore.rules` or `config.js` changes; nothing to redeploy.
+
+- **Settings → Locations → + Add a location** now asks what kind first: **YMCA**, **Travel / no equipment**, **Home gym** or **Custom (start empty)**. A preset comes with its equipment and weights, then opens so you can rename it or turn things off. If you already have one, it's marked **Add another**. Custom works as before.
+
 ## 0.5.0 — Apple Health, Readiness and the Forge Score (W2a) (2026-10-09)
 
 **Cloud Functions changed** (`npm --prefix functions install`, then `firebase deploy --only functions`; four new functions, no new secrets). **`firestore.rules` and `config.js` are unchanged**, so there's nothing to republish.
