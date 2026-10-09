@@ -1,0 +1,17 @@
+{
+  "appId": "com.christianeverett.forge",
+  "appName": "Forge",
+  "webDir": "www",
+  "backgroundColor": "#0a0a0b",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "backgroundColor": "#0a0a0b",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": ["banner", "sound", "list"]
+    }
+  }
+}

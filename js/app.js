@@ -1,4 +1,5 @@
 // App boot: service worker, sign-in, live data, and a tiny hash router.
+import { isNative, syncStatusBar } from './native/bridge.js';
 import { configured } from './firebase.js';
 import { state, subscribe, LOADED_KEYS } from './state.js';
 import { esc, toast, closeAllSheets } from './ui.js';
@@ -21,9 +22,18 @@ const syncPill = document.getElementById('sync');
 const offlineBanner = document.getElementById('offline');
 const scrollMemory = createScrollMemory();
 
+// ---------- the iPhone app (Capacitor shell) ----------
+if (isNative()) {
+  document.documentElement.classList.add('native');
+  const dark = window.matchMedia('(prefers-color-scheme: dark)');
+  syncStatusBar(dark.matches);
+  dark.addEventListener('change', (e) => syncStatusBar(e.matches));
+}
+
 // ---------- service worker + "new version" banner ----------
 function setupServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+  if (isNative()) return; // the iPhone app ships its files inside the app: no offline cache or update banner needed
   // Reload on controller change only if a service worker already controlled this page (a real update)
   // or you tapped the banner. The very first install also fires controllerchange (clients.claim), and
   // reloading then would just flash the page for no reason.
@@ -246,10 +256,21 @@ function settlePrograms() {
   import('./body-programs/store.js').then((m) => m.settleProgram());
 }
 
+// iPhone app: read Apple Health quietly on open and when Forge comes back to the front (every 6 h at most,
+// and only once you've connected it on Settings → Apple Health).
+let healthAutoAt = 0;
+function autoHealth() {
+  if (!isNative() || !allLoaded() || !state.user || Date.now() - healthAutoAt < 60000) return;
+  healthAutoAt = Date.now();
+  import('./screens/apple.js').then((m) => m.autoHealthSync()).catch(() => {});
+}
+if (isNative()) document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoHealth(); });
+
 subscribe((patch) => {
   seedAwards();
   seedMissions();
   settlePrograms();
+  autoHealth();
   const keys = Object.keys(patch);
   // Withings finished a history import while weight.csv rows are in Forge: drop the duplicate csv copies.
   if (('weights' in patch || 'integrations' in patch) && allLoaded()) import('./withings/dedupe.js').then((m) => m.dedupeCsv());

@@ -9,6 +9,7 @@ import { currentReadiness } from '../health/today.js';
 import { shiftDay } from '../health/metrics.js';
 import { NEEDED_DAYS } from '../health/readiness.js';
 import { icon } from '../ui/icons.js';
+import { isNative } from '../native/bridge.js';
 
 const call = async (...args) => (await import('../functions.js')).call(...args);
 const INGEST_URL = `https://us-east1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/healthIngest`;
@@ -25,6 +26,64 @@ const ago = (iso) => {
   return m < 2 ? 'just now' : m < 90 ? `${m} min ago` : m < 36 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`;
 };
 const dayText = (d) => (d ? formatDay(d, { weekday: 'short', month: 'short', day: 'numeric' }) : '—');
+
+// ---------- iPhone app: read HealthKit directly (js/native/health.js) ----------
+const NATIVE_KEY = () => `forge.healthkit.last.${(state.user && state.user.uid) || ''}`; // per account on a shared phone
+const AUTO_EVERY_MS = 6 * 3600 * 1000;
+let nativeState = null; // { text } while reading
+const lastNative = () => { try { return Number(localStorage.getItem(NATIVE_KEY())) || 0; } catch { return 0; } };
+
+/**
+ * Read Apple Health on this phone and save the daily summaries. The first time it reaches back IMPORT_DAYS days;
+ * after that, from 3 days before the last read (late Watch syncs). Returns the number of days saved.
+ */
+export async function nativeHealthSync({ onText = () => {} } = {}) {
+  const { readHealthDays } = await import('../native/health.js');
+  const last = lastNative();
+  const since = last ? shiftDay(new Date(last).toLocaleDateString('en-CA'), -3) : shiftDay(todayKey(), -(IMPORT_DAYS - 1));
+  onText('Reading Apple Health on this phone…');
+  const { days } = await readHealthDays({ since });
+  let sent = 0;
+  for (let i = 0; i < days.length; i += CHUNK) {
+    onText(`Saving ${days.length} daily summaries…`);
+    const r = await call('importHealthDays', { days: days.slice(i, i + CHUNK) });
+    sent += r.days || 0;
+  }
+  try { localStorage.setItem(NATIVE_KEY(), String(Date.now())); } catch { /* private mode */ }
+  return sent;
+}
+
+/** Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old. */
+export async function autoHealthSync() {
+  if (!isNative() || !state.user || !lastNative() || Date.now() - lastNative() < AUTO_EVERY_MS) return 0;
+  try { return await nativeHealthSync(); } catch { return 0; }
+}
+
+function nativeCard() {
+  const last = lastNative();
+  return `<div class="card stack" data-native-health>
+    <p class="label">Apple Health on this iPhone</p>
+    <p>Forge reads your Watch’s HRV, resting heart rate, sleep, breathing, blood oxygen, steps and exercise straight from Apple Health. Only daily summaries are saved. ${last ? '' : 'iOS asks once which data to share: turn them all on.'}</p>
+    ${nativeState ? `<p class="small" aria-live="polite">${esc(nativeState.text)}</p>` : ''}
+    <button class="btn bigbtn" data-native-read ${nativeState ? 'disabled' : ''}>${nativeState ? 'Reading…' : last ? 'Read Apple Health now' : 'Connect Apple Health'}</button>
+    <p class="small muted">${last ? `Last read ${esc(ago(new Date(last).toISOString()))}. Forge reads again by itself when you open it (every 6 hours at most).` : `The first read brings in the last ${IMPORT_DAYS} days.`}</p>
+  </div>`;
+}
+
+async function runNative(el) {
+  if (nativeState) return;
+  nativeState = { text: 'Asking Apple Health…' };
+  renderApple(el);
+  try {
+    const n = await nativeHealthSync({ onText: (text) => { nativeState = { text }; const p = $('[data-native-health] [aria-live]', el); if (p) p.textContent = text; } });
+    nativeState = null;
+    toast(n ? `Saved ${n} days from Apple Health` : 'Up to date', 3500);
+  } catch (e) {
+    nativeState = null;
+    toast(e.message || 'Couldn’t read Apple Health.', 5000);
+  }
+  renderApple(el);
+}
 
 function statusCard() {
   const today = todayKey();
@@ -156,7 +215,9 @@ export function renderApple(el) {
       <h1>Apple Health</h1>
       ${state.serverError ? `<div class="notice warn">Forge can’t read Apple Health data yet (${esc(state.serverError)}). If you just updated, publish the new <code>firestore.rules</code> (DEPLOY.md).</div>` : ''}
       <p class="muted">Bring your Watch’s overnight HRV, resting heart rate, sleep and wrist temperature into Forge for Readiness and your Forge Score. Everything stays in your own Forge account.</p>
+      ${isNative() ? nativeCard() : ''}
       ${statusCard()}
+      ${isNative() ? '<details class="card"><summary>Other ways: Shortcut or export file</summary><div class="stack" style="margin-top:12px">' : ''}
       <div class="card stack">
         <p class="label">Shortcut token</p>
         <p>${has ? 'A token is active. Your Shortcut uses it to send data to Forge.' : 'Make a token, then paste it into the Shortcut below. It works like a password for just this one job.'}</p>
@@ -166,6 +227,7 @@ export function renderApple(el) {
       </div>
       ${recipe()}
       ${importCard()}
+      ${isNative() ? '</div></details>' : ''}
       <div class="card stack">
         <p class="label">Delete Apple Health data</p>
         <p class="small muted">Removes every Apple Health day from Forge and turns the Shortcut token off. Your Withings data and your workouts stay.</p>
@@ -175,6 +237,8 @@ export function renderApple(el) {
     </section>`;
 
   $$('[data-copy-text]', el).forEach((b) => (b.onclick = () => copyText(b.dataset.copyText, b)));
+  const nr = $('[data-native-read]', el);
+  if (nr) nr.onclick = () => runNative(el);
   $('[data-delete]', el).onclick = () => deleteApple(el);
   $('[data-create]', el).onclick = () => createToken(el, has);
   const rv = $('[data-revoke]', el);

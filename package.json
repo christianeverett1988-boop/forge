@@ -1,1 +1,21 @@
-{ "name": "forge", "private": true, "type": "module", "scripts": { "test": "node tests/run.js" } }
+{
+  "name": "forge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run.js",
+    "native:build": "node scripts/build-www.mjs",
+    "native:sync": "node scripts/build-www.mjs && npx cap sync ios",
+    "native:open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capgo/capacitor-health": "^8.7.0"
+  }
+}

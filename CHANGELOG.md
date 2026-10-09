@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.15.0 — iPhone app proof of concept (Capacitor) (2026-10-09)
+
+The same Forge code can now run inside a native iPhone shell, built on your Mac with Xcode: **docs/native-ios.md**. The web app on GitHub Pages works exactly as before; nothing here runs in a browser. No Cloud Functions, `firestore.rules` or `config.js` changes. Merge after 0.14.5 and 0.14.6.
+
+**In the iPhone app:**
+- **Real haptics:** the Taptic Engine on Done set, tabs, segments and "rest's over", instead of the iOS switch trick.
+- **The rest timer reaches the lock screen:** a "Rest's over · Next: Bench press" notification, kept in step with +/- 15 s, pause and skip.
+- **Apple Health straight from HealthKit:** Settings → Apple Health → Connect. Forge reads HRV, resting heart rate, breathing, blood oxygen, sleep stages, steps, active energy and exercise minutes, turns them into the same daily summaries as the export import (same code), and saves only those. It reads again by itself on open, every 6 hours at most. The Shortcut and export import are still there under "Other ways".
+- **Opens offline:** the app carries its own files and Firebase's code (`scripts/build-www.mjs`), so it needs no service worker.
+- **Withings sign-in** opens over the app (Safari view) instead of leaving it.
+- **Status bar** follows light and dark.
+
+**Under the hood:**
+- `js/native/bridge.js` is the only place the app touches native code. Every call is a no-op in a browser.
+- `js/native/health.js` maps HealthKit to export-style records. The export aggregator gained `addRecord()`.
+- New files: `capacitor.config.json` (bundle ID `com.christianeverett.forge` for now; it becomes your LLC's before TestFlight) and npm scripts `native:build`, `native:sync`, `native:open`.
+- New tests cover the bridge (with a fake native shell), the HealthKit → daily-summary path, and the www build.
+
 ## 0.14.4 — Figures for cardio machines, jump rope and boxing (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

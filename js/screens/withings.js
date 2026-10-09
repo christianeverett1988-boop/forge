@@ -10,6 +10,7 @@ import { classify, verdict, compare, STATE_LABEL, median, yearRows, backfillYear
 import { reviewQueue, byDay, suggestCutoff, underCutoff, parseWeightCSV, planCsvImport, csvAccounted, importMessage } from '../withings/review.js';
 import { fmtMetric, KEY_OF_TYPE } from '../withings/body.js';
 import { icon } from '../ui/icons.js';
+import { openExternal } from '../native/bridge.js';
 
 const W = () => (state.integrations && state.integrations.withings) || null;
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
@@ -133,7 +134,11 @@ export function renderWithings(el, sub) {
     renderWithings(el);
   }));
   const go = $('[data-go]', el);
-  if (go) go.addEventListener('click', () => setTimeout(() => { connectUrl = null; }, 1000));
+  if (go) go.addEventListener('click', (e) => {
+    // iPhone app: open Withings' page over Forge (Safari view) instead of leaving the app.
+    if (openExternal(go.href)) e.preventDefault();
+    setTimeout(() => { connectUrl = null; }, 1000);
+  });
   const sync = $('[data-sync]', el);
   if (sync) sync.onclick = async () => {
     busy = 'sync';
