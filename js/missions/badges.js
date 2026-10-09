@@ -21,6 +21,16 @@ const leanText = (kg, units) => {
 
 const at = (day) => `${day}T12:00:00`; // earned date, a local-noon timestamp string
 
+/**
+ * Mission badges to celebrate on Today: earned, not in awards_seen yet, and earned on or after the day missions
+ * started (the XP rule: nothing from before is celebrated or paid). Before awards_seen exists nothing is new,
+ * because the first run seeds it quietly with everything already earned.
+ */
+export function newMissionBadges(badges, seen, started) {
+  if (!seen || !started) return [];
+  return badges.filter((b) => b.earned && !seen[b.id] && b.earned.at.slice(0, 10) >= started);
+}
+
 /** For each streak length, the first day a run of that many consecutive weigh-in days was reached. */
 export function streakDays(days) {
   const sorted = [...new Set(days)].sort();

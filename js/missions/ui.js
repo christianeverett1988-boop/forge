@@ -1,7 +1,10 @@
 // "Today's missions" card for the Today screen, and the week dots for Awards.
 import { esc } from '../ui.js';
 import { icon } from '../ui/icons.js';
-import { todayMissions, seenToday, rememberDone, weekProgress, MISSION_XP } from './store.js';
+import { badgeSVG } from '../ui/badges.js';
+import { units as getUnits } from '../state.js';
+import { rememberBadges } from '../workouts/awards-store.js';
+import { todayMissions, seenToday, rememberDone, weekProgress, unseenMissionBadges, MISSION_XP } from './store.js';
 
 const fmt = (n) => Math.round(n).toLocaleString();
 
@@ -59,4 +62,39 @@ export function missionWeekHtml() {
     <p class="small muted">Bright = all missions done</p>
     <p class="small muted">+${MISSION_XP} XP for each mission and a bonus for finishing the day’s set.</p>
   </div>`;
+}
+
+// ---------- new mission badges ----------
+// Saving a badge to awards_seen re-renders Today, so the card keeps what it showed for the rest of this visit
+// (until dismissed) and the shine plays only the first time.
+const XP_BADGE = 100;
+const shown = new Map(); // badge id → badge, celebrated this session and not dismissed yet
+const shone = new Set();
+
+/** A small card per newly earned weigh-in streak or body-comp badge: art, name, +100 XP and a link to Awards. */
+export function badgeCelebrationCards() {
+  for (const b of unseenMissionBadges()) shown.set(b.id, b);
+  const units = getUnits();
+  return [...shown.values()].map((b) => {
+    const first = !shone.has(b.id);
+    shone.add(b.id);
+    return `<div class="card ms-badge" data-new-badge="${esc(b.id)}" role="status">
+      <span class="ms-badge-art">${badgeSVG(b.id, { shine: first, size: 56, label: b.name, units })}</span>
+      <span class="ms-badge-text"><small class="label">New badge</small><b>${esc(b.name)}</b><small class="ms-xp">+${XP_BADGE} XP</small></span>
+      <span class="ms-badge-links"><a class="link" href="#/awards" data-badge-awards>See awards</a><button type="button" class="ms-badge-x" data-badge-dismiss aria-label="Dismiss">${icon('close', { size: 18 })}</button></span>
+    </div>`;
+  }).join('');
+}
+
+/** Wire the buttons and, a moment later (so the shine isn't cut off by the re-render), remember the badges. */
+export function afterBadgeCelebrations(el) {
+  for (const card of el.querySelectorAll('[data-new-badge]')) {
+    card.querySelector('[data-badge-dismiss]').onclick = () => {
+      shown.delete(card.dataset.newBadge);
+      card.remove();
+    };
+    card.querySelector('[data-badge-awards]').onclick = () => shown.delete(card.dataset.newBadge);
+  }
+  const fresh = unseenMissionBadges();
+  if (fresh.length) setTimeout(() => rememberBadges(fresh), 1500);
 }

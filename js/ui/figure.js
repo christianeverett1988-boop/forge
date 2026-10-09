@@ -7,7 +7,8 @@
 // sleeps while the workout is paused or resting. The view box is fitted to the whole rep at mount.
 // Pure code and data: offline, no downloads. Templates: js/ui/poses.js. Skeleton and camera: js/ui/rig.js.
 import { TEMPLATES, EXERCISE_TEMPLATES } from './poses.js';
-import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, drawOrder, frameBox } from './rig.js';
+import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, bellDir, BELL_OFFSET, drawOrder, frameBox } from './rig.js';
+const add3 = (p, d, k) => [p[0] + d[0] * k, p[1] + d[1] * k, p[2] + d[2] * k];
 import { onFrame, reducedMotion } from './motion.js';
 
 export const hasFigure = (exerciseId) => !!EXERCISE_TEMPLATES[exerciseId];
@@ -178,8 +179,8 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   el('stop', { offset: 0, 'stop-color': '#000', 'stop-opacity': 0.6 }, sg);
   el('stop', { offset: 1, 'stop-color': '#000', 'stop-opacity': 0 }, sg);
 
-  // Floor line across the box (not for hanging moves).
-  if (tpl.rig.legs === 'ik') el('line', { x1: f1(box[0]), y1: tpl.cam.ground + 2, x2: f1(box[0] + box[2]), y2: tpl.cam.ground + 2, stroke: '#2a313a', 'stroke-width': 1.5 }, svg);
+  // Floor line across the box (not for hanging moves); floor moves ask for it with tpl.floor.
+  if (tpl.rig.legs === 'ik' || tpl.floor) el('line', { x1: f1(box[0]), y1: tpl.cam.ground + 2, x2: f1(box[0] + box[2]), y2: tpl.cam.ground + 2, stroke: '#2a313a', 'stroke-width': 1.5 }, svg);
 
   const groups = {};
   const glows = []; // { node, weight }
@@ -480,12 +481,9 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
       }
       if (g['kb' + S]) {
         const P0 = project(grip);
-        // Hangs under the hand, or swings out along the forearm (tpl.kbOrient = 'arm').
-        let ang = 0;
-        if (tpl.kbOrient === 'arm') {
-          const W = project(j['wrist' + S]);
-          ang = (Math.atan2(P0[0] - W[0], P0[1] - W[1]) * -180) / Math.PI;
-        }
+        // Hangs under the hand, swings out along the forearm (tpl.kbOrient = 'arm') or lies where param `kb` says.
+        const B = project(add3(grip, bellDir(tpl, j, S), BELL_OFFSET));
+        const ang = (Math.atan2(B[0] - P0[0], B[1] - P0[1]) * -180) / Math.PI;
         g['kb' + S]._bell.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])}) rotate(${f1(ang)})`);
       }
       for (const kind of ['cable', 'band']) {

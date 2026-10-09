@@ -9,6 +9,7 @@ import './csv.test.js';
 import './session.test.js';
 import './figure.test.js';
 import './homeposes.test.js';
+import './kbposes.test.js';
 import './bodymap.test.js';
 import './preview.test.js';
 import './rings.test.js';
