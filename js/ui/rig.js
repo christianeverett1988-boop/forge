@@ -278,7 +278,7 @@ export function solve(tpl, P) {
         const fy = (P['fy' + S] ?? f.y ?? 0) + air;
         // A lifted heel pivots the foot about the toes.
         const lift = Math.min(heel, BODY.footFwd * 0.9);
-        footA = Math.min(footA, 90 - (Math.asin(lift / BODY.footFwd) * 180) / Math.PI);
+        if (!f.raw) footA = Math.min(footA, 90 - (Math.asin(lift / BODY.footFwd) * 180) / Math.PI); // feet.raw: use the angle as given (feet on a sled)
         ankle = [fx, BODY.ankleY + fy + lift, side * (P['fz' + S] ?? P.fz ?? f.z ?? 0.15)];
       }
       const pole = norm([f.pole ?? 1, f.poleY ?? 0, side * (f.kneesOut ?? 0.35)]);
@@ -308,6 +308,7 @@ export function solve(tpl, P) {
       j[k] = rotAbout(j[k], DIRS.includes(k) ? [0, 0, 0] : rollOrigin, rollAxis, r.roll.deg);
     }
   }
+  if (P.sl != null) j.sl = P.sl; // leg-press sled: where its plate sits along the rail (metres)
   return j;
 }
 
@@ -390,6 +391,9 @@ export function propParts(tpl) {
     if (g === 'towel') out.push('towel');
     if (g === 'strap') out.push('strapN', 'strapF');
     if (g === 'loop') out.push('loop');
+    if (g === 'sled') out.push('sled');
+    if (g === 'kneepads') out.push('padN', 'padF');
+    if (g === 'cuff') out.push('cuffcable', 'cuff', 'pulley');
   }
   return out;
 }
@@ -410,6 +414,40 @@ export function loopEnds(tpl, j) {
     return m ? add(j['hip' + m[1]], mul(sub(j['knee' + m[1]], j['hip' + m[1]]), 0.82)) : j[s];
   };
   return [pt(tpl.loop.a), pt(tpl.loop.b)];
+}
+
+// ---------- gym machine props (v0.14.2) ----------
+/**
+ * Leg-press sled. tpl.sled = { dir, q, half, w }: the rails rise at `dir` degrees and the plate stands square to them.
+ * Its position along the rail is the pose parameter `sl` (metres from the origin); `q` is where its middle sits up the
+ * plate (measured along the plate, toward the head). `face` is the side the feet press; `back` is the far side.
+ */
+export function sledPlate(tpl, j) {
+  const { dir = 45, q = 0.5, half = 0.3, w = 0.28 } = tpl.sled;
+  const d = [Math.cos(rad(dir)), Math.sin(rad(dir))];
+  const p = [-d[1], d[0]];
+  const at = (along, up, z) => [d[0] * along + p[0] * up, d[1] * along + p[1] * up, z];
+  const quad = (along) => [at(along, q - half, -w), at(along, q + half, -w), at(along, q + half, w), at(along, q - half, w)];
+  return { d, p, face: quad(j.sl), back: quad(j.sl + 0.06), centre: at(j.sl + 0.03, q, 0) };
+}
+
+/** Hip-machine knee pads: a short upright pad beside each knee (tpl.pads = { out, off, h }): outside it (abductor) or inside it (adductor). */
+export function kneePad(tpl, j, S) {
+  const { out = true, off = 0.1, h = 0.18 } = tpl.pads;
+  const side = S === 'N' ? -1 : 1;
+  const k = j['knee' + S];
+  const c = [k[0], k[1], k[2] + side * off * (out ? 1 : -1)];
+  return { centre: c, a: [c[0], c[1] - h / 2, c[2]], b: [c[0], c[1] + h / 2, c[2]] };
+}
+
+/** Ankle cuff on tpl.cuff.leg and the cable from it to tpl.cuff.pulley (a world point on the low pulley). */
+export function ankleCuff(tpl, j) {
+  const S = tpl.cuff.leg;
+  const ank = j['ankle' + S];
+  const up = norm(sub(j['knee' + S], ank));
+  const centre = add(ank, mul(up, 0.07));
+  const across = norm([0, -up[2], up[1]]); // around the shin, so a front view reads a band
+  return { centre, a: add(centre, mul(across, 0.06)), b: sub(centre, mul(across, 0.06)), pulley: tpl.cuff.pulley };
 }
 
 /** World point whose depth decides where each part sits in the draw order, plus a small tie-break. */
@@ -458,6 +496,10 @@ function anchors(tpl, j) {
       a[name] = [[x, y, { F: 0.37, M: 0, N: -0.37 }[name[2]]], 0];
     } else if (/^dip[NF]$/.test(name)) a[name] = [[0, (tpl.dipY ?? 1.15), name === 'dipN' ? -0.26 : 0.26], 0];
     else if (/^ring[NF]$/.test(name)) a[name] = [j['grip' + name.slice(-1)], 0.005];
+    else if (name === 'sled') a.sled = [sledPlate(tpl, j).centre, 0];
+    else if (/^pad[NF]$/.test(name)) a[name] = [kneePad(tpl, j, name[3]).centre, -0.02];
+    else if (name === 'cuff') a.cuff = [ankleCuff(tpl, j).centre, -0.03];
+    else if (name === 'cuffcable') { const c = ankleCuff(tpl, j); a.cuffcable = [mid(c.centre, c.pulley), 0]; } else if (name === 'pulley') a.pulley = [tpl.cuff.pulley, 0];
   }
   return a;
 }
@@ -510,6 +552,9 @@ export function frameBox(tpl, project, phases, n = 16) {
       const R = tpl.plate ?? 0.2;
       for (const z of [-0.6, 0.6]) for (const [dx, dy] of [[0, R], [0, -R], [R, 0], [-R, 0]]) take([j.bar[0] + dx, j.bar[1] + dy, z]);
     }
+    if (parts.includes('sled')) for (const q of [...sledPlate(tpl, j).back, ...sledPlate(tpl, j).face]) take(q);
+    for (const S of ['N', 'F']) if (parts.includes('pad' + S)) { take(kneePad(tpl, j, S).a); take(kneePad(tpl, j, S).b); }
+    if (parts.includes('cuff')) take(tpl.cuff.pulley);
     if (parts.includes('pbM')) take([tpl.rig.hands.x, tpl.rig.hands.y + 0.05, 0]);
     if (parts.includes('goblet')) take([j.gripN[0], j.gripN[1] - 0.25, 0]);
     for (const S of ['N', 'F']) if (parts.includes('kb' + S)) take(add(j['grip' + S], mul(bellDir(tpl, j, S), 0.2)));
@@ -518,7 +563,8 @@ export function frameBox(tpl, project, phases, n = 16) {
     for (const e of tpl.env || []) {
       const pts = e.type === 'bench' ? e.pads.flat()
         : e.type === 'box' || e.type === 'table' ? [[e.x0, e.h], [e.x1, 0]]
-          : e.type === 'doorframe' ? [[e.x, 0], [e.x, 1.7]] : [];
+          : e.type === 'doorframe' ? [[e.x, 0], [e.x, 1.7]]
+            : e.type === 'slab' ? [e.a, e.b, [e.a[0], e.a[1] - e.t], [e.b[0], e.b[1] - e.t]] : [];
       for (const [x, y] of pts) for (const z of [-0.15, 0.15]) take([x, y, z]);
     }
   }

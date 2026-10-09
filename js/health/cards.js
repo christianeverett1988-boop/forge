@@ -127,8 +127,12 @@ export function goalPathHtml(path, energy, { series, today, goalKg, units }) {
     case 'flat': head = '<p>Your trend is flat right now, so there is no date yet. A small change in food or training will get it moving.</p>'; break;
     case 'away': head = '<p>Your trend is moving a little away from your goal. That is normal and it can turn around. No date for now: a small change in food or training usually does it.</p>'; break;
     case 'far': head = '<p>At this pace your goal is more than five years away. A small change in food or training would bring it much closer.</p>'; break;
-    default: head = `<p class="big-title">Around ${fmtDate(path.etaDay, true)}</p>
-      <p class="small muted">Likely between ${fmtDate(path.earlyDay)} and ${path.lateDay ? fmtDate(path.lateDay, true) : 'later, the pace is still settling'}.</p>`;
+    default: {
+      // Show the year on both ends of the range whenever either one is outside this year, so it never reads backwards.
+      const yr = [path.earlyDay, path.lateDay].some((d) => d && d.slice(0, 4) !== today.slice(0, 4));
+      head = `<p class="big-title">Around ${fmtDate(path.etaDay, true)}</p>
+      <p class="small muted">Likely between ${fmtDate(path.earlyDay, yr)} and ${path.lateDay ? fmtDate(path.lateDay, yr) : 'later, the pace is still settling'}.</p>${daysBetween(today, path.etaDay) > 365 ? '<p class="small">That\'s more than a year at your current pace.</p>' : ''}`;
+    }
   }
   const pace = path.slopePerWeek != null ? `<p class="small" data-pace>Pace: <b>${path.slopePerWeek < 0 ? 'down' : 'up'} ${perWeek(path.slopePerWeek)} a week</b> · usual safe limit about ${perWeek(path.capKgPerWeek)} a week.${path.overCap && path.status !== 'away' ? ' That is a little fast. Eating a bit more protects your muscle.' : ''}</p>` : '';
   const en = energy ? `<p class="small" data-energy>Energy balance from your body changes: about <b>${energy.kcalPerDay > 0 ? '+' : '−'}${Math.round(Math.abs(energy.kcalPerDay) / 10) * 10} kcal a day</b> <span class="muted">(estimate${energy.usedLean ? '' : ', fat only'})</span></p>` : '';
