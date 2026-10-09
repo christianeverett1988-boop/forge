@@ -31,7 +31,7 @@ export function renderLocations(el) {
       <h1>Locations</h1>
       <p class="muted">Workouts only use the equipment at the place you pick. Bodyweight moves work everywhere.</p>
       <ul class="list">
-        ${[...state.locations].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((l) => `
+        ${[...state.locations].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || '')).map((l) => `
           <li class="tap" data-edit="${esc(l.id)}">
             <div><b>${esc(l.name)}</b>${l.is_default ? ' <span class="pill">Default</span>' : ''}
               <small class="muted">${l.equipment.length ? `${l.equipment.length} items` : 'Bodyweight only'}</small></div>

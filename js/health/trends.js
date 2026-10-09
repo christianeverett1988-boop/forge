@@ -116,6 +116,19 @@ export function trendsFor(series, metric, today, floors = NOISE_FLOOR) {
 
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 
+/** The value a Trends row shows: for weight, the smoothed trend (as on the Weight tab); otherwise the last reading. */
+export function trendRowValue(t, weights = []) {
+  const tr = t.key === 'weight_kg' && weights.length ? weights[weights.length - 1].trend : null;
+  return Number.isFinite(tr) ? tr : t.last.v;
+}
+
+/** The points a Trends row's sparkline draws: for weight, the smoothed trend line; otherwise the raw series. */
+export function trendRowSeries(t, weights = []) {
+  if (t.key !== 'weight_kg') return t.series;
+  const pts = weights.filter((w) => Number.isFinite(w.trend)).map((w) => ({ day: w.day, v: w.trend }));
+  return pts.length ? pts : t.series;
+}
+
 /**
  * Daily series for every trend metric: Map(metric → [{ day, v }]) oldest first.
  * weights: the weight series [{ day, kg }] (yours, already de-duplicated); measures: body_measures docs;
