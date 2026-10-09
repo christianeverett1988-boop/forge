@@ -79,7 +79,7 @@ export function renderBody(el) {
       ${compositionCard()}
       <div data-photos-slot></div>
       ${goalPathCard()}
-      ${bodyProfileHtml(currentBodyProfile(), state.profile || {})}
+      ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
       <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
       <div class="card">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>

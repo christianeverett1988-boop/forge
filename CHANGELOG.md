@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.1 — Consistency and polish (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Weight now agrees everywhere.** Progress → Trends showed your last weigh-in; it now shows your weight trend, the same number as the Weight tab, Today and Coach. The row is called "Weight trend".
+- **Body tab is calmer before you have scale data.** The empty Body Profile card is gone (the "No body data yet" card already says what to do), and the photos invitation is one small row: "Progress photos, Take your first set".
+- **Exercise sheet buttons line up.** "Watch on YouTube" is now "YouTube", so Favourite, YouTube and Share each fit on one line.
+- **Library search no longer holds the screen back.** If the search box was focused, tapping Back or a tab now always changes the screen straight away.
+- **Locations no longer break** if an older or imported location has no created date.
+- **Coach card on Today** was already above the disclaimer and shows a one-line question; no change needed.
+
 ## 0.10.0 — Forge Coach, no AI needed (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

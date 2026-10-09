@@ -1,7 +1,7 @@
 // Cards that sit on other screens: the Body tab's "Progress photos" card and the Today weekly reminder.
 // They fill themselves in after the screen draws, because reading photos from this phone is asynchronous.
 import { esc, formatDay, todayKey } from '../ui.js';
-import { icon, emptyState } from '../ui/icons.js';
+import { icon } from '../ui/icons.js';
 import { state } from '../state.js';
 import { mySessions } from './access.js';
 import { photoUrl } from './metrics.js';
@@ -17,7 +17,9 @@ export async function mountBodyPhotosCard(host) {
     return;
   }
   if (!sessions.length) {
-    host.innerHTML = `<div class="card" data-photos-empty>${emptyState({ icon: 'camera', title: 'Track how you look, not just what you weigh', text: 'Take a few photos each week. They stay on this phone.', action: { href: '#/photos/take', label: 'Take first photos' } })}</div>`;
+    host.innerHTML = `<a class="card row between center nav-card" href="#/photos/take" data-photos-empty>
+      <span class="row center gap"><span aria-hidden="true">${icon('camera')}</span><span><b>Progress photos</b><br><span class="small muted">Take your first set</span></span></span>
+      <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
     return;
   }
   const latest = sessions[0];

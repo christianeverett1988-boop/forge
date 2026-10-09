@@ -284,6 +284,8 @@ window.addEventListener('hashchange', async () => {
   const to = routeParts();
   prevParts = to;
   scrollMemory.save(from[0] || 'today', window.scrollY);
+  // A focused field (e.g. Library search) would make render() wait for blur; a route change always renders.
+  if (document.activeElement && main.contains(document.activeElement)) document.activeElement.blur();
   if (from[0] !== to[0] || from[1] !== to[1]) resetCounters();
   if (swipePop) {
     const done = swipePop;

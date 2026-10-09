@@ -134,3 +134,19 @@ test('every js/**/*.js module parses (catches duplicate imports no other test wo
     }
   }
 });
+
+test('v0.10.1: Trends shows the smoothed weight trend, the same number as the Weight tab', async () => {
+  const { trendRowValue } = await import('../js/health/trends.js');
+  const { smooth, dailyWeights } = await import('../js/weight/smoothing.js');
+  const weights = smooth(dailyWeights([
+    { day: '2026-10-01', kg: 95, source: 'manual', measured_at: '2026-10-01T08:00:00.000Z' },
+    { day: '2026-10-02', kg: 94, source: 'manual', measured_at: '2026-10-02T08:00:00.000Z' },
+    { day: '2026-10-03', kg: 92, source: 'manual', measured_at: '2026-10-03T08:00:00.000Z' },
+  ]));
+  const last = weights[weights.length - 1];
+  const t = { key: 'weight_kg', last: { v: last.kg } };
+  eq(trendRowValue(t, weights), last.trend);
+  assert(last.trend !== last.kg, 'fixture must differ between raw and trend');
+  eq(trendRowValue({ key: 'fat_ratio_pct', last: { v: 20 } }, weights), 20, 'other metrics keep their last reading');
+  eq(trendRowValue(t, []), last.kg, 'no weight series: fall back to the last reading');
+});

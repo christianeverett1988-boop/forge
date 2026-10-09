@@ -42,7 +42,7 @@ export function openHowTo(id, { extra, focus } = {}) {
         <div data-viewseg></div>
         <div class="ht-actions">
           <button class="ht-act" data-fav aria-pressed="false"><span aria-hidden="true" data-favicon>${icon('star')}</span><small>Favourite</small></button>
-          <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${icon('play', { size: 22 })}</span><small>Watch on YouTube</small></a>
+          <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${icon('play', { size: 22 })}</span><small>YouTube</small></a>
           <button class="ht-act" data-share><span aria-hidden="true">${icon('share', { size: 22 })}</span><small>Share</small></button>
         </div>
         <div class="seg ht-seg" role="tablist" aria-label="Details">
