@@ -25,11 +25,12 @@ const usable = (weights) => weights
   .map((w) => ({ ...w, at: w.measured_at || `${w.day}T12:00:00` }))
   .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)); // newest first
 
-const ANCHOR_DAYS = 180;
+const ANCHOR_DAYS = 14; // a typed-in or confirmed weight only anchors the walk if it's this close to the newest reading
 
 /**
  * Where "your weight" starts, newest end of the walk. In order of trust:
- *   1. weights you typed in or confirmed ("That's me") within 180 days of the newest reading;
+ *   1. weights you typed in or confirmed ("That's me") within 14 days of the newest reading (older ones may be
+ *      far from today's weight: someone who lost 20 kg since onboarding must not be flagged);
  *   2. your profile weight (from onboarding or Edit profile): the newest 10 readings within 15% of it, or the
  *      profile weight itself if none are;
  *   3. the median of the newest 10 readings (fine unless someone else used the scale most recently).

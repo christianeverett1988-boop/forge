@@ -32,7 +32,10 @@ export function niceTicks(min, max, count = 4) {
 }
 
 /** The unit a formatter puts after its number ("lb", "%", "bpm"), or '' for plain scores. */
-export const unitOf = (fmt) => String(fmt(1)).replace(/^[^\d]*[\d.,]+\s*/, '').trim();
+export const unitOf = (fmt) => {
+  const u = String(fmt(1)).replace(/^[^\d]*[\d.,]+\s*/, '').trim();
+  return /\d/.test(u) ? '' : u; // "0 h 01 min", "5 ft 3 in": no single unit to show
+};
 
 /** An axis number: grouped thousands, the tick step's decimals. */
 export const axisLabel = (v, decimals) => v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -120,14 +123,19 @@ export function bindScrub(svg, readout, { dayText = (d) => formatDay(d, { weekda
   const clear = () => { if (g) g.setAttribute('visibility', 'hidden'); if (readout) readout.textContent = idle; };
   const down = (ev) => { svg.setPointerCapture && ev.pointerId != null && svg.setPointerCapture(ev.pointerId); show(ev); };
   const move = (ev) => { if (ev.buttons || ev.pointerType === 'touch' || ev.pointerType === 'mouse') show(ev); };
-  const outside = (ev) => { if (!svg.contains(ev.target)) clear(); };
+  let unbind = () => {};
+  const outside = (ev) => {
+    if (!svg.isConnected) return unbind(); // the screen changed: stop listening
+    if (!svg.contains(ev.target)) clear();
+  };
   svg.style.touchAction = 'pan-y'; // vertical scrolling still works; horizontal drags scrub
   svg.addEventListener('pointerdown', down);
   svg.addEventListener('pointermove', move);
   document.addEventListener('pointerdown', outside);
-  return () => {
+  unbind = () => {
     svg.removeEventListener('pointerdown', down);
     svg.removeEventListener('pointermove', move);
     document.removeEventListener('pointerdown', outside);
   };
+  return unbind;
 }

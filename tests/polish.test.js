@@ -79,3 +79,16 @@ test('classifier seed: a recent typed-in or confirmed weight beats the profile; 
   eq(seedWeight(list([...you, ancient]), 99) < 101, true, 'a typed-in weight from years ago is not an anchor');
   eq(seedWeight([], 90), null);
 });
+
+test('classifier seed: an onboarding weight from months ago never flags you after a big loss (review repro)', () => {
+  const t0 = Date.UTC(2026, 0, 1, 12);
+  const typed = { id: 'onb', kg: 120, measured_at: new Date(t0).toISOString(), source: 'manual' };
+  const scale = Array.from({ length: 35 }, (_, i) => ({ id: `s${i}`, kg: 120 - (20 * (i + 1)) / 35, measured_at: new Date(t0 + (i + 1) * 5 * 864e5).toISOString(), source: 'withings' }));
+  eq(scale.filter((w) => suspects([typed, ...scale], 0.15, 120).has(w.id)).length, 0);
+  eq(scale.filter((w) => suspects([typed, ...scale]).has(w.id)).length, 0);
+});
+
+test('unitOf gives no unit for formats with more than one (sleep, imperial height)', () => {
+  eq(unitOf(() => '0 h 01 min'), '');
+  eq(unitOf(() => '5 ft 3 in'), '');
+});
