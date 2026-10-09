@@ -380,7 +380,6 @@ const WATCH_SERVER = [
   ['integrations', (rows) => ({ integrations: Object.fromEntries(rows.map((r) => [r.id || 'withings', r])) })],
 ];
 
-// v0.1.x stored weight inventory in pounds (dumbbells_lb); v0.2.0 stores kg like everything else.
 // My foods and the food log. Like the server-written ones, they are not part of "loaded": if the rules aren't
 // published yet the app still opens and the Food screen says what to do.
 const WATCH_FOOD = [
@@ -388,6 +387,7 @@ const WATCH_FOOD = [
   ['food_logs', (rows) => ({ food_logs: rows })],
 ];
 
+// v0.1.x stored weight inventory in pounds (dumbbells_lb); v0.2.0 stores kg like everything else.
 let dbModule = null;
 function migrateInventory(rows) {
   if (!dbModule) return;

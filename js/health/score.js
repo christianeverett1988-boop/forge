@@ -330,9 +330,9 @@ export function scoreDay(comps, weights = {}) {
  * Day scores for chosen days (long-term view): [{ day, score, pillars: { body, recovery, ... } }] in the order given.
  * A day only gets a score when at least MIN_PILLARS pillars have data that day. Same inputs as forgeScore.
  */
-export function scoreSamples({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, days = [] }) {
+export function scoreSamples({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, foodLogs = [], targets = null, days = [] }) {
   const done = finishedWorkouts(workouts).sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
-  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done };
+  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done, food: foodDays(foodLogs), targets };
   return days.map((day) => {
     const { score, pillars } = scoreDay(componentsFor(day, ctx));
     const n = Object.values(pillars).filter((v) => v != null).length;

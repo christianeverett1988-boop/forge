@@ -9,7 +9,7 @@ import { PILLARS } from '../health/score.js';
 import { weeklyScores, longTerm } from '../health/longterm.js';
 import { longevityCards } from '../health/longevity.js';
 import { longTermHtml, longevityHtml } from '../health/longview.js';
-import { myBodyMeasures, weightSeries } from '../derived.js';
+import { myBodyMeasures, weightSeries, foodTargets } from '../derived.js';
 import { todayKey } from '../ui.js';
 import { units } from '../state.js';
 
@@ -22,11 +22,11 @@ let ltRange = 90; // Long term card: 90 days or 365
 let weeklyMemo = null;
 function weekly() {
   const day = todayKey();
-  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile];
+  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile, state.food_logs];
   if (weeklyMemo && weeklyMemo.day === day && keys.every((k, i) => weeklyMemo.keys[i] === k)) return weeklyMemo.value;
   const value = weeklyScores({
     rows: state.health_daily || [], series: weightSeries(), measures: myBodyMeasures(), workouts: state.workouts,
-    cardio: state.cardio || [], profile: state.profile || {},
+    cardio: state.cardio || [], profile: state.profile || {}, foodLogs: state.food_logs || [], targets: foodTargets(),
   }, day);
   weeklyMemo = { day, keys, value };
   return value;

@@ -254,3 +254,19 @@ test('weekly report: nutrition block averages the logged days only, and the shar
   eq(none.hasData, false);
   assert(!/Food/.test(reportText(none, 'metric')));
 });
+
+// v0.14.5 (rebase onto 0.14.4): the long-term views score days with scoreSamples, which came after food logging
+// was built. They must see food too, or Nutrition would be missing from Long term, the coach and the doctor summary.
+import { scoreSamples } from '../js/health/score.js';
+import { weeklyScores } from '../js/health/longterm.js';
+
+test('long-term scoring sees food: scoreSamples and weeklyScores carry the Nutrition pillar; no food → no pillar, no crash', () => {
+  const logs = eaten(lastDays(13), 2000, 160);
+  const [withFood] = scoreSamples({ foodLogs: logs, targets: TARGETS, days: ['2026-10-10'] });
+  assert(withFood.pillars.nutrition != null && withFood.pillars.nutrition > 50, `nutrition pillar ${withFood.pillars.nutrition}`);
+  const [none] = scoreSamples({ days: ['2026-10-10'] });
+  eq(none.pillars.nutrition ?? null, null);
+  const weeks = weeklyScores({ foodLogs: logs, targets: TARGETS }, '2026-10-10', 2);
+  assert(weeks.every((w) => w.pillars.nutrition == null || w.pillars.nutrition > 50), 'weekly pillar values are scores');
+  eq(weeklyScores({}, '2026-10-10', 2).length, 0);
+});

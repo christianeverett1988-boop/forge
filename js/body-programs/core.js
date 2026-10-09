@@ -161,7 +161,7 @@ const plural = (n, one, many) => (n === 1 ? one : many);
  * The goals for one week, as the missions do: { id, label, done, text, ... }. Steps are left out without Apple Health.
  *   data  { idx (indexDays), series (weight trend), progress (progressDays), trainingDays, steps (target),
  *           band (paceBand, for cut4), units }
- * Protein is not a goal yet: when food logging lands (#33), add a `protein` goal here that uses idx.protein and
+ * Protein is not a goal yet: food logging exists (v0.14.5); to add it, put a `protein` goal here that uses idx.protein and
  * targets.proteinG, the way missions/core.js does, and list it in the programs' `goals`.
  */
 export function weekGoals(def, start, end, today, data) {
