@@ -204,7 +204,7 @@ test('morning auto-read: reads when today has no overnight data (every 20 min), 
 });
 
 // ---------- weekly refresh countdown (js/native/expiry.js) ----------
-import { expiryFrom, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, DAY_MS } from '../js/native/expiry.js';
+import { expiryFrom, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, whenText, bannerDeadline, refreshRow, DAY_MS } from '../js/native/expiry.js';
 import { scheduleExpiryReminder, EXPIRY_NOTIFICATION_ID } from '../js/native/bridge.js';
 
 test('expiry: the profile date wins, otherwise build/first-seen + 7 days, otherwise unknown', () => {
@@ -256,12 +256,47 @@ test('expiry: loadExpiry is null on the web; in the app it reads app-install.jso
   delete globalThis.fetch;
 });
 
-test('expiry reminder: its own notification, cancelled when there is none', async () => {
+test('expiry wording: the deadline says today, tomorrow or the weekday', () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const exp = local(2026, 10, 16, 18, 12); // a Friday
+  eq(whenText(exp, local(2026, 10, 16, 9)), 'today at 6:12 PM');
+  eq(whenText(exp, local(2026, 10, 15, 20)), 'tomorrow at 6:12 PM');
+  eq(whenText(exp, local(2026, 10, 12, 9)), 'Fri at 6:12 PM');
+  eq(bannerDeadline(exp, local(2026, 10, 15, 20)), 'Stops opening tomorrow at 6:12 PM. Plug your iPhone into the Mac mini and double-click Refresh Forge.');
+  assert(bannerDeadline(exp, local(2026, 10, 17, 9)).startsWith('Forge may have stopped opening.'));
+  const far = refreshRow(exp, local(2026, 10, 11, 9));
+  eq(far.value, '6 days');
+  eq(far.sub, 'Good until Fri, Oct 16 · 6:12 PM');
+  assert(!far.due);
+  const soon = refreshRow(exp, local(2026, 10, 15, 20));
+  assert(soon.due);
+  eq(soon.value, '1 day');
+  eq(soon.sub, 'Due tomorrow: plug into the Mac mini and double-click Refresh Forge');
+});
+
+test('expiry reminder: the "Remind me" tap (ask: true) asks first, then schedules only if allowed', async () => {
+  const at = Date.now() + 3 * DAY_MS;
+  let calls = fakeShell({ permission: 'prompt' }); // the fake never flips to granted: the user said no
+  eq(await scheduleExpiryReminder(at, { ask: true }), false);
+  assert(calls.some((c) => c[1] === 'requestPermissions'));
+  assert(!calls.some((c) => c[1] === 'schedule'));
+  calls = fakeShell({ permission: 'granted' });
+  eq(await scheduleExpiryReminder(at, { ask: true }), true);
+  assert(calls.some((c) => c[1] === 'schedule'));
+  web();
+});
+
+test('expiry reminder: boot never asks for permission; it only schedules when already allowed', async () => {
   web();
   eq(await scheduleExpiryReminder(Date.now() + 1e6), false);
-  const calls = fakeShell();
   const at = Date.now() + 3 * DAY_MS;
+  let calls = fakeShell({ permission: 'prompt' }); // fresh install
+  eq(await scheduleExpiryReminder(at), false);
+  assert(!calls.some((c) => c[1] === 'requestPermissions'), 'boot must not ask');
+  assert(!calls.some((c) => c[1] === 'schedule'));
+  calls = fakeShell({ permission: 'granted' });
   eq(await scheduleExpiryReminder(at), true);
+  assert(!calls.some((c) => c[1] === 'requestPermissions'));
   const sched = calls.find((c) => c[1] === 'schedule');
   eq(sched[2].notifications[0].id, EXPIRY_NOTIFICATION_ID);
   eq(sched[2].notifications[0].schedule.at.getTime(), at);

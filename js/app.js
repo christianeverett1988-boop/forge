@@ -287,7 +287,7 @@ if (isNative()) document.addEventListener('visibilitychange', () => { if (docume
 if (isNative()) {
   import('./native/expiry.js').then(async (m) => {
     const at = m.reminderAt(await m.loadExpiry());
-    if (at != null) scheduleExpiryReminder(at); // none once it's past: the Today banner takes over
+    if (at != null) scheduleExpiryReminder(at); // never asks for permission here (Settings → "Remind me" does); none once it's past: the Today banner takes over
   }).catch(() => {});
 }
 

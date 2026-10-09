@@ -144,6 +144,7 @@ const SHELL = [
   './js/native/autoread.js',
   './js/native/bridge.js',
   './js/native/expiry.js',
+  './js/native/refresh-ui.js',
   './js/native/health.js',
   './js/ui/errors.js',
   './data/metrics.json',

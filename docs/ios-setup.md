@@ -85,13 +85,15 @@ Tell me how the feel compares with the Home Screen web app. That's the point of 
 
 ## Every week: the 7-day refresh
 
-With a free Apple ID the app **stops opening after 7 days** (it bounces back to the Home Screen or says "Unable to verify app"). Forge counts it down: **Settings** shows "App refresh: expires in N days", you get a notification the day before, and Today shows "Plug your iPhone into the Mac mini and double-click Refresh Forge." when it's due.
+With a free Apple ID the app **stops opening after 7 days** (it bounces back to the Home Screen or says "Unable to verify app"). Forge counts it down: **Settings → iPhone app → App refresh** shows the exact date and the days left (tap it for these steps and a **Remind me** button, which asks for notifications the first time), and Today shows a "Forge needs its weekly refresh" banner with the real deadline from the day before.
 
 1. **Plug in** the iPhone (or have it on the same Wi-Fi, if you turned on "Show this iPhone when on Wi-Fi" in Xcode → Window → Devices and Simulators).
 2. **Unlock** it and keep the screen on.
 3. **Double-click "Refresh Forge"** on the Mac mini's Desktop.
 
-It switches Forge to the `main` version, pulls the newest code, rebuilds the app, signs it again and installs it on your iPhone, without opening Xcode. It prints a ✓ for each step and ends with "Forge is refreshed: good for 7 more days." If a step fails it says in words what to do (unlock the phone, plug it in, turn on Developer Mode…). Every step's details go to `refresh-forge.log` in the Forge folder (`~/forge-app`); send that file to Claude if it keeps failing.
+It switches Forge to the `main` version, pulls the newest code, rebuilds the app, signs it again and installs it on your iPhone, without opening Xcode. It prints a ✓ for each step and ends with the real date, for example "Forge is refreshed: good until Fri, Oct 16 at 6:12 PM." (it clears Forge's old signing profile first, so every refresh really gets a fresh 7 days; if it can't get a full one, it says so). If a step fails it says in words what to do (unlock the phone, plug it in, turn on Developer Mode…). Every step's details go to `refresh-forge.log` in the Forge folder (`~/forge-app`); if it keeps failing, send refresh-forge.log in your Forge chat (not on GitHub: it has your iPhone's ID).
+
+**Same file, any iPhone.** Plug in your wife's iPhone instead (one phone at a time) and double-click the same file: it registers her phone with your Personal Team automatically.
 
 The Desktop file is put there by `bash scripts/ios-setup.sh` (run that again to get a newer copy after Forge changes the refresh steps). The first time, macOS may ask you to allow it: right-click it → Open → Open. If your Forge folder isn't `~/forge-app`, open the file in a text editor and change `REPO` at the top.
 

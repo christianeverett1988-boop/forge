@@ -37,7 +37,8 @@ import { topInsights, dismissInsight, reportFor, currentReportWeek, currentGoalP
 import { compactInsightsHtml, bindInsightCards } from '../health/cards.js';
 import { goalLine } from '../health/goalpath.js';
 import { showReportCard } from '../health/weekly.js';
-import { loadExpiry, refreshDue, BANNER_TEXT } from '../native/expiry.js';
+import { loadExpiry, refreshDue } from '../native/expiry.js';
+import { refreshBannerHtml, openRefreshSheet } from '../native/refresh-ui.js';
 
 /** A small Food card: today's calories and protein so far, Log food, and a way into the meals. (The rings stay as they are.) */
 function foodCard(t) {
@@ -194,7 +195,7 @@ export function renderToday(el) {
           iPhone can erase data from websites you don’t open for 7 days. Installed apps are protected.
         </div>` : ''}
 
-      ${isNative() ? '<div class="notice info" data-app-refresh-banner hidden></div>' : ''}
+      ${isNative() ? '<div data-app-refresh-slot></div>' : ''}
 
       ${t.flags.map((f) => `<div class="notice ${f.level}">${esc(f.message)}</div>`).join('')}
 
@@ -280,8 +281,12 @@ export function renderToday(el) {
     overrideReadiness(false);
     renderToday(el);
   };
-  const refreshBanner = $('[data-app-refresh-banner]', el);
-  if (refreshBanner) loadExpiry().then((e) => { if (refreshBanner.isConnected && refreshDue(e)) { refreshBanner.textContent = BANNER_TEXT; refreshBanner.hidden = false; } });
+  const refreshSlot = $('[data-app-refresh-slot]', el);
+  if (refreshSlot) loadExpiry().then((e) => {
+    if (!refreshSlot.isConnected || !refreshDue(e)) return;
+    refreshSlot.innerHTML = refreshBannerHtml(e);
+    $('[data-app-refresh-banner]', refreshSlot).addEventListener('click', openRefreshSheet);
+  });
   bindInsightCards(el, dismissInsight);
   afterMissionsRender();
   afterBadgeCelebrations(el);

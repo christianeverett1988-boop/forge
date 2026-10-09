@@ -83,6 +83,11 @@ fieldset.card legend + * { clear: both; }
 .g-row.static, .g-row.sw { cursor: default; }
 .g-row.static:active, .g-row.sw:active { background: none; }
 .g-row.g-danger { color: var(--danger); }
+.g-row.due .g-ic { background: var(--warn-tint); color: var(--warn); }
+.g-row.due .g-val { color: var(--warn); font-weight: 600; }
+.refresh-banner { display: flex; gap: var(--s-3); align-items: flex-start; width: 100%; text-align: left; border: 0; color: var(--text-1); font: inherit; font-size: 15px; cursor: pointer; }
+.refresh-banner .rb-ic { flex: none; display: inline-flex; padding-top: 1px; }
+.refresh-steps { margin: 0; padding-left: 1.3em; display: grid; gap: var(--s-2); }
 .g-pad { padding: var(--s-3) 20px var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
 .g-row.col { flex-direction: column; align-items: stretch; padding: var(--s-3) 20px; gap: var(--s-2); }
 

@@ -99,10 +99,32 @@ async function applyRest() {
 // ---------- "refresh the app" reminder (free Apple ID: the app stops opening after 7 days) ----------
 export const EXPIRY_NOTIFICATION_ID = 4102;
 
-/** Schedule (atMs) or cancel (null) the one local notification that says the app needs its weekly refresh. */
-export async function scheduleExpiryReminder(atMs) {
+/** The notification plugin only if notifications are already allowed. Never shows the iOS prompt. */
+async function notificationsIfGranted() {
+  const N = plugin('LocalNotifications');
+  if (!N) return null;
+  try {
+    const p = await N.checkPermissions();
+    return p && p.display === 'granted' ? N : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Schedule (atMs) or cancel (null) the one local notification that says the app needs its weekly refresh.
+ * Quiet by default: unless notifications are already allowed it does nothing (no prompt at boot).
+ * `ask: true` is for a tap on "Remind me", which asks in context first.
+ */
+export async function scheduleExpiryReminder(atMs, { ask = false } = {}) {
   if (!isNative()) return false;
-  const N = await notifications();
+  let N = await notificationsIfGranted();
+  if (!N && ask) {
+    const P = plugin('LocalNotifications');
+    try {
+      if (P && (await P.requestPermissions()).display === 'granted') N = P;
+    } catch { /* stays off */ }
+  }
   if (!N) return false;
   try {
     await N.cancel({ notifications: [{ id: EXPIRY_NOTIFICATION_ID }] });

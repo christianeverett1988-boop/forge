@@ -74,3 +74,34 @@ export async function loadExpiry() {
   cached = { expiry: expiryFrom(info, seen) };
   return cached.expiry;
 }
+
+// ---------- wording (Settings row, Today banner, refresh sheet) ----------
+const dayStart = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const dayDiff = (t, now) => Math.round((dayStart(t) - dayStart(now)) / DAY_MS);
+const timeOf = (t) => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const dayOf = (t) => new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+/** "today at 6:12 PM" / "tomorrow at 6:12 PM" / "Fri at 6:12 PM" (calendar days, local time). */
+export function whenText(expiryMs, now = Date.now()) {
+  const diff = dayDiff(expiryMs, now);
+  if (diff <= 0) return `today at ${timeOf(expiryMs)}`;
+  if (diff === 1) return `tomorrow at ${timeOf(expiryMs)}`;
+  return `${new Date(expiryMs).toLocaleDateString('en-US', { weekday: 'short' })} at ${timeOf(expiryMs)}`;
+}
+
+/** The Today banner's second line, with the real deadline. */
+export function bannerDeadline(expiryMs, now = Date.now()) {
+  if (expiryMs <= now) return `Forge may have stopped opening. ${BANNER_TEXT}`;
+  return `Stops opening ${whenText(expiryMs, now)}. ${BANNER_TEXT}`;
+}
+
+/** The Settings row: { value: '5 days', sub, due }. */
+export function refreshRow(expiryMs, now = Date.now()) {
+  const n = daysLeft(expiryMs, now);
+  const due = refreshDue(expiryMs, now);
+  const value = expiryMs <= now ? 'Due now' : `${n} day${n === 1 ? '' : 's'}`;
+  const how = 'plug into the Mac mini and double-click Refresh Forge';
+  let sub = `Good until ${dayOf(expiryMs)} · ${timeOf(expiryMs)}`;
+  if (due) sub = `${expiryMs <= now ? 'Due now' : dayDiff(expiryMs, now) <= 0 ? 'Due today' : 'Due tomorrow'}: ${how}`;
+  return { value, sub, due };
+}
