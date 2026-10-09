@@ -20,7 +20,8 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .navbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 6;
   height: calc(var(--safe-top) + 44px); padding: var(--safe-top) 8px 0;
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  display: grid; grid-template-columns: minmax(auto, 1fr) minmax(0, max-content) minmax(auto, 1fr); align-items: center;
+  column-gap: 4px; /* side columns grow to fit the back button; the title column is what shrinks and ellipsizes */
   pointer-events: none;
   /* The blur lives on the .navbar itself, not a child: .navbar has a view-transition-name, which makes it a
      backdrop root, so a child's backdrop-filter would only see the (empty) inside of the bar. */
@@ -42,9 +43,11 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
   border: 0; background: none; color: var(--accent-text); font: 17px var(--font); cursor: pointer;
 }
 .nb-back[hidden] { display: none; }
+/* Title squeezed too hard: keep just the chevron (the aria-label still names the destination). */
+.nb-back.icon-only span { display: none; }
 .nb-back svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .nb-title {
-  grid-column: 2; margin: 0; font-size: 17px; font-weight: 600; max-width: 56vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  grid-column: 2; margin: 0; font-size: 17px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   opacity: 0; transform: translateY(6px);
   transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-spring);
 }

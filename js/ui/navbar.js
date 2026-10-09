@@ -83,6 +83,10 @@ export function navBar({ title, back = null, backLabel = null, onBack = null, ac
   back$.setAttribute('aria-label', backLabel ? `Back to ${backLabel}` : 'Back');
   el.querySelector('.nb-title').textContent = title || '';
   el.hidden = !(large || hasBack);
+  // iOS-style: the title truncates first; if even that leaves it under ~110px, the back label drops to a bare chevron.
+  back$.classList.remove('icon-only');
+  const t$ = el.querySelector('.nb-title');
+  if (hasBack && !el.hidden && t$.scrollWidth > t$.clientWidth && t$.clientWidth < 110) back$.classList.add('icon-only');
   el.classList.toggle('collapsed', !large && hasBack);
 
   if (large) {

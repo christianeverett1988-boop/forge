@@ -192,3 +192,12 @@ test('shell: no spinner, no floating sync pill, manifest has id and a maskable i
   assert(mf.icons.some((i) => i.purpose === 'maskable'), 'maskable icon');
   eq(mf.theme_color, mf.background_color);
 });
+
+test('nav bar: title column shrinks and ellipsizes instead of overlapping the back button', () => {
+  const css = readFileSync(new URL('../css/nav.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const bar = css.match(/\.navbar\s*\{[^}]*\}/)[0];
+  assert(/grid-template-columns:\s*minmax\(auto,\s*1fr\)\s+minmax\(0,\s*max-content\)\s+minmax\(auto,\s*1fr\)/.test(bar), 'navbar grid rule');
+  const title = css.match(/\.nb-title\s*\{[^}]*\}/)[0];
+  assert(/min-width:\s*0/.test(title) && /text-overflow:\s*ellipsis/.test(title) && !/max-width:\s*56vw/.test(title), 'title can shrink and ellipsizes');
+  assert(/\.nb-back\.icon-only span\s*\{\s*display:\s*none/.test(css), 'chevron-only fallback');
+});
