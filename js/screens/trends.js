@@ -4,7 +4,7 @@ import { state, units as getUnits } from '../state.js';
 import { esc } from '../ui.js';
 import { progressTabs } from './progress.js';
 import { intel } from '../health/intel.js';
-import { trendRowValue } from '../health/trends.js';
+import { trendRowValue, trendRowSeries } from '../health/trends.js';
 import { fmtMetric } from '../withings/body.js';
 import { fmtAmount } from '../health/insights.js';
 import { sparkSvg } from '../health/cards.js';
@@ -19,7 +19,7 @@ function row(t, u, today, weights) {
   const value = fmtMetric(t.key, trendRowValue(t, weights), u, { kind: t.kind });
   return `<a class="g-row trend-row ${esc(t.tone)}" href="#/metric/${esc(t.key)}" aria-label="${esc(t.key === 'weight_kg' ? 'Weight trend' : t.label)}: ${esc(value)}, ${esc(word)}">
     <span class="g-text"><span>${esc(t.key === 'weight_kg' ? 'Weight trend' : t.label)}</span><small>${esc(change)}</small></span>
-    ${sparkSvg(t.series, today)}
+    ${sparkSvg(trendRowSeries(t, weights), today)}
     <span class="tr-val"><b>${esc(value)}</b><span class="tr-arrow" aria-hidden="true">${tr.enough ? icon(ARROW[tr.direction]) : ''}</span></span>
   </a>`;
 }

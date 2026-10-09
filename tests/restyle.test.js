@@ -150,3 +150,20 @@ test('v0.10.1: Trends shows the smoothed weight trend, the same number as the We
   eq(trendRowValue({ key: 'fat_ratio_pct', last: { v: 20 } }, weights), 20, 'other metrics keep their last reading');
   eq(trendRowValue(t, []), last.kg, 'no weight series: fall back to the last reading');
 });
+
+test('v0.10.1: the Trends weight sparkline draws the smoothed trend, other metrics stay raw', async () => {
+  const { trendRowSeries } = await import('../js/health/trends.js');
+  const { smooth, dailyWeights } = await import('../js/weight/smoothing.js');
+  const weights = smooth(dailyWeights([
+    { day: '2026-10-01', kg: 95, source: 'manual', measured_at: '2026-10-01T08:00:00.000Z' },
+    { day: '2026-10-02', kg: 97, source: 'manual', measured_at: '2026-10-02T08:00:00.000Z' },
+    { day: '2026-10-03', kg: 94, source: 'manual', measured_at: '2026-10-03T08:00:00.000Z' },
+  ]));
+  const raw = weights.map((w) => ({ day: w.day, v: w.kg }));
+  const pts = trendRowSeries({ key: 'weight_kg', series: raw }, weights);
+  eq(JSON.stringify(pts.map((p) => p.v)), JSON.stringify(weights.map((w) => w.trend)), 'points come from trend');
+  assert(pts.some((p, i) => p.v !== raw[i].v), 'fixture must differ between raw and trend');
+  const other = [{ day: '2026-10-01', v: 20 }];
+  eq(trendRowSeries({ key: 'fat_ratio_pct', series: other }, weights), other, 'other metrics keep raw series');
+  eq(trendRowSeries({ key: 'weight_kg', series: raw }, []), raw, 'no weight series: fall back to raw');
+});
