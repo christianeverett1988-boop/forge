@@ -1,7 +1,7 @@
 // Workout-complete summary: confetti, "Workout #N", count-up stats (time without pauses, sets, volume, PRs),
 // PRs with old → new, "vs last time" per exercise, and the muscles you worked.
 // Then XP with the level bar (and a level-up burst), the weekly streak, new badges, and a Share image.
-import { state } from '../state.js';
+import { state, units as getUnits } from '../state.js';
 import { esc, $, toast } from '../ui.js';
 import { unit } from '../workouts/plan.js';
 import { buildIndex } from '../workouts/history.js';
@@ -100,7 +100,7 @@ export function renderSummary(el, id) {
         <div class="aw-bar" role="progressbar" aria-label="Level progress"><i data-xpbar style="--p:${(aw.levelUp ? aw.after.progress : aw.after.progress).toFixed(3)}"></i></div>
         <p class="small muted"><b class="lvl-name">Level ${aw.after.level} · ${esc(aw.after.name)}</b>${aw.after.next != null ? ` · ${(aw.after.next - aw.after.xp).toLocaleString()} XP to ${esc(aw.after.nextName)}` : ''}</p>
         <p class="small">${aw.streak.current ? `${icon('flame', { filled: true })} ${aw.streak.current}-week streak` : `${icon('flame')} Streak starts when you hit your planned days this week`} · ${aw.streak.thisWeek.done} of ${aw.streak.thisWeek.goal} days this week</p>
-        ${aw.badges.length ? `<p class="label">New badge${aw.badges.length === 1 ? '' : 's'}</p><div class="sum-badges">${aw.badges.map((b, k) => `<span class="sum-badge ${celebrate.has(b.id) ? 'bdg-pop' : ''}" style="--d:${(1.6 + k * 0.3).toFixed(1)}s">${badgeSVG(b.id, { shine: celebrate.has(b.id), size: 64 })}${esc(b.name)}</span>`).join('')}</div>` : ''}
+        ${aw.badges.length ? `<p class="label">New badge${aw.badges.length === 1 ? '' : 's'}</p><div class="sum-badges">${aw.badges.map((b, k) => `<span class="sum-badge ${celebrate.has(b.id) ? 'bdg-pop' : ''}" style="--d:${(1.6 + k * 0.3).toFixed(1)}s">${badgeSVG(b.id, { shine: celebrate.has(b.id), size: 64, units: getUnits() })}${esc(b.name)}</span>`).join('')}</div>` : ''}
         <a class="small" href="#/awards">See all awards ${icon('chev', { size: 14 })}</a>
       </div>` : ''}
 

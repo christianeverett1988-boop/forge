@@ -63,9 +63,9 @@ export const BADGE_ART = {
   wi7: { tier: 1, shape: 'flame', icon: 'scale', n: '7' },
   wi30: { tier: 2, shape: 'flame', icon: 'scale', n: '30' },
   wi100: { tier: 3, shape: 'flame', icon: 'scale', n: '100' },
-  bf1: { tier: 1, shape: 'round', icon: 'drop', n: '1%' },
-  bf2: { tier: 2, shape: 'round', icon: 'drop', n: '2%' },
-  bf5: { tier: 3, shape: 'round', icon: 'drop', n: '5%' },
+  bf1: { tier: 1, shape: 'round', icon: 'drop', n: '−1' },
+  bf2: { tier: 2, shape: 'round', icon: 'drop', n: '−2' },
+  bf5: { tier: 3, shape: 'round', icon: 'drop', n: '−5' },
   lean1: { tier: 2, shape: 'shield', icon: 'plus', n: '+1 kg' },
 };
 export const TIER_NAMES = { 1: 'Ember', 2: 'Steel', 3: 'Gold', 4: 'White heat' };
@@ -106,9 +106,10 @@ function ensureSprite() {
  * One badge as SVG markup.
  *   earned  false → grey silhouette   shine  true → a light sweeps across once (new badges)
  */
-export function badgeSVG(id, { earned = true, shine = false, size = 64, label = '' } = {}) {
+export function badgeSVG(id, { earned = true, shine = false, size = 64, label = '', units = 'imperial' } = {}) {
   ensureSprite();
-  const a = BADGE_ART[id] || { tier: 1, shape: 'round', icon: 'spark' };
+  const a = { ...(BADGE_ART[id] || { tier: 1, shape: 'round', icon: 'spark' }) };
+  if (id === 'lean1') a.n = units === 'metric' ? '+1 kg' : '+2 lb'; // the 1 kg goal, in the user's units
   const m = METAL[a.tier];
   const d = SHAPES[a.shape];
   const icon = ICONS[a.icon] || ICONS.spark;

@@ -47,7 +47,7 @@ export function indexDays({ weights = [], bodyMeasures = [], workouts = [], card
     for (const f of foodLogs) {
       if (!f || f.deleted || num(f.protein_g) == null) continue;
       const d = f.day || localDay(f.logged_at || f.at);
-      if (d) protein.set(d, (protein.get(d) || 0) + f.protein_g);
+      if (d) protein.set(d, (protein.get(d) || 0) + f.protein_g * (num(f.servings) ?? 1)); // protein_g is per serving
     }
   }
   return { weigh, trained, moved, health, protein };
@@ -71,7 +71,7 @@ export function fmtClock(min) {
  *   idx      indexDays(...)
  *   targets  { steps, bed: 'HH:MM', proteinG }
  *   restDay  nothing is planned for today: the Train mission asks for a walk
- * Each: { id, label, done, xp, progress?: { value, target, unit } }
+ * Each: { id, label, done, xp, progress?: { value, target, unit }, waiting?: no Apple Health row for the day yet }
  */
 export function missionsFor(day, idx, { targets = {}, restDay = false } = {}) {
   const t = { ...DEFAULTS, ...targets };
@@ -88,8 +88,13 @@ export function missionsFor(day, idx, { targets = {}, restDay = false } = {}) {
     list.push({ id: 'protein', label: 'Protein hit', done: g >= t.proteinG, progress: { value: g, target: Math.round(t.proteinG), unit: 'g protein' } });
   }
   if (idx.health.size) {
-    const steps = num((idx.health.get(day) || {}).steps) || 0;
-    list.push({ id: 'steps', label: 'Steps', done: steps >= t.steps, progress: { value: steps, target: t.steps, unit: 'steps' } });
+    const row = idx.health.get(day);
+    if (row) {
+      const steps = num(row.steps) || 0;
+      list.push({ id: 'steps', label: 'Steps', done: steps >= t.steps, progress: { value: steps, target: t.steps, unit: 'steps' } });
+    } else {
+      list.push({ id: 'steps', label: 'Steps', done: false, waiting: true }); // Apple Health usually syncs once a day
+    }
     const start = bedStart(idx.health.get(day));
     const target = parseClock(t.bed);
     if (start != null && target != null) list.push({ id: 'bed', label: `In bed by ${fmtClock(target)}`, done: nightMin(start) <= nightMin(target) });

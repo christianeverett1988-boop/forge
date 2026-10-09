@@ -1,16 +1,23 @@
 // Badges from weigh-ins and body composition. Pure; js/missions/store.js feeds them into the Awards screen.
 import { shiftDay } from './core.js';
+import { weightToDisplay, weightUnit } from '../units.js';
 
 export const MISSION_BADGES = [
   { id: 'wi7', name: 'Weekly Weigh', how: 'Weigh in 7 days in a row', days: 7 },
   { id: 'wi30', name: 'Scale Habit', how: 'Weigh in 30 days in a row', days: 30 },
   { id: 'wi100', name: 'Steady Hand', how: 'Weigh in 100 days in a row', days: 100 },
-  { id: 'bf1', name: 'First Percent', how: 'Body fat down 1 point from where you started (needs a Withings scale)', key: 'fat_ratio_pct', drop: 1 },
+  { id: 'bf1', name: 'First Point', how: 'Body fat down 1 point from where you started (needs a Withings scale)', key: 'fat_ratio_pct', drop: 1 },
   { id: 'bf2', name: 'Two Points', how: 'Body fat down 2 points from where you started (needs a Withings scale)', key: 'fat_ratio_pct', drop: 2 },
   { id: 'bf5', name: 'Five Points', how: 'Body fat down 5 points from where you started (needs a Withings scale)', key: 'fat_ratio_pct', drop: 5 },
-  { id: 'lean1', name: 'Plus a Kilo', how: 'Lean mass up 1 kg from where you started (needs a Withings scale)', key: 'fat_free_mass_kg', gain: 1 },
+  { id: 'lean1', name: 'Lean Gain', how: 'Lean mass up 1 kg from where you started (needs a Withings scale)', key: 'fat_free_mass_kg', gain: 1 },
 ];
 export const MISSION_BADGE_IDS = new Set(MISSION_BADGES.map((b) => b.id));
+
+/** The lean-mass goal (stored in kg) in the user's units. */
+const leanText = (kg, units) => {
+  const v = weightToDisplay(kg, units);
+  return `Lean mass up ${units === 'metric' ? v : v.toFixed(1)} ${weightUnit(units)} from where you started (needs a Withings scale)`;
+};
 
 const at = (day) => `${day}T12:00:00`; // earned date, a local-noon timestamp string
 
@@ -55,7 +62,7 @@ export function compFirstDay(points, { drop = 0, gain = 0 }) {
  * `weighDays`: days with a weigh-in. `bodyMeasures`: body_measures docs (without them the body-comp badges stay locked).
  * `seen`: awards_seen, so a badge once earned stays earned.
  */
-export function missionBadges({ weighDays = [], bodyMeasures = [], seen = {} } = {}) {
+export function missionBadges({ weighDays = [], bodyMeasures = [], seen = {}, units = 'imperial' } = {}) {
   const streaks = streakDays(weighDays);
   const comp = {};
   for (const key of new Set(MISSION_BADGES.filter((b) => b.key).map((b) => b.key))) {
@@ -66,6 +73,6 @@ export function missionBadges({ weighDays = [], bodyMeasures = [], seen = {} } =
   return MISSION_BADGES.map((b) => {
     const day = b.days ? streaks[b.days] : compFirstDay(comp[b.key], b);
     const date = day ? at(day) : (seen && seen[b.id]) || null;
-    return { id: b.id, name: b.name, how: b.how, earned: date ? { at: date, workoutId: null } : null };
+    return { id: b.id, name: b.name, how: b.gain ? leanText(b.gain, units) : b.how, earned: date ? { at: date, workoutId: null } : null };
   });
 }

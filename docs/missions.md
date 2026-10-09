@@ -13,7 +13,7 @@ Up to **4 a day**, in this order of priority. Each is done or not.
 | **Weigh in** | Any weight or body measurement today that isn't deleted or waiting in "Is this you?". A Withings weigh-in completes it by itself. | never |
 | **Train or move** | A finished workout today, **or** one cardio session of 20 min or more. On a rest day the row reads "Rest day: a 20-min walk counts". | never |
 | **Protein hit** | Protein logged today reaches your protein target. | there are no food logs (`state.food_logs` empty or missing) |
-| **Steps** | Today's `health_daily.steps` reaches the target (default 8,000; Settings → Missions). | no Apple Health days at all |
+| **Steps** | Today's `health_daily.steps` reaches the target (default 8,000; Settings → Missions). Until today's row syncs it stays unchecked and says "Updates when Apple Health syncs". | no Apple Health days at all |
 | **In bed on time** | Last night's `sleep.in_bed_start` is at or before your bedtime (default 23:00; Settings → Missions). After midnight counts as late. | no Apple Health days, or no sleep start time in the day's data (never guessed) |
 
 Notes

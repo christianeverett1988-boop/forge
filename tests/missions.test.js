@@ -52,7 +52,11 @@ test('missions: steps need Apple Health data and reach the target', () => {
   eq(s.progress.target, 8000);
   eq(get(run(D, { healthDaily: [health(D, { steps: 8000 })] }), 'steps').done, true);
   eq(get(run(D, { healthDaily: [health(D, { steps: 9000 })] }, { targets: { steps: 10000 } }), 'steps').done, false, 'custom target');
-  eq(get(run(D, { healthDaily: [health('2026-10-08', { steps: 9000 })] }), 'steps').progress.value, 0, 'data exists but not for today yet');
+  const wait = get(run(D, { healthDaily: [health('2026-10-08', { steps: 9000 })] }), 'steps');
+  eq(wait.done, false, 'data exists but not for today yet: kept, unchecked');
+  eq(wait.waiting, true);
+  eq(wait.progress, undefined, 'no 0 / target while waiting for the sync');
+  eq(s.waiting, undefined);
   eq(get(run(D, { healthDaily: [{ ...health(D, { steps: 9000 }), deleted: true }] }), 'steps'), undefined, 'only deleted rows: hidden');
 });
 
@@ -76,6 +80,9 @@ test('missions: protein is hidden without food logs and turns on with them', () 
   eq(ids(run(D, {}, { targets: t })), 'weigh,train');
   eq(ids(run(D, { foodLogs: [] }, { targets: t })), 'weigh,train', 'an empty list is the same as none');
   const logs = [{ day: D, protein_g: 100 }, { day: D, protein_g: 40 }, { day: '2026-10-08', protein_g: 200 }];
+  const serv = get(run(D, { foodLogs: [{ day: D, protein_g: 40, servings: 1.5 }, { day: D, protein_g: 30 }] }, { targets: { proteinG: 90 } }), 'protein');
+  eq(serv.progress.value, 90, 'protein_g is per serving: 40 × 1.5 + 30');
+  eq(serv.done, true);
   const p = get(run(D, { foodLogs: logs }, { targets: t }), 'protein');
   eq(p.done, false);
   eq(p.progress.value, 140);
@@ -170,6 +177,9 @@ test('badges: body-fat drop is judged against the first 14-day average', () => {
 test('badges: +1 kg lean mass, and nothing without body_measures', () => {
   const m = comp('fat_free_mass_kg', [[0, 60], [10, 60.2], [20, 61.1], [21, 61.2], [22, 61]]);
   assert(missionBadges({ bodyMeasures: m }).find((b) => b.id === 'lean1').earned, 'lean mass earned');
+  const how = (units) => missionBadges({ units }).find((b) => b.id === 'lean1').how;
+  eq(how('imperial').startsWith('Lean mass up 2.2 lb'), true);
+  eq(how('metric').startsWith('Lean mass up 1 kg'), true);
   const none = missionBadges({ weighDays: days(0, 3) });
   eq(none.filter((b) => ['bf1', 'bf2', 'bf5', 'lean1'].includes(b.id)).every((b) => b.earned === null), true);
   const deleted = comp('fat_free_mass_kg', [[0, 60], [20, 62], [21, 62]]).map((d) => ({ ...d, deleted: true }));

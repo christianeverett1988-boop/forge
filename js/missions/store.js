@@ -3,7 +3,7 @@
 //   missions_started  the first local day missions counted for XP (never earlier: no retroactive XP)
 //   mission_steps     step target (default 8,000)       mission_bed   bedtime target 'HH:MM' (default 23:00)
 //   missions_seen     { day: [mission ids already shown as done] } for the last two weeks, so a check springs once
-import { state } from '../state.js';
+import { state, units as getUnits } from '../state.js';
 import { patch } from '../db.js';
 import { currentTargets } from '../derived.js';
 import { streak } from '../workouts/awards.js';
@@ -62,7 +62,7 @@ export function weekProgress() {
 /** Mission badges (streaks, body composition), keeping any already saved in awards_seen. */
 export function extraBadges() {
   const idx = liveIndex();
-  return missionBadges({ weighDays: [...idx.weigh], bodyMeasures: state.body_measures || [], seen: (state.settings && state.settings.awards_seen) || {} });
+  return missionBadges({ weighDays: [...idx.weigh], bodyMeasures: state.body_measures || [], seen: (state.settings && state.settings.awards_seen) || {}, units: getUnits() });
 }
 
 /**

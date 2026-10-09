@@ -18,7 +18,7 @@ export function missionsCard() {
   }
   const seen = seenToday();
   const rows = m.list.map((x) => {
-    const sub = progressText(x.progress);
+    const sub = x.waiting ? 'Updates when Apple Health syncs' : progressText(x.progress);
     const pop = x.done && !seen.has(x.id);
     return `<li class="ms-row ${x.done ? 'done' : ''}" data-mission="${x.id}" aria-label="${esc(x.label)}: ${x.done ? 'done' : 'not done yet'}">
       <span class="ms-check ${pop ? 'ms-pop' : ''}" aria-hidden="true">${x.done ? icon('check', { filled: true }) : '<i class="ms-ring"></i>'}</span>
@@ -29,7 +29,7 @@ export function missionsCard() {
   return `<div class="card ms-card" data-missions>
     <div class="row between center"><p class="label">Today’s missions</p><span class="small muted">${m.done} of ${m.total}</span></div>
     <ul class="ms-list">${rows}</ul>
-    <p class="small muted">Finish all ${m.total} for +${m.bonus} XP more.</p>
+    <p class="small muted">Finish ${m.total === 2 ? 'both' : `all ${m.total}`} for +${m.bonus} XP more.</p>
   </div>`;
 }
 
@@ -54,8 +54,9 @@ export function missionWeekHtml() {
   }).join('');
   const full = days.filter((d) => d.all).length;
   return `<div class="card ms-week">
-    <div class="row between center"><p class="label">Daily missions</p><span class="small muted">${full} full ${full === 1 ? 'day' : 'days'} this week</span></div>
+    <div class="row between center"><p class="label">Daily missions</p><span class="small muted">${full} of the last 7 days complete</span></div>
     <ol class="ms-dots">${dots}</ol>
+    <p class="small muted">Bright = all missions done</p>
     <p class="small muted">+${MISSION_XP} XP for each mission and a bonus for finishing the day’s set.</p>
   </div>`;
 }
