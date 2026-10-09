@@ -8,6 +8,7 @@ import './workouts.test.js';
 import './csv.test.js';
 import './session.test.js';
 import './figure.test.js';
+import './homeposes.test.js';
 import './bodymap.test.js';
 import './preview.test.js';
 import './rings.test.js';

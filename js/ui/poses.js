@@ -12,8 +12,10 @@
 //   focus  optional joints to frame (the rest may run off the edge of the demo box).
 // Parts are depth-sorted every frame (rig.js drawOrder), so limbs crossing the body layer correctly.
 //
-// The squat, pull-up and curl below are the approved samples; js/ui/poses-lib.js holds the rest of the library.
+// The squat, pull-up and curl below are the approved samples; js/ui/poses-lib.js holds the rest of the library
+// and js/ui/poses-home.js the home, travel and bodyweight moves (table, towel, doorframe, floor, mobility).
 import { LIBRARY, LIBRARY_MAP } from './poses-lib.js';
+import { HOME, HOME_MAP } from './poses-home.js';
 
 export const TEMPLATES = {
   squat_barbell: {
@@ -58,21 +60,21 @@ export const TEMPLATES = {
   },
 };
 
-Object.assign(TEMPLATES, LIBRARY);
+Object.assign(TEMPLATES, LIBRARY, HOME);
 
 /** Exercise id → template. Anything not listed falls back to photos or the muscle list. */
 export const EXERCISE_TEMPLATES = {
   bb_back_squat: 'squat_barbell',
   pullup: 'pullup',
   db_curl: 'curl_dumbbell',
-  // Around the house. Props follow the exercise's load, so backpack moves show empty hands. Table and
-  // doorframe rows (pull-bar rig), towel pull-aparts (bar handle), prone moves, slider fly and triceps
-  // extensions have no template that fits without a wrong prop, so they stay on the muscle map.
+  // Around the house. Props follow the exercise's load, so backpack moves show empty hands. The table,
+  // towel, doorframe, floor, band and mobility moves have their own templates in poses-home.js (HOME_MAP).
   backpack_bent_row: 'row_bent', backpack_one_arm_row: 'row_one_arm', backpack_reverse_fly: 'rear_delt_fly',
   backpack_curl: 'curl_dumbbell', backpack_lateral_raise: 'lateral_raise', backpack_shrug: 'shrug',
   backpack_suitcase_carry: 'carry', chair_dip: 'bench_dip', backpack_goblet_squat: 'squat_goblet',
   backpack_rdl: 'rdl', stair_step_up: 'step_up',
   ...LIBRARY_MAP,
+  ...HOME_MAP,
 };
 
 export const templateFor = (exerciseId) => TEMPLATES[EXERCISE_TEMPLATES[exerciseId]] || null;

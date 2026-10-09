@@ -1,7 +1,7 @@
 // App boot: service worker, sign-in, live data, and a tiny hash router.
 import { configured } from './firebase.js';
 import { state, subscribe, LOADED_KEYS } from './state.js';
-import { esc, toast } from './ui.js';
+import { esc, toast, closeAllSheets } from './ui.js';
 import { APP_NAME } from '../config.js';
 import { stopRest, restRemaining } from './timer.js';
 import { viewTransition, animateCounters, resetCounters, reducedMotion } from './ui/motion.js';
@@ -289,6 +289,7 @@ function afterRoute(parts) {
 }
 
 window.addEventListener('hashchange', async () => {
+  closeAllSheets(); // a sheet never stays on top of the new screen (navigating button, deep link, back gesture)
   const from = prevParts;
   const to = routeParts();
   prevParts = to;
