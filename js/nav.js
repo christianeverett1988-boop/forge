@@ -9,7 +9,7 @@ export const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
   history: 'weight', awards: 'weight', score: 'weight',
   locations: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
-  metric: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
+  metric: 'body', photos: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
 };
 export const tabOf = (route) => TAB_FOR[route] || route;
 
