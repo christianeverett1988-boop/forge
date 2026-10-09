@@ -1,5 +1,7 @@
 import { state, units as getUnits } from '../state.js';
 import { isNative } from '../native/bridge.js';
+import { loadExpiryInfo } from '../native/expiry.js';
+import { refreshRowHtml, openRefreshSheet } from '../native/refresh-ui.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
@@ -92,6 +94,7 @@ export function renderSettings(el) {
         ${nav('#/withings', 'scale', 'Withings', withingsLine(), 'data-withings-card')}
         ${nav('#/apple', 'heart', 'Apple Health', appleLine(), 'data-apple-card')}
       </div>
+      ${isNative() ? '<p class="sec-title" data-app-refresh-title hidden>iPhone app</p><div class="group" data-app-refresh-group hidden></div>' : ''}
 
       <p class="sec-title">Your data</p>
       <div class="group">
@@ -127,6 +130,14 @@ export function renderSettings(el) {
   $$('input[name=units]', el).forEach((r) =>
     r.addEventListener('change', () => patch('settings', 'main', { units: r.value }))
   );
+  const group = $('[data-app-refresh-group]', el);
+  if (group) loadExpiryInfo().then((info) => {
+    if (!info || info.at == null || !group.isConnected) return;
+    group.innerHTML = refreshRowHtml(info.at, info.exact);
+    group.hidden = false;
+    $('[data-app-refresh-title]', el).hidden = false;
+    $('[data-app-refresh]', group).addEventListener('click', openRefreshSheet);
+  });
   $$('input[name=player]', el).forEach((r) => r.addEventListener('change', () => patch('settings', 'main', { player: r.value })));
   $$('input[name=coach]', el).forEach((r) => r.addEventListener('change', () => {
     unlockAudio();

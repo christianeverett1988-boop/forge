@@ -7,4 +7,7 @@ node_modules/
 
 # Output of scripts/ios-setup.sh
 /ios-setup.log
+/refresh-forge.log
+/build/
+/.devices.json
 /.shots/

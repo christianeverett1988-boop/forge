@@ -202,3 +202,122 @@ test('morning auto-read: reads when today has no overnight data (every 20 min), 
   // the morning rule ends at 12:00
   eq(autoReadMode({ now: at(12, 10), last: at(11, 10).getTime(), today, rows: partial }), null);
 });
+
+// ---------- weekly refresh countdown (js/native/expiry.js) ----------
+import { expiryFrom, expiryInfo, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, loadExpiryInfo, whenText, bannerDeadline, refreshRow, dueSoonLine, DAY_MS } from '../js/native/expiry.js';
+import { scheduleExpiryReminder, EXPIRY_NOTIFICATION_ID } from '../js/native/bridge.js';
+
+test('expiry: the profile date wins, otherwise build/first-seen + 7 days, otherwise unknown', () => {
+  const built = Date.parse('2026-10-09T10:00:00Z');
+  eq(expiryFrom({ builtAt: '2026-10-09T10:00:00Z' }), built + 7 * DAY_MS);
+  eq(expiryFrom({ builtAt: '2026-10-09T10:00:00Z', expires: '2026-10-15T08:30:00Z' }), Date.parse('2026-10-15T08:30:00Z'));
+  eq(expiryFrom(null, built), built + 7 * DAY_MS);
+  eq(expiryFrom({ expires: 'nonsense' }), null);
+  eq(expiryFrom({}), null);
+});
+
+test('expiry: days left round up, the line and the banner follow', () => {
+  const exp = Date.parse('2026-10-16T10:00:00Z');
+  const at = (iso) => Date.parse(iso);
+  eq(daysLeft(exp, at('2026-10-09T10:00:00Z')), 7);
+  eq(daysLeft(exp, at('2026-10-09T10:00:01Z')), 7);
+  eq(daysLeft(exp, at('2026-10-15T20:00:00Z')), 1);
+  eq(daysLeft(exp, at('2026-10-16T09:59:00Z')), 1);
+  eq(daysLeft(exp, at('2026-10-17T00:00:00Z')), 0);
+  eq(daysLeft(null), null);
+  eq(expiryLine(exp, at('2026-10-12T10:00:00Z')), 'App refresh: expires in 4 days');
+  eq(expiryLine(exp, at('2026-10-15T12:00:00Z')), 'App refresh: expires in 1 day');
+  eq(expiryLine(exp, at('2026-10-17T00:00:00Z')), 'App refresh: due now');
+  eq(expiryLine(null), '');
+  assert(!refreshDue(exp, at('2026-10-14T09:00:00Z')), 'two days left: no banner');
+  assert(refreshDue(exp, at('2026-10-15T10:00:00Z')), 'exactly a day left: banner');
+  assert(refreshDue(exp, at('2026-10-16T08:00:00Z')), 'the morning it is due: banner');
+  assert(refreshDue(exp, at('2026-10-18T08:00:00Z')), 'already expired: banner');
+  assert(!refreshDue(null), 'unknown: no banner');
+});
+
+test('expiry: the reminder is the day before, kept between 8:00 and 20:00, never in the past', () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const now = local(2026, 10, 9, 12);
+  eq(reminderAt(local(2026, 10, 16, 14), now), local(2026, 10, 15, 14));
+  eq(reminderAt(local(2026, 10, 16, 3), now), local(2026, 10, 15, 8)); // 3:00 the day before → 8:00
+  eq(reminderAt(local(2026, 10, 16, 23), now), local(2026, 10, 15, 20)); // 23:00 → 20:00
+  eq(reminderAt(local(2026, 10, 10, 11), now), null); // the day before is already past
+  eq(reminderAt(null, now), null);
+});
+
+test('expiry: loadExpiry is null on the web; in the app it reads app-install.json', async () => {
+  web();
+  eq(await loadExpiry(), null);
+  fakeShell();
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ builtAt: '2026-10-09T10:00:00Z', expires: '2026-10-14T01:02:03Z' }) });
+  eq(await loadExpiry(), Date.parse('2026-10-14T01:02:03Z'));
+  eq((await loadExpiryInfo()).exact, true);
+  web();
+  delete globalThis.fetch;
+});
+
+test('expiry wording: the deadline says today, tomorrow or the weekday', () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const exp = local(2026, 10, 16, 18, 12); // a Friday
+  eq(whenText(exp, local(2026, 10, 16, 9)), 'today at 6:12 PM');
+  eq(whenText(exp, local(2026, 10, 15, 20)), 'tomorrow at 6:12 PM');
+  eq(whenText(exp, local(2026, 10, 12, 9)), 'Fri at 6:12 PM');
+  eq(bannerDeadline(exp, local(2026, 10, 15, 20)), 'Stops opening tomorrow at 6:12 PM. Plug your iPhone into the Mac mini and double-click Refresh Forge.');
+  assert(bannerDeadline(exp, local(2026, 10, 17, 9)).startsWith('Forge may have stopped opening.'));
+  const far = refreshRow(exp, local(2026, 10, 11, 9));
+  eq(far.value, '6 days');
+  eq(far.sub, 'Good until Fri, Oct 16 · 6:12 PM');
+  assert(!far.due);
+  const soon = refreshRow(exp, local(2026, 10, 15, 20));
+  assert(soon.due);
+  eq(soon.value, '1 day');
+  eq(soon.sub, 'Due tomorrow: plug into the Mac mini and double-click Refresh Forge');
+});
+
+test('expiry wording: a guessed date has no time, and the sheet explains when "Remind me" is too late', async () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const exp = local(2026, 10, 16, 18, 12);
+  eq(expiryInfo({ expires: '2026-10-16T18:12:00Z' }).exact, true);
+  const guess = expiryInfo({ builtAt: '2026-10-09T10:00:00Z' });
+  eq(guess.exact, false);
+  eq(guess.at, Date.parse('2026-10-09T10:00:00Z') + 7 * DAY_MS);
+  eq(refreshRow(exp, local(2026, 10, 11, 9), false).sub, 'Good until about Fri, Oct 16');
+  eq(bannerDeadline(exp, local(2026, 10, 15, 20), false), 'Stops opening around tomorrow. Plug your iPhone into the Mac mini and double-click Refresh Forge.');
+  eq(whenText(exp, local(2026, 10, 12, 9), false), 'Fri');
+  eq(dueSoonLine(exp, local(2026, 10, 15, 20)), 'Due tomorrow at 6:12 PM: refresh it the next time you’re at the Mac mini.');
+  eq(dueSoonLine(exp, local(2026, 10, 15, 20), false), 'Due tomorrow: refresh it the next time you’re at the Mac mini.');
+  eq(dueSoonLine(exp, local(2026, 10, 17, 9)), 'Due now: refresh it the next time you’re at the Mac mini.');
+});
+
+test('expiry reminder: the "Remind me" tap (ask: true) asks first, then schedules only if allowed', async () => {
+  const at = Date.now() + 3 * DAY_MS;
+  let calls = fakeShell({ permission: 'prompt' }); // the fake never flips to granted: the user said no
+  eq(await scheduleExpiryReminder(at, { ask: true }), false);
+  assert(calls.some((c) => c[1] === 'requestPermissions'));
+  assert(!calls.some((c) => c[1] === 'schedule'));
+  calls = fakeShell({ permission: 'granted' });
+  eq(await scheduleExpiryReminder(at, { ask: true }), true);
+  assert(calls.some((c) => c[1] === 'schedule'));
+  web();
+});
+
+test('expiry reminder: boot never asks for permission; it only schedules when already allowed', async () => {
+  web();
+  eq(await scheduleExpiryReminder(Date.now() + 1e6), false);
+  const at = Date.now() + 3 * DAY_MS;
+  let calls = fakeShell({ permission: 'prompt' }); // fresh install
+  eq(await scheduleExpiryReminder(at), false);
+  assert(!calls.some((c) => c[1] === 'requestPermissions'), 'boot must not ask');
+  assert(!calls.some((c) => c[1] === 'schedule'));
+  calls = fakeShell({ permission: 'granted' });
+  eq(await scheduleExpiryReminder(at), true);
+  assert(!calls.some((c) => c[1] === 'requestPermissions'));
+  const sched = calls.find((c) => c[1] === 'schedule');
+  eq(sched[2].notifications[0].id, EXPIRY_NOTIFICATION_ID);
+  eq(sched[2].notifications[0].schedule.at.getTime(), at);
+  calls.length = 0;
+  await scheduleExpiryReminder(null);
+  assert(calls.some((c) => c[1] === 'cancel') && !calls.some((c) => c[1] === 'schedule'));
+  web();
+});
