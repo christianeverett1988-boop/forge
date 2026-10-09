@@ -72,6 +72,8 @@ const routes = {
   awards: () => import('./screens/awards.js').then((m) => m.renderAwards(main)),
   settings: () => import('./screens/settings.js').then((m) => m.renderSettings(main)),
   locations: () => import('./screens/locations.js').then((m) => m.renderLocations(main)),
+  apple: () => import('./screens/apple.js').then((m) => m.renderApple(main)),
+  score: () => import('./screens/score.js').then((m) => m.renderScore(main)),
   withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
   metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
@@ -80,13 +82,13 @@ const routes = {
 const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
   history: 'weight', weight: 'weight', awards: 'weight', locations: 'settings', profile: 'settings',
-  withings: 'settings', metric: 'body',
+  withings: 'settings', apple: 'settings', score: 'weight', metric: 'body',
 };
 // Screens that fill the whole screen (no tab bar).
 const FULLSCREEN = new Set(['play', 'summary', 'profile']);
 // For screen-change animations: tabs slide sideways, detail screens push in / pop out.
 const TAB_ORDER = ['today', 'train', 'body', 'weight', 'settings'];
-const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, awards: 0, settings: 0 };
+const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, awards: 0, score: 0, settings: 0 };
 
 const routeParts = () => (location.hash.replace(/^#\/?/, '').split('?')[0] || 'today').split('/');
 const currentRoute = () => routeParts()[0];

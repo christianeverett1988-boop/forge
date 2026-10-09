@@ -26,6 +26,8 @@ import { runDataCheck, saveReport } from './src/datacheck.js';
 import { maintainAll, disconnect } from './src/maintenance.js';
 import { resultPage } from './src/pages.js';
 import { P } from './src/paths.js';
+import { handleIngest, importDays, createToken, revokeToken, deleteAppleData, BadPayload, MAX_BODY_BYTES } from './src/health.js';
+import { log } from './src/log.js';
 
 initializeApp();
 const REGION = 'us-east1';
@@ -141,10 +143,60 @@ export const withingsDataCheck = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY],
 
 export const withingsDisconnect = onCall({ secrets: [CLIENT_SECRET, WEBHOOK_KEY], timeoutSeconds: 300 }, async (req) => {
   const uid = needUid(req);
-  return friendly(() => disconnect({ db: db(), api: api(), uid, webhookUrl: webhookUrl(), deleteData: !!(req.data && req.data.deleteData) }));
+  return friendly(() => disconnect({ db: db(), api: api(), uid, webhookUrl: webhookUrl(), deleteData: !!(req.data && req.data.deleteData), deleteApple: !!(req.data && req.data.deleteApple) }));
 });
 
 // ---------- daily upkeep (1 Cloud Scheduler job) ----------
 export const withingsMaintenance = onSchedule({ schedule: '0 4 * * *', timeZone: 'America/New_York', secrets: [CLIENT_SECRET, WEBHOOK_KEY], timeoutSeconds: 540, retryCount: 1 }, async () => {
   await maintainAll({ db: db(), api: api(), enqueue, webhookUrl: webhookUrl() });
+});
+
+// ---------- Apple Health (Shortcut bridge + export import). No secrets: tokens are per user and hashed ----------
+export const healthIngest = onRequest({ invoker: 'public', timeoutSeconds: 30, concurrency: 10 }, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const declared = Number(req.get('content-length') || 0);
+  if (declared > MAX_BODY_BYTES) { // refused before any work (the platform's own body limit still applies)
+    res.status(413).json({ error: 'too_large' });
+    return;
+  }
+  const bodyBytes = Math.max(declared, req.rawBody ? req.rawBody.length : 0);
+  let body = req.body;
+  if (bodyBytes <= MAX_BODY_BYTES && (typeof body === 'string' || Buffer.isBuffer(body))) {
+    try { body = JSON.parse(String(body)); } catch { body = null; }
+  }
+  try {
+    const r = await handleIngest({ method: req.method, headers: req.headers, bodyBytes, body }, { db: db() });
+    res.status(r.status).json(r.body);
+  } catch {
+    log('ingest', { status: 500 });
+    res.status(500).json({ error: 'server_error' }); // never echo the cause: it could mention a value
+  }
+});
+
+export const createShortcutToken = onCall({ secrets: [] }, async (req) => {
+  const uid = needUid(req);
+  return friendly(() => createToken({ db: db(), uid }));
+});
+
+export const revokeShortcutToken = onCall({ secrets: [] }, async (req) => {
+  const uid = needUid(req);
+  return friendly(() => revokeToken({ db: db(), uid }));
+});
+
+export const deleteAppleHealthData = onCall({ secrets: [] }, async (req) => {
+  const uid = needUid(req);
+  return friendly(() => deleteAppleData({ db: db(), uid }));
+});
+
+// The app parses an Apple Health export on the phone and sends only daily summaries (never the zip).
+export const importHealthDays = onCall({ secrets: [], timeoutSeconds: 60 }, async (req) => {
+  const uid = needUid(req);
+  return friendly(async () => {
+    try {
+      return await importDays({ db: db(), uid, data: req.data });
+    } catch (e) {
+      if (e instanceof BadPayload) throw new HttpsError('invalid-argument', 'Forge couldn’t read some of that Health data.');
+      throw e;
+    }
+  });
 });

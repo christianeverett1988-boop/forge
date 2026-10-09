@@ -13,6 +13,7 @@ import { getAccessToken, NotConnected } from './tokens.js';
 import { incrementalSync, reconcile90 } from './sync.js';
 import { backfillTaskId, enqueueOnce } from './tasks.js';
 import { log } from './log.js';
+import { deleteAppleData } from './health.js';
 
 export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = () => Date.now() }) {
   const out = { uid, ok: true };
@@ -92,10 +93,11 @@ export async function maintainAll(deps) {
 
 /**
  * Disconnect: revoke the notification, delete tokens and the Withings-user mapping, mark disconnected.
- * deleteData also deletes everything synced or stored server-side (body_measures, health_daily, the
- * Withings weights and the status doc) — "Delete everything" calls this first.
+ * deleteData also deletes the synced Withings data (body_measures, the Withings weights and the status doc).
+ * deleteApple additionally deletes Apple Health (health_daily, the Shortcut token and status) — "Delete
+ * everything" passes both; the Withings dialog passes only deleteData.
  */
-export async function disconnect({ db, api, uid, webhookUrl, deleteData = false, now = () => Date.now() }) {
+export async function disconnect({ db, api, uid, webhookUrl, deleteData = false, deleteApple = false, now = () => Date.now() }) {
   const privRef = db.doc(P.priv(uid));
   const priv = await privRef.get();
   let revoked = null;
@@ -113,12 +115,14 @@ export async function disconnect({ db, api, uid, webhookUrl, deleteData = false,
   }
   let deleted = 0;
   if (deleteData) {
-    for (const col of [P.bodyCol(uid), P.healthCol(uid)]) deleted += await deleteAll(db, await db.collection(col).get());
+    deleted += await deleteAll(db, await db.collection(P.bodyCol(uid)).get());
     deleted += await deleteAll(db, await db.collection(P.weightCol(uid)).where('source', '==', 'withings').get());
     await db.doc(P.status(uid)).delete();
   } else {
     await db.doc(P.status(uid)).set({ connected: false, disconnected_at: new Date(now()).toISOString(), subscription_ok: null }, { merge: true });
   }
+  // Apple Health data is separate from Withings: it goes only when asked (Delete everything, or its own button).
+  if (deleteApple) deleted += (await deleteAppleData({ db, uid })).deleted;
   return { revoked, deleted };
 }
 

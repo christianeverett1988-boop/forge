@@ -145,6 +145,9 @@ export function generateWorkout(opts) {
     // Preview edits (Train): forced = { pickedId: replacementId } (⋯ → Replace);
     // avoidIds = exercises to steer away from when there's another option (Switch).
     forced = {}, avoidIds = [],
+    // Readiness (js/health/readiness.js): { level: 'green'|'amber'|'red', override?: true }. Amber takes a set
+    // off every accessory; Red makes it a light day unless you override.
+    readiness = null,
   } = opts;
   const experience = profile.experience || 'beginner';
   const notes = [];
@@ -173,6 +176,11 @@ export function generateWorkout(opts) {
 
   const { deload, week, cycle } = deloadInfo(program, experience, now);
   if (deload) notes.push('Deload week: lighter weights and fewer sets so you recover and come back stronger.');
+  const rLevel = readiness && !readiness.override ? readiness.level : null;
+  const readinessDeload = rLevel === 'red' && !deload;
+  const lighter = deload || readinessDeload; // targets for a deload week, whether planned or from Readiness
+  if (readinessDeload) notes.push('Your body is asking for a lighter day (Readiness is red), so this is a short, easy session. Mobility or a walk is a good swap too. You can train as planned instead.');
+  if (rLevel === 'amber') notes.push('Readiness is amber: one set less on each accessory today.');
 
   // Chains: per chain AND movement pattern (e.g. the squat chain has squat steps and split-squat steps),
   // use the step you last trained; otherwise a starting step for your experience.
@@ -237,10 +245,11 @@ export function generateWorkout(opts) {
     const exForTarget = slot.reps ? { ...ex, reps: slot.reps } : prog.repBias === 'high' && !ex.timed ? { ...ex, reps: [Math.max(ex.reps[0], 8), Math.max(ex.reps[1], 12)] } : ex;
     const chainNext = ex.chain ? exercises.find((e) => e.chain === ex.chain && e.step === ex.step + 1 && canDo(e, available)) : null;
     const target = nextTarget(exForTarget, historyFor(ex.id), {
-      inventory: location.weight_inventory || {}, unit, role: slot.role, experience, deload, chainNext,
+      inventory: location.weight_inventory || {}, unit, role: slot.role, experience, deload: lighter, chainNext,
     });
-    if (slot.sets && !deload) target.sets = slot.sets;
-    else if (!deload && volume !== 1) target.sets = Math.min(5, Math.round(defaultSets(slot.role, experience) * volume));
+    if (slot.sets && !lighter) target.sets = slot.sets;
+    else if (!lighter && volume !== 1) target.sets = Math.min(5, Math.round(defaultSets(slot.role, experience) * volume));
+    if (rLevel === 'amber' && slot.role === 'accessory' && !lighter) target.sets = Math.max(1, target.sets - 1);
     const wu = slot.role !== 'accessory' && target.weight ? warmups(ex, target.weight, { inventory: location.weight_inventory || {}, unit }) : [];
     const risky = (ex.avoid || []).filter((t) => avoid.has(t));
     const warning = risky.length ? `Heads up: this commonly stresses your ${risky.map((t) => t.replace('_', ' ')).join(', ')} (from your injury note). Swap it if it bothers you.` : null;
@@ -270,5 +279,6 @@ export function generateWorkout(opts) {
     }
   }
 
-  return { dayType, label: day.label, deload, week, cycle, notes, exercises: items, est_minutes: Math.round(total() + 5) };
+  const readinessApplied = rLevel === 'amber' ? 'amber' : readinessDeload ? 'red' : null;
+  return { dayType, label: day.label, deload, readinessDeload, readiness: readinessApplied, week, cycle, notes, exercises: items, est_minutes: Math.round(total() + 5) };
 }

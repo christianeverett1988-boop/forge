@@ -175,7 +175,7 @@ export async function deleteAllUserData() {
   const serverData = (await Promise.all(READ_ONLY_COLLECTIONS.map(count))).some((n) => n > 0);
   if (serverData) {
     const { call } = await import('./functions.js');
-    await call('withingsDisconnect', { deleteData: true });
+    await call('withingsDisconnect', { deleteData: true, deleteApple: true }); // Withings data and Apple Health data
   }
   for (const col of COLLECTIONS) {
     const snap = await getDocs(collection(db, 'users', uid(), col));
