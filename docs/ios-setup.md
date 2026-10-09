@@ -93,7 +93,7 @@ With a free Apple ID the app **stops opening after 7 days** (it bounces back to 
 
 It switches Forge to the `main` version, pulls the newest code, rebuilds the app, signs it again and installs it on your iPhone, without opening Xcode. It prints a ✓ for each step and ends with the real date, for example "Forge is refreshed: good until Fri, Oct 16 at 6:12 PM." (it clears Forge's old signing profile first, so every refresh really gets a fresh 7 days; if it can't get a full one, it says so). If a step fails it says in words what to do (unlock the phone, plug it in, turn on Developer Mode…). Every step's details go to `refresh-forge.log` in the Forge folder (`~/forge-app`); if it keeps failing, send refresh-forge.log in your Forge chat (not on GitHub: it has your iPhone's ID).
 
-**Same file, any iPhone.** Plug in your wife's iPhone instead (one phone at a time) and double-click the same file: it registers her phone with your Personal Team automatically.
+**Same file, any iPhone.** Plug in your wife's iPhone instead (one phone at a time) and double-click the same file: it registers her phone with your Personal Team automatically. The first time on her phone, turn on Developer Mode (Settings → Privacy & Security → Developer Mode; the phone restarts), and after the install trust your Apple ID once (Settings → General → VPN & Device Management).
 
 The Desktop file is put there by `bash scripts/ios-setup.sh` (run that again to get a newer copy after Forge changes the refresh steps). The first time, macOS may ask you to allow it: right-click it → Open → Open. If your Forge folder isn't `~/forge-app`, open the file in a text editor and change `REPO` at the top.
 

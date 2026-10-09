@@ -16,11 +16,16 @@ const ms = (v) => {
 
 /** → ms since epoch when the app stops opening, or null if nothing is known. `info`: { expires, builtAt } (strings or ms). */
 export function expiryFrom(info, firstSeen = null) {
+  return expiryInfo(info, firstSeen).at;
+}
+
+/** Same, plus whether the date is exact: { at, exact }. Only the signing profile's `expires` is exact; the rest is a guess. */
+export function expiryInfo(info, firstSeen = null) {
   const i = info || {};
   const exp = ms(i.expires);
-  if (exp) return exp;
+  if (exp) return { at: exp, exact: true };
   const from = ms(i.builtAt) || ms(firstSeen);
-  return from ? from + SIGNED_FOR_MS : null;
+  return { at: from ? from + SIGNED_FOR_MS : null, exact: false };
 }
 
 /** Whole days left, rounded up (6 h left = 1 day; 0 only once it has expired). */
@@ -52,12 +57,16 @@ export const BANNER_TEXT = 'Plug your iPhone into the Mac mini and double-click 
 
 // ---------- loading (iPhone app only) ----------
 const SEEN_KEY = 'forge.install.firstSeen';
-let cached = null; // { expiry: ms|null }
+let cached = null; // { at: ms|null, exact }
 
-/** Read app-install.json once. Falls back to "first time this build ran" + 7 days. Resolves null on the web. */
 export async function loadExpiry() {
+  return (await loadExpiryInfo())?.at ?? null;
+}
+
+/** Read app-install.json once → { at, exact }; exact only when the date came from the signing profile. Falls back to "first time this build ran" + 7 days. Resolves null on the web. */
+export async function loadExpiryInfo() {
   if (!isNative()) return null;
-  if (cached) return cached.expiry;
+  if (cached) return cached;
   let info = null;
   try {
     const r = await fetch('./app-install.json', { cache: 'no-store' });
@@ -71,8 +80,8 @@ export async function loadExpiry() {
       else { seen = Date.now(); localStorage.setItem(SEEN_KEY, JSON.stringify({ version: VERSION, at: seen })); }
     } catch { seen = Date.now(); }
   }
-  cached = { expiry: expiryFrom(info, seen) };
-  return cached.expiry;
+  cached = expiryInfo(info, seen);
+  return cached;
 }
 
 // ---------- wording (Settings row, Today banner, refresh sheet) ----------
@@ -82,26 +91,31 @@ const timeOf = (t) => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric',
 const dayOf = (t) => new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
 /** "today at 6:12 PM" / "tomorrow at 6:12 PM" / "Fri at 6:12 PM" (calendar days, local time). */
-export function whenText(expiryMs, now = Date.now()) {
+export function whenText(expiryMs, now = Date.now(), exact = true) {
   const diff = dayDiff(expiryMs, now);
-  if (diff <= 0) return `today at ${timeOf(expiryMs)}`;
-  if (diff === 1) return `tomorrow at ${timeOf(expiryMs)}`;
-  return `${new Date(expiryMs).toLocaleDateString('en-US', { weekday: 'short' })} at ${timeOf(expiryMs)}`;
+  const at = exact ? ` at ${timeOf(expiryMs)}` : '';
+  if (diff <= 0) return `today${at}`;
+  if (diff === 1) return `tomorrow${at}`;
+  return `${new Date(expiryMs).toLocaleDateString('en-US', { weekday: 'short' })}${at}`;
 }
 
-/** The Today banner's second line, with the real deadline. */
-export function bannerDeadline(expiryMs, now = Date.now()) {
+/** The Today banner's second line, with the real deadline ("around …" and no time when the date is only a guess). */
+export function bannerDeadline(expiryMs, now = Date.now(), exact = true) {
   if (expiryMs <= now) return `Forge may have stopped opening. ${BANNER_TEXT}`;
-  return `Stops opening ${whenText(expiryMs, now)}. ${BANNER_TEXT}`;
+  return `Stops opening ${exact ? '' : 'around '}${whenText(expiryMs, now, exact)}. ${BANNER_TEXT}`;
 }
+
+/** Shown in the refresh sheet instead of "Remind me" when the day-before reminder time has already passed. */
+export const dueSoonLine = (expiryMs, now = Date.now(), exact = true) =>
+  `Due ${expiryMs <= now ? 'now' : whenText(expiryMs, now, exact)}: refresh it the next time you’re at the Mac mini.`;
 
 /** The Settings row: { value: '5 days', sub, due }. */
-export function refreshRow(expiryMs, now = Date.now()) {
+export function refreshRow(expiryMs, now = Date.now(), exact = true) {
   const n = daysLeft(expiryMs, now);
   const due = refreshDue(expiryMs, now);
   const value = expiryMs <= now ? 'Due now' : `${n} day${n === 1 ? '' : 's'}`;
   const how = 'plug into the Mac mini and double-click Refresh Forge';
-  let sub = `Good until ${dayOf(expiryMs)} · ${timeOf(expiryMs)}`;
+  let sub = exact ? `Good until ${dayOf(expiryMs)} · ${timeOf(expiryMs)}` : `Good until about ${dayOf(expiryMs)}`;
   if (due) sub = `${expiryMs <= now ? 'Due now' : dayDiff(expiryMs, now) <= 0 ? 'Due today' : 'Due tomorrow'}: ${how}`;
   return { value, sub, due };
 }

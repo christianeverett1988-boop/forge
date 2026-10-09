@@ -204,7 +204,7 @@ test('morning auto-read: reads when today has no overnight data (every 20 min), 
 });
 
 // ---------- weekly refresh countdown (js/native/expiry.js) ----------
-import { expiryFrom, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, whenText, bannerDeadline, refreshRow, DAY_MS } from '../js/native/expiry.js';
+import { expiryFrom, expiryInfo, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, loadExpiryInfo, whenText, bannerDeadline, refreshRow, dueSoonLine, DAY_MS } from '../js/native/expiry.js';
 import { scheduleExpiryReminder, EXPIRY_NOTIFICATION_ID } from '../js/native/bridge.js';
 
 test('expiry: the profile date wins, otherwise build/first-seen + 7 days, otherwise unknown', () => {
@@ -252,6 +252,7 @@ test('expiry: loadExpiry is null on the web; in the app it reads app-install.jso
   fakeShell();
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ builtAt: '2026-10-09T10:00:00Z', expires: '2026-10-14T01:02:03Z' }) });
   eq(await loadExpiry(), Date.parse('2026-10-14T01:02:03Z'));
+  eq((await loadExpiryInfo()).exact, true);
   web();
   delete globalThis.fetch;
 });
@@ -272,6 +273,21 @@ test('expiry wording: the deadline says today, tomorrow or the weekday', () => {
   assert(soon.due);
   eq(soon.value, '1 day');
   eq(soon.sub, 'Due tomorrow: plug into the Mac mini and double-click Refresh Forge');
+});
+
+test('expiry wording: a guessed date has no time, and the sheet explains when "Remind me" is too late', async () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const exp = local(2026, 10, 16, 18, 12);
+  eq(expiryInfo({ expires: '2026-10-16T18:12:00Z' }).exact, true);
+  const guess = expiryInfo({ builtAt: '2026-10-09T10:00:00Z' });
+  eq(guess.exact, false);
+  eq(guess.at, Date.parse('2026-10-09T10:00:00Z') + 7 * DAY_MS);
+  eq(refreshRow(exp, local(2026, 10, 11, 9), false).sub, 'Good until about Fri, Oct 16');
+  eq(bannerDeadline(exp, local(2026, 10, 15, 20), false), 'Stops opening around tomorrow. Plug your iPhone into the Mac mini and double-click Refresh Forge.');
+  eq(whenText(exp, local(2026, 10, 12, 9), false), 'Fri');
+  eq(dueSoonLine(exp, local(2026, 10, 15, 20)), 'Due tomorrow at 6:12 PM: refresh it the next time you’re at the Mac mini.');
+  eq(dueSoonLine(exp, local(2026, 10, 15, 20), false), 'Due tomorrow: refresh it the next time you’re at the Mac mini.');
+  eq(dueSoonLine(exp, local(2026, 10, 17, 9)), 'Due now: refresh it the next time you’re at the Mac mini.');
 });
 
 test('expiry reminder: the "Remind me" tap (ask: true) asks first, then schedules only if allowed', async () => {

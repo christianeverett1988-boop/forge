@@ -37,7 +37,7 @@ import { topInsights, dismissInsight, reportFor, currentReportWeek, currentGoalP
 import { compactInsightsHtml, bindInsightCards } from '../health/cards.js';
 import { goalLine } from '../health/goalpath.js';
 import { showReportCard } from '../health/weekly.js';
-import { loadExpiry, refreshDue } from '../native/expiry.js';
+import { loadExpiryInfo, refreshDue } from '../native/expiry.js';
 import { refreshBannerHtml, openRefreshSheet } from '../native/refresh-ui.js';
 
 /** A small Food card: today's calories and protein so far, Log food, and a way into the meals. (The rings stay as they are.) */
@@ -282,9 +282,9 @@ export function renderToday(el) {
     renderToday(el);
   };
   const refreshSlot = $('[data-app-refresh-slot]', el);
-  if (refreshSlot) loadExpiry().then((e) => {
-    if (!refreshSlot.isConnected || !refreshDue(e)) return;
-    refreshSlot.innerHTML = refreshBannerHtml(e);
+  if (refreshSlot) loadExpiryInfo().then((info) => {
+    if (!refreshSlot.isConnected || !info || !refreshDue(info.at)) return;
+    refreshSlot.innerHTML = refreshBannerHtml(info.at, info.exact);
     $('[data-app-refresh-banner]', refreshSlot).addEventListener('click', openRefreshSheet);
   });
   bindInsightCards(el, dismissInsight);

@@ -20,7 +20,7 @@ if [ ! -d "$REPO/.git" ]; then
 fi
 cd "$REPO" || exit 1
 LOG="$PWD/refresh-forge.log"
-STEP="$LOG.step" # the output of the step that is running now: the error advice below reads only this, never the whole log
+STEP="$(mktemp -t forge-refresh-step)" # outside the repo, so git never sees it. The output of the step that is running now: the error advice below reads only this, never the whole log
 : > "$LOG"
 : > "$STEP"
 trap 'rm -f "$STEP"' EXIT
