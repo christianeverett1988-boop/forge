@@ -14,7 +14,6 @@ import { exerciseRecords } from '../workouts/history.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
 import { photoLoop, hasPhotos, loadPhotoIndex, photoFallback } from '../ui/photos.js';
 import { bodyMap, exerciseValues } from '../ui/bodymap.js';
-import { icon } from '../ui/icons.js';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 

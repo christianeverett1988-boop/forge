@@ -1,5 +1,7 @@
 // v0.6.0 visual restyle: tokens are the only place colours live, controls and pull-to-refresh maths.
 import { readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { test, eq, assert } from './harness.js';
 import { segThumb } from '../js/ui/controls.js';
 import { pullState, PULL_THRESHOLD } from '../js/ui/pull.js';
@@ -119,4 +121,16 @@ test('icons: every name renders decorative currentColor SVG; unknown names rende
   assert(icon('trophy', { filled: true }).includes('fill="currentColor"'));
   const es = emptyState({ icon: 'chart', title: 'No workouts yet', text: 'Finish one and it shows up here.', action: { href: '#/train', label: 'Start a workout' } });
   assert(es.includes('<h3>No workouts yet</h3>') && es.includes('href="#/train"') && es.includes('es-icon'));
+});
+
+test('every js/**/*.js module parses (catches duplicate imports no other test would load)', () => {
+  const walk = (dir) => readdirSync(new URL(`../${dir}`, import.meta.url), { withFileTypes: true })
+    .flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : d.name.endsWith('.js') ? [`${dir}/${d.name}`] : []));
+  for (const f of walk('js')) {
+    try {
+      execFileSync(process.execPath, ['--check', fileURLToPath(new URL(`../${f}`, import.meta.url))], { stdio: 'pipe' });
+    } catch (e) {
+      assert(false, `${f} fails to parse: ${String(e.stderr || e.message).split('\n').slice(0, 4).join(' ')}`);
+    }
+  }
 });
