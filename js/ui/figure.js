@@ -7,7 +7,7 @@
 // sleeps while the workout is paused or resting. The view box is fitted to the whole rep at mount.
 // Pure code and data: offline, no downloads. Templates: js/ui/poses.js. Skeleton and camera: js/ui/rig.js.
 import { TEMPLATES, EXERCISE_TEMPLATES } from './poses.js';
-import { BODY, BODY_PARTS, sledPlate, kneePad, ankleCuff, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, bellDir, BELL_OFFSET, drawOrder, frameBox } from './rig.js';
+import { BODY, BODY_PARTS, cardioProps, sledPlate, kneePad, ankleCuff, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, bellDir, BELL_OFFSET, drawOrder, frameBox } from './rig.js';
 const add3 = (p, d, k) => [p[0] + d[0] * k, p[1] + d[1] * k, p[2] + d[2] * k];
 import { onFrame, reducedMotion } from './motion.js';
 
@@ -347,6 +347,8 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     } else if (name === 'pulley') {
       el('circle', { r: 0.055 * s, fill: '#2a3038', stroke: C.steel, 'stroke-width': 1.6 }, g);
       el('circle', { r: 0.016 * s, fill: C.steel }, g);
+    } else if (name === 'cardioB' || name === 'cardioF') {
+      g._nodes = []; // the machine shapes, updated in place each frame (same count every frame)
     } else if (name === 'ball') {
       g._b = el('circle', { r: 0.11 * s, fill: '#3b3128', stroke: '#6b5a48', 'stroke-width': 1.2 }, g);
     } else if (name === 'wheel') {
@@ -463,6 +465,35 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
   const ux = [1, 0, 0];
   const uy = [0, -1, 0]; // screen y runs down
 
+  const PRIM_TAG = { line: 'line', curve: 'polyline', circle: 'circle', poly: 'polygon' };
+  const pt2 = (p) => project(p).slice(0, 2).map(f1).join(',');
+  const setAll = (n, attrs) => { for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); };
+  /** Machine shapes (rig.js cardioProps): one node per shape, reused from frame to frame. */
+  function drawPrims(g, list) {
+    list.forEach((p, i) => {
+      let n = g._nodes[i];
+      if (!n || n.tagName !== PRIM_TAG[p.k]) {
+        const fresh = document.createElementNS(NS, PRIM_TAG[p.k]);
+        if (n) g.replaceChild(fresh, n); else g.appendChild(fresh);
+        n = fresh;
+        g._nodes[i] = n;
+      }
+      if (p.k === 'line') {
+        const A = project(p.a);
+        const B = project(p.b);
+        setAll(n, { x1: f1(A[0]), y1: f1(A[1]), x2: f1(B[0]), y2: f1(B[1]), stroke: p.c, 'stroke-width': f1(p.w * s), 'stroke-linecap': 'round' });
+      } else if (p.k === 'curve') {
+        setAll(n, { points: p.pts.map(pt2).join(' '), fill: 'none', stroke: p.c, 'stroke-width': f1(p.w * s), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      } else if (p.k === 'circle') {
+        const C0 = project(p.c);
+        setAll(n, { cx: f1(C0[0]), cy: f1(C0[1]), r: f1(p.r * s), fill: p.fill || 'none', stroke: p.stroke || 'none', 'stroke-width': 1.2 });
+      } else {
+        setAll(n, { points: p.pts.map(pt2).join(' '), fill: p.fill || 'none', stroke: p.stroke || 'none', 'stroke-width': 1, 'stroke-linejoin': 'round' });
+      }
+    });
+    while (g._nodes.length > list.length) g.removeChild(g._nodes.pop());
+  }
+
   // ----- props, moved each frame -----
   function updateProps(j) {
     const b = j.bar;
@@ -542,6 +573,11 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
       const P0 = project(cf.pulley);
       g.pulley.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])})`);
     }
+    if (g.cardioB) {
+      const cp = cardioProps(tpl, j);
+      drawPrims(g.cardioB, cp.back);
+      drawPrims(g.cardioF, cp.front);
+    }
     if (g.towel) line(g.towel._line, j.gripN, j.gripF);
     if (g.loop) line(g.loop._line, ...loopEnds(tpl, j));
     const mg = [(j.gripN[0] + j.gripF[0]) / 2, (j.gripN[1] + j.gripF[1]) / 2, (j.gripN[2] + j.gripF[2]) / 2];
@@ -598,7 +634,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     }
 
     // Glow: opacity only, strongest at the hardest point of the rep.
-    const k = staticPose ? 1 : progressAt(phases, t, 0);
+    const k = staticPose || tpl.cycle ? 1 : progressAt(phases, t, 0); // loops (cardio, rope, boxing) keep a steady glow
     const kk = Math.pow(k, 1.6);
     for (const g of glows) g.node.setAttribute('opacity', (g.weight * kk).toFixed(2));
   }

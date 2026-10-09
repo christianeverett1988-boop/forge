@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.14.4 — Figures for cardio machines, jump rope and boxing (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Twelve new demo figures** (new `js/ui/poses-cardio.js`, added to the offline shell). They are loops, not reps: each has one cycle angle `ph` that runs at a steady speed, and the feet and hands are placed from the machine's own geometry, so they stay on the belt, pedals, plates, steps and handles in every frame.
+  - **Treadmill incline walk** (side view): a 10° belt with marks that slide back at the speed of the foot on it, an upright with a console and two handrails. The feet swap (one on the belt, one swinging just above it), the hips bob a little, the hands stay on the rails.
+  - **Bike steady / Bike intervals** (side view): seat, handlebars, crank and pedals. The ball of each foot stays over its pedal, the pedals go round a circle and stay opposite each other, the body sits on the seat and the hands stay on the bars. Intervals use the same bike with a bigger lean (40° instead of 22°) and a twice-as-fast cadence.
+  - **Rower intervals** (side view): rail, sliding seat, footplates, a flywheel and a handle on a chain. Catch → drive (legs, then back, then arms) → finish → recovery (arms, then body, then seat). Feet stay strapped to the plates, the body stays on the seat, and the hands stay on the handle.
+  - **Stair climber** (side view): two steps that go up and down in turn, hands on the rails; the foot on the high step has its knee bent while the other leg pushes.
+  - **Elliptical** (side view): two foot plates on a tilted ellipse (drawn faintly), and two handles that swing about a pivot (back as the same-side foot goes forward). Hands stay on the handles.
+  - **Jump rope and double-unders** (3/4 front view): a small hop with a rope that goes from hand to hand, passes under the feet while they are in the air and over the head. The double-under turns the rope twice in one higher hop. The rope is a flat-bottomed U under the feet and a round loop elsewhere, and is drawn in front of or behind the body depending on which side of it it is on.
+  - **Shadowboxing, Shadowboxing with Light Dumbbells, Boxing footwork, Heavy bag rounds** (3/4 front view): a guard stance (lead foot forward, rear heel up) with alternating straight punches (jab with the lead hand, cross with the rear). The dumbbell version is the same with a small dumbbell in each hand. Footwork steps in (lead foot, then rear) and out (rear foot, then lead) and keeps one foot on the floor. On the heavy bag the fists stop at the bag's surface (it is round, so it curves away at the sides), and the bag swings away only after it has been hit.
+- **Left without a figure:** `slip_and_roll`, `muscleup`, `muscleup_transition` and `mb_rotational_throw`. The rig has no way to twist or roll the trunk, hang from a bar and transition over it, or throw a medicine ball, and a wrong-looking figure is worse than none.
+- **Rig additions** (`rig.js`, `figure.js`; existing templates are unchanged): a template may have a `drive(P)` that turns its cycle angle into joint targets and a `prims(j)` that returns the machine shapes (lines, curves, circles, polygons) for a frame, drawn behind or in front of the body by the new `cardio` gear. `tempo.lin` gives a steady speed instead of the sine ease. Pose params `fa` / `faN` / `faF` set the foot angle per frame. Loops (`cycle`) keep a steady muscle glow rather than a pulse.
+- Not yet seen on a real screen: there is no browser in this environment, so these were built and checked as joint positions and a fake-DOM mount of every figure, not as rendered pixels. Worth a look at iPhone size.
+- New tests in `tests/cardioposes.test.js`; three older tests that said these ids had no figure now say the four left out still have none.
+
 ## 0.14.3 — Coach answers for missions, body programs and long-term health (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

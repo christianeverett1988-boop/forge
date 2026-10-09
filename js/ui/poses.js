@@ -18,6 +18,7 @@ import { LIBRARY, LIBRARY_MAP } from './poses-lib.js';
 import { HOME, HOME_MAP } from './poses-home.js';
 import { KB, KB_MAP } from './poses-kb.js';
 import { GYM, GYM_MAP } from './poses-gym.js';
+import { CARDIO, CARDIO_MAP } from './poses-cardio.js';
 
 export const TEMPLATES = {
   squat_barbell: {
@@ -62,7 +63,7 @@ export const TEMPLATES = {
   },
 };
 
-Object.assign(TEMPLATES, LIBRARY, HOME, KB, GYM);
+Object.assign(TEMPLATES, LIBRARY, HOME, KB, GYM, CARDIO);
 
 /** Exercise id → template. Anything not listed falls back to photos or the muscle list. */
 export const EXERCISE_TEMPLATES = {
@@ -79,6 +80,7 @@ export const EXERCISE_TEMPLATES = {
   ...HOME_MAP,
   ...KB_MAP,
   ...GYM_MAP,
+  ...CARDIO_MAP,
 };
 
 export const templateFor = (exerciseId) => TEMPLATES[EXERCISE_TEMPLATES[exerciseId]] || null;

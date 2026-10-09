@@ -11,6 +11,7 @@ import './figure.test.js';
 import './homeposes.test.js';
 import './kbposes.test.js';
 import './gymposes.test.js';
+import './cardioposes.test.js';
 import './goalpath-dates.test.js';
 import './bodymap.test.js';
 import './preview.test.js';
