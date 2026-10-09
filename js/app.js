@@ -8,6 +8,7 @@ import { viewTransition, animateCounters, resetCounters, reducedMotion } from '.
 import { loadPhotoIndex } from './ui/photos.js';
 import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
 import { hapticTabs, hapticSegments } from './ui/haptic.js';
+import { enhanceSegs } from './ui/controls.js';
 import { attachSwipeBack } from './ui/swipeback.js';
 import { skeletonHTML } from './ui/skeleton.js';
 import { tabOf, routeDepth, transitionKind, backTarget, backLabel, TITLE_FOR, createScrollMemory } from './nav.js';
@@ -192,6 +193,7 @@ async function render() {
     if (FULLSCREEN.has(route)) hideNavBar();
     else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()), backLabel: backLabel(routeParts()) });
     hapticTabs(nav, onTab);
+    enhanceSegs(main);
     hapticSegments(main);
     animateCounters(main);
     // A brand-new account sees the how-to tour once, on Today, right after onboarding.

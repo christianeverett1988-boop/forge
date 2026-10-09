@@ -8,14 +8,6 @@
   --ease-in-out: cubic-bezier(.65, 0, .35, 1);
   --ease-spring: cubic-bezier(.32, .72, 0, 1);   /* iOS sheet / push feel */
   --ease-bounce: cubic-bezier(.34, 1.56, .64, 1); /* small pops */
-  /* Forge palette additions */
-  --ember: #FF6A2B;
-  --volt: #C6FF3D;
-  --gold: #FFC94D;
-  --rec-red: #FF4D5E;
-  --rec-amber: #FFB547;
-  --rec-green: #5BE49B;
-  --num: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
 }
 
 h1, h2, .big-title { text-wrap: balance; }
@@ -73,7 +65,7 @@ main.route-fade { animation: vt-fade-in var(--t-med) var(--ease-out); }
 }
 
 /* ---------- Skeleton loaders (instead of spinners) ---------- */
-.skeleton { background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 40%, var(--surface) 80%); background-size: 300% 100%; border-radius: 20px; animation: shimmer 1.4s linear infinite; }
+.skeleton { background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 40%, var(--surface) 80%); background-size: 300% 100%; border-radius: var(--r-xl); animation: shimmer 1.4s linear infinite; }
 .skeleton.h1 { height: 40px; width: 60%; margin: 24px auto 16px; }
 .skeleton.row3 { height: 90px; margin-bottom: 14px; }
 .skeleton.block { height: 260px; }

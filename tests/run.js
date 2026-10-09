@@ -16,6 +16,7 @@ import './awards.test.js';
 import './tour.test.js';
 import './health.test.js';
 import './shell.test.js';
+import './restyle.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

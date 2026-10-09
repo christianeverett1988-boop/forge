@@ -1,5 +1,4 @@
 /* Apple Health, Readiness and Forge Score (v0.5.0). Big tap targets, safe areas, calm motion. */
-:root { --ready-green: #6ee7a8; --ready-amber: #ffc857; --ready-red: #ff5d6c; }
 
 /* ---------- Readiness card on Today ---------- */
 .ready-card { border-left: 5px solid var(--rc, var(--line)); gap: 10px; }
@@ -41,9 +40,9 @@
 .score-days { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
 .score-days span { flex: 1; border-radius: 4px 4px 2px 2px; background: var(--surface-2); min-height: 4px; position: relative; }
 .score-days span.has { background: var(--accent); opacity: .85; }
-.score-days span.today { opacity: 1; box-shadow: 0 0 8px rgba(198, 255, 61, .45); }
+.score-days span.today { opacity: 1; box-shadow: 0 0 8px var(--accent-glow); }
 .pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.pillar { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-height: 84px; color: inherit; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.pillar { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: var(--surface); border: 0; border-radius: var(--radius); padding: 12px; min-height: 84px; color: inherit; text-align: left; font: inherit; cursor: pointer; width: 100%; }
 .pillar:active { background: var(--surface-2); }
 .pillar.off { opacity: .6; cursor: default; }
 .pillar .mini { width: 56px; height: 56px; position: relative; }
@@ -76,7 +75,7 @@
 .field-chip small { color: var(--muted); font-size: 13px; }
 .field-chip.on { box-shadow: inset 3px 0 0 var(--good); }
 .field-chip.off b { color: var(--muted); }
-.token-box { word-break: break-all; font: 14px/1.4 ui-monospace, Menlo, monospace; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; user-select: all; -webkit-user-select: all; }
+.token-box { word-break: break-all; font: 14px/1.4 ui-monospace, Menlo, monospace; background: var(--surface-2); border: 0; border-radius: 12px; padding: 12px; user-select: all; -webkit-user-select: all; }
 .steps { counter-reset: s; list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .steps > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
 .steps > li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; display: grid; place-items: center; }
@@ -94,6 +93,6 @@
 .ready-bars .meh i { background: var(--muted); opacity: .6; }
 .ready-why-btn { min-height: 44px; min-width: 44px; padding: 0 8px; }
 .ready-stale { font-size: 14px; color: var(--muted); }
-.copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
+.copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
 .copy-chip code { word-break: break-all; text-align: left; }
 .copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
