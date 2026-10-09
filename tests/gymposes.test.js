@@ -220,6 +220,40 @@ test('hip machine: the legs move the right way — apart for the abductor, toget
   eq(JSON.stringify(ab.env), JSON.stringify(ad.env), 'same machine');
 });
 
+test('hip abductor: both knees open together by the same amount, feet stay under the knees, each pad stays against its knee', () => {
+  const tpl = tplOf('machine_hip_abductor');
+  const project = camera(tpl.cam);
+  const screenGap = (p, q) => Math.abs(project(p)[0] - project(q)[0]);
+  const js = poses(tpl);
+  const start = js[0];
+  let maxOpen = 0;
+  for (const j of js) {
+    const openN = Math.abs(j.kneeN[2]) - Math.abs(start.kneeN[2]);
+    const openF = Math.abs(j.kneeF[2]) - Math.abs(start.kneeF[2]);
+    maxOpen = Math.max(maxOpen, openN);
+    assert(Math.abs(openN - openF) < 0.005, `knees open by the same amount (${openN.toFixed(3)} vs ${openF.toFixed(3)})`);
+    assert(Math.abs(j.kneeN[2] + j.kneeF[2]) < 0.005, 'knees stay mirrored about the midline');
+    for (const S of ['N', 'F']) {
+      const side = S === 'N' ? -1 : 1;
+      assert(Math.abs(j['ankle' + S][0] - j['knee' + S][0]) < 0.03, `${S} foot stays under the knee front to back`);
+      assert(Math.abs(Math.abs(j['ankle' + S][2]) - Math.abs(j['knee' + S][2])) < 0.14, `${S} foot stays roughly under the knee sideways`);
+      assert(j['ankle' + S][1] < 0.15, `${S} foot rests on the footrest`);
+      const pad = kneePad(tpl, j, S);
+      assert(dist(pad.centre, j['knee' + S]) < 0.12, `${S} pad is touching its knee (${dist(pad.centre, j['knee' + S]).toFixed(3)} m)`);
+      assert(side * (pad.centre[2] - j['knee' + S][2]) > 0.05, `${S} pad is on the outside of its knee`);
+      // As the viewer sees it: the pad stays beside the knee, the same distance for both legs.
+      assert(screenGap(pad.centre, j['knee' + S]) < 12, `${S} pad is beside its knee on screen`);
+    }
+    const gN = screenGap(kneePad(tpl, j, 'N').centre, j.kneeN);
+    const gF = screenGap(kneePad(tpl, j, 'F').centre, j.kneeF);
+    assert(Math.abs(gN - gF) < 1, 'both pads sit the same distance from their knees on screen');
+  }
+  assert(maxOpen > 0.1, 'both knees really open');
+  // On screen, the far knee travels about as far as the near one.
+  const travel = (S) => Math.abs(project(solve(tpl, tpl.b)['knee' + S])[0] - project(solve(tpl, tpl.a)['knee' + S])[0]);
+  assert(travel('F') > 0.75 * travel('N') && travel('N') > 0.75 * travel('F'), `far knee moves ${travel('F').toFixed(1)}px, near ${travel('N').toFixed(1)}px`);
+});
+
 test('hip machine: sits on the seat, spine on the back pad, thighs level over the seat, feet on the floor, hands clear of the pads', () => {
   for (const id of HIP_MACHINES) {
     const tpl = tplOf(id);
