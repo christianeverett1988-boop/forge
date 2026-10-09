@@ -1,0 +1,34 @@
+/* ---------- Daily missions (Today card, Awards week) ---------- */
+.ms-list { list-style: none; margin: 8px 0; padding: 0; display: grid; }
+.ms-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 12px; min-height: var(--tap, 48px); padding: 6px 0; }
+.ms-row + .ms-row { border-top: .5px solid var(--separator); }
+.ms-check { display: grid; place-items: center; width: 28px; height: 28px; color: var(--good); }
+.ms-check .ic { width: 28px; height: 28px; }
+.ms-ring { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--text-3); box-sizing: border-box; }
+.ms-text { display: grid; gap: 1px; }
+.ms-text small { font-size: 13px; }
+.ms-row.done .ms-text > span { color: var(--text-2); }
+.ms-xp { font: 700 13px var(--num, inherit); color: var(--accent-text); white-space: nowrap; }
+.ms-done { display: flex; align-items: center; gap: 10px; min-height: var(--tap, 48px); color: var(--text); text-decoration: none; }
+.ms-done .ic { color: var(--good); width: 24px; height: 24px; }
+.ms-done > span:nth-of-type(1) { flex: 1; font-weight: 700; }
+.ms-dots { list-style: none; margin: 10px 0; padding: 0; display: flex; justify-content: space-between; }
+.ms-dot { display: grid; justify-items: center; gap: 4px; }
+.ms-dot i { width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); box-sizing: border-box; }
+.ms-dot.some i { background: color-mix(in srgb, var(--ember) 45%, var(--surface-2)); }
+.ms-dot.all i { background: var(--ember); box-shadow: 0 0 10px color-mix(in srgb, var(--ember) 50%, transparent); }
+.ms-dot.off i { background: transparent; border: 1.5px dashed var(--text-3); }
+.ms-dot small { font-size: 11px; color: var(--text-3); }
+.ms-set { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
+.ms-set input[type=time] { min-height: 44px; font: 600 17px var(--font, inherit); background: var(--surface-2); color: var(--text); border: 0; border-radius: 12px; padding: 0 12px; }
+.ms-stepper { display: flex; align-items: center; gap: 4px; }
+.ms-stepper button { width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--surface-2); color: var(--text); font: 800 22px var(--num, inherit); cursor: pointer; }
+.ms-stepper output { min-width: 64px; text-align: center; font: 700 17px var(--num, inherit); }
+@media (prefers-reduced-motion: no-preference) {
+  .ms-pop { animation: ms-spring .5s var(--ease-spring) both; }
+  @keyframes ms-spring { 0% { transform: scale(.4); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-pop { animation: ms-fade .25s linear both; }
+  @keyframes ms-fade { from { opacity: 0; } }
+}

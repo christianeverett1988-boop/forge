@@ -230,8 +230,17 @@ function seedAwards() {
   import('./workouts/awards-store.js').then((m) => m.syncBadges());
 }
 
+// Missions count XP from the day they first run: remember that day once, after settings have loaded.
+let missionsSeeded = false;
+function seedMissions() {
+  if (missionsSeeded || !allLoaded() || !state.settings) return;
+  missionsSeeded = true;
+  if (!state.settings.missions_started) import('./missions/store.js').then((m) => m.ensureStarted());
+}
+
 subscribe((patch) => {
   seedAwards();
+  seedMissions();
   const keys = Object.keys(patch);
   // Withings finished a history import while weight.csv rows are in Forge: drop the duplicate csv copies.
   if (('weights' in patch || 'integrations' in patch) && allLoaded()) import('./withings/dedupe.js').then((m) => m.dedupeCsv());
