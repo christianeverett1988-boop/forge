@@ -1,13 +1,12 @@
 /* Apple Health, Readiness and Forge Score (v0.5.0). Big tap targets, safe areas, calm motion. */
-:root { --ready-green: #6ee7a8; --ready-amber: #ffc857; --ready-red: #ff5d6c; }
 
 /* ---------- Readiness card on Today ---------- */
-.ready-card { border-left: 5px solid var(--rc, var(--line)); gap: 10px; }
+.ready-card { gap: var(--s-3); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc, transparent) 30%, transparent), 0 0 44px color-mix(in srgb, var(--rc, transparent) 14%, transparent); }
 .ready-card.green { --rc: var(--ready-green); }
 .ready-card.amber { --rc: var(--ready-amber); }
 .ready-card.red { --rc: var(--ready-red); }
 .ready-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ready-pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; }
+.ready-pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
 .ready-pill::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 10px var(--rc); }
 .ready-why { font-size: 17px; line-height: 1.35; }
 .ready-do { font-size: 14px; color: var(--muted); }
@@ -27,23 +26,24 @@
 
 /* ---------- Score card on Today and the Score screen ---------- */
 .score-card { display: grid; grid-template-columns: 84px 1fr auto; gap: 14px; align-items: center; }
-.score-card .chev { font-size: 24px; color: var(--muted); }
+.score-card .chev { color: var(--text-3); }
 .score-mini { width: 84px; height: 84px; position: relative; }
 .score-mini svg, .score-hero svg { display: block; width: 100%; height: 100%; }
-.score-mini b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.score-mini b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 28px var(--num); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .sc-track { fill: none; stroke: var(--surface-2); }
+.sc-hero .sc-arc { filter: drop-shadow(0 0 8px var(--accent-glow)); }
 .sc-arc { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s var(--ease-out); stroke-dashoffset: var(--off); }
 .sc-pre .sc-arc { stroke-dashoffset: var(--c); transition: none; }
 .score-hero { position: relative; width: 212px; height: 212px; margin: 4px auto 0; }
 .score-hero .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.score-hero .num b { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.score-hero .num b { font: 700 72px/1 var(--num); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 16px var(--accent-glow)); }
 .score-hero .num small { color: var(--muted); font-weight: 600; margin-top: 4px; }
 .score-days { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
 .score-days span { flex: 1; border-radius: 4px 4px 2px 2px; background: var(--surface-2); min-height: 4px; position: relative; }
 .score-days span.has { background: var(--accent); opacity: .85; }
-.score-days span.today { opacity: 1; box-shadow: 0 0 8px rgba(198, 255, 61, .45); }
+.score-days span.today { opacity: 1; box-shadow: 0 0 8px var(--accent-glow); }
 .pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.pillar { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-height: 84px; color: inherit; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.pillar { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: var(--surface); border: 0; border-radius: var(--radius); padding: 12px; min-height: 84px; color: inherit; text-align: left; font: inherit; cursor: pointer; width: 100%; }
 .pillar:active { background: var(--surface-2); }
 .pillar.off { opacity: .6; cursor: default; }
 .pillar .mini { width: 56px; height: 56px; position: relative; }
@@ -52,7 +52,7 @@
 .pillar span { display: flex; flex-direction: column; min-width: 0; }
 .pillar span strong { font-size: 16px; }
 .pillar span small { color: var(--muted); font-size: 13px; }
-.pillar[aria-expanded="true"] { border-color: var(--accent); }
+.pillar[aria-expanded="true"] { background: var(--surface-2); }
 .mover { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; min-height: 56px; }
 .mover .arrow { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 20px; background: var(--surface-2); }
 .mover .arrow.up { color: var(--good); }
@@ -76,7 +76,7 @@
 .field-chip small { color: var(--muted); font-size: 13px; }
 .field-chip.on { box-shadow: inset 3px 0 0 var(--good); }
 .field-chip.off b { color: var(--muted); }
-.token-box { word-break: break-all; font: 14px/1.4 ui-monospace, Menlo, monospace; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; user-select: all; -webkit-user-select: all; }
+.token-box { word-break: break-all; font: 14px/1.4 ui-monospace, Menlo, monospace; background: var(--surface-2); border: 0; border-radius: 12px; padding: 12px; user-select: all; -webkit-user-select: all; }
 .steps { counter-reset: s; list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .steps > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
 .steps > li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; display: grid; place-items: center; }
@@ -94,6 +94,6 @@
 .ready-bars .meh i { background: var(--muted); opacity: .6; }
 .ready-why-btn { min-height: 44px; min-width: 44px; padding: 0 8px; }
 .ready-stale { font-size: 14px; color: var(--muted); }
-.copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
+.copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
 .copy-chip code { word-break: break-all; text-align: left; }
-.copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }

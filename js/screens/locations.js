@@ -7,6 +7,7 @@ import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRo
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
 import { navBar, screenNav } from '../ui/navbar.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 const INVENTORY = [
   ['dumbbells_kg', 'Dumbbell pairs', 'dumbbells'],
@@ -34,9 +35,10 @@ export function renderLocations(el) {
           <li class="tap" data-edit="${esc(l.id)}">
             <div><b>${esc(l.name)}</b>${l.is_default ? ' <span class="pill">Default</span>' : ''}
               <small class="muted">${l.equipment.length ? `${l.equipment.length} items` : 'Bodyweight only'}</small></div>
-            <span aria-hidden="true">›</span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}
       </ul>
+      ${state.locations.length ? '' : emptyState({ icon: 'pin', title: 'No locations yet', text: 'Add where you train so workouts match the equipment you have.', action: { attr: 'data-add-empty', label: 'Add a location' } })}
       <button class="btn ghost" data-add>+ Add a location</button>
     </section>`;
 
@@ -46,6 +48,8 @@ export function renderLocations(el) {
       renderLocations(el);
     })
   );
+  const addEmpty = $('[data-add-empty]', el);
+  if (addEmpty) addEmpty.onclick = () => $('[data-add]', el).click();
   $('[data-add]', el).onclick = () =>
     sheet('Add a location', (body, close) => {
       let creating = false; // a quick double-tap must not make two locations
@@ -60,15 +64,17 @@ export function renderLocations(el) {
       };
       const rows = presetPickerRows(state.locations);
       body.innerHTML = `
-        <div class="choices">
+        <div class="pick-group">
           ${rows.map(({ preset, addAnother }) => `
             <button class="pick" type="button" data-preset="${esc(preset.key)}">
-              <b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
-              <small>${esc(presetDescription(preset, { inLocations: true }))}</small>
+              <span class="pick-text"><b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
+              <small>${esc(presetDescription(preset, { inLocations: true }))}</small></span>
+              <span class="chev" aria-hidden="true">${icon('chev')}</span>
             </button>`).join('')}
           <button class="pick" type="button" data-custom>
-            <b>Custom (start empty)</b>
-            <small>Name it and pick your own equipment.</small>
+            <span class="pick-text"><b>Custom (start empty)</b>
+            <small>Name it and pick your own equipment.</small></span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </button>
         </div>`;
       $$('[data-preset]', body).forEach((b) =>
@@ -196,7 +202,7 @@ function inventoryHTML(loc) {
         <div class="inv" data-inv="${key}">
           <p><b>${label}</b>${!loc.equipment.includes(equip) && !(equip === 'dumbbells' && loc.equipment.includes('adjustable_dumbbells')) ? ' <small class="muted">(turned off below)</small>' : ''}</p>
           <div class="chips">
-            ${(inv[key] || []).slice().sort((a, b) => a - b).map((kg) => `<button class="chip-btn" data-rm="${key}:${kg}" aria-label="Remove ${show(kg)} ${u}">${show(kg)} ${u} ✕</button>`).join('') || '<span class="muted small">Full rack assumed</span>'}
+            ${(inv[key] || []).slice().sort((a, b) => a - b).map((kg) => `<button class="chip-btn" data-rm="${key}:${kg}" aria-label="Remove ${show(kg)} ${u}">${show(kg)} ${u} ${icon('close', { size: 14 })}</button>`).join('') || '<span class="muted small">Full rack assumed</span>'}
           </div>
           <form class="row gap" data-addinv="${key}">
             <input name="w" type="number" inputmode="decimal" step="0.5" min="0.5" placeholder="Weight (${u})" class="grow" aria-label="${label} weight in ${u}">

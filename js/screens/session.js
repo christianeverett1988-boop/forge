@@ -13,6 +13,7 @@ import { powerUp, prExplosion } from '../ui/fx.js';
 import { openPaused, openAway, openFinish, closeOverlays } from './overlays.js';
 import { openPlateCalculator } from './tools.js';
 import { openExercisePicker } from './picker.js';
+import { icon } from '../ui/icons.js';
 
 let clockTimer = null;
 let holdTimer = null;
@@ -57,10 +58,10 @@ export function renderSession(el) {
   el.innerHTML = `
     <section class="stack session" data-list>
       <div class="row between center">
-        <a class="btn small ghost" href="#/play">▶ Guided view</a>
+        <a class="btn small ghost" href="#/play">${icon('play')} Guided view</a>
         <div class="row gap">
-          <button class="icon-btn" data-pause aria-label="Pause workout">❚❚</button>
-          <button class="icon-btn" data-menu aria-label="Workout options">⋯</button>
+          <button class="icon-btn" data-pause aria-label="Pause workout">${icon('pause')}</button>
+          <button class="icon-btn" data-menu aria-label="Workout options">${icon('more')}</button>
         </div>
       </div>
       <div>
@@ -160,8 +161,8 @@ function exerciseCard(it, i, u) {
           : '<span class="bwtag">BW</span>')
           : `<input data-w="${i}:${j}" type="number" inputmode="decimal" step="0.5" placeholder="${disp(s.plan_weight_kg) || u}" value="${disp(s.weight_kg)}" aria-label="Weight ${u}">`}
         <input data-r="${i}:${j}" type="number" inputmode="numeric" placeholder="${s.plan_reps ?? (timed ? 's' : 'reps')}" value="${s.reps ?? ''}" aria-label="${timed ? 'Seconds' : 'Reps'}">
-        ${timed ? `<button class="mini" data-hold="${i}:${j}" aria-label="Start timer">▶</button>` : `<button class="mini rir ${s.rir != null ? 'set' : ''}" data-rir="${i}:${j}" aria-label="Reps in reserve">${rirLabel(s.rir)}</button>`}
-        <button class="setcheck" data-done="${i}:${j}" aria-label="${s.done ? 'Undo set' : 'Complete set'}">${s.done ? '✓' : ''}</button>
+        ${timed ? `<button class="mini" data-hold="${i}:${j}" aria-label="Start timer">${icon('play', { size: 16 })}</button>` : `<button class="mini rir ${s.rir != null ? 'set' : ''}" data-rir="${i}:${j}" aria-label="Reps in reserve">${rirLabel(s.rir)}</button>`}
+        <button class="setcheck" data-done="${i}:${j}" aria-label="${s.done ? 'Undo set' : 'Complete set'}">${s.done ? icon('check') : ''}</button>
       </div>`;
   }).join('');
   const t = it.target || {};
@@ -171,7 +172,7 @@ function exerciseCard(it, i, u) {
     <article class="card excard ${it.superset ? 'superset' : ''}" data-ex="${i}">
       <div class="row between center">
         <button class="exname" data-info="${i}"><b>${esc(ex.name)}</b>${it.superset ? ` <span class="pill">Superset ${esc(it.superset)}</span>` : ''}</button>
-        <button class="icon-btn" data-exmenu="${i}" aria-label="Exercise options">⋯</button>
+        <button class="icon-btn" data-exmenu="${i}" aria-label="Exercise options">${icon('more')}</button>
       </div>
       <p class="small muted">${esc(range)}${ex.unilateral ? ' · each side' : ''}${it.note ? ` · ${esc(it.note)}` : ''}</p>
       ${it.warning ? `<p class="notice warn small">${esc(it.warning)}</p>` : ''}
@@ -317,7 +318,7 @@ function exerciseMenu(i, el) {
           <button class="btn ghost grow" data-a="up" ${i === 0 ? 'disabled' : ''}>Move up</button>
           <button class="btn ghost grow" data-a="down" ${i === L().exercises.length - 1 ? 'disabled' : ''}>Move down</button>
         </div>
-        <button class="btn ghost" data-a="dropset">Remove last unfinished set</button>
+        <button class="btn ghost" data-a="dropset">Remove last open set</button>
         <button class="btn danger-ghost" data-a="remove">Remove exercise</button>
       </div>`;
     body.addEventListener('click', (e) => {

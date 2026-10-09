@@ -9,6 +9,7 @@ import { formatWeight, weightToDisplay, weightFromInput, weightUnit } from '../u
 import { classify, verdict, compare, STATE_LABEL, median, yearRows, backfillYears } from '../withings/check.js';
 import { reviewQueue, byDay, suggestCutoff, underCutoff, parseWeightCSV, planCsvImport, csvAccounted, importMessage } from '../withings/review.js';
 import { fmtMetric, KEY_OF_TYPE } from '../withings/body.js';
+import { icon } from '../ui/icons.js';
 
 const W = () => (state.integrations && state.integrations.withings) || null;
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
@@ -46,13 +47,20 @@ export function renderWithings(el, sub) {
 
       ${!connected ? `
       <div class="card stack">
-        <p class="notice info small" data-one-account><b>One scale, one Forge account (for now).</b> A Withings scale can only link to a single Forge account at the moment, and this one isn’t linked to yours. You can still log your weight by hand: tap <b>Log weight</b> on Today, or <b>Progress → + Log weight</b>.</p>
-        <p>Your scale’s weigh-ins and body composition land in Forge on their own, a few minutes after you step off. Your full Withings history comes in too.</p>
-        <p class="notice info small">${EXISTING_ACCOUNT}</p>
+        <p>Your scale’s weigh-ins and body composition arrive in Forge on their own, history included.</p>
+        <p class="callout" data-one-account>${icon('info')}<span>This scale isn’t linked to your Forge account yet. You can still log your weight by hand.</span></p>
+        <p class="callout warn">${icon('warn')}<span>Log in with your <b>existing</b> Withings account. Don’t create a new one.</span></p>
         ${connectUrl ? `
-          <a class="btn" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings →</a>
+          <a class="btn primary" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings ${icon('chev')}</a>
           <p class="small muted">On the Withings page, tap <b>Log in</b> (not “Create account”), then <b>Allow</b>. When it says “Connected”, come back here.</p>`
-        : `<button class="btn" data-connect ${busy === 'connect' ? 'disabled' : ''}>${busy === 'connect' ? 'Preparing…' : 'Connect Withings'}</button>`}
+        : `<button class="btn primary" data-connect ${busy === 'connect' ? 'disabled' : ''}>${busy === 'connect' ? 'Preparing…' : 'Connect Withings'}</button>`}
+        <details class="learn-more small"><summary>Learn more</summary>
+          <div class="stack">
+            <p class="small muted"><b>One scale, one Forge account (for now).</b> A Withings scale can only link to a single Forge account at the moment. To log by hand, tap <b>Log weight</b> on Today, or <b>Progress → + Log weight</b>.</p>
+            <p class="small muted">Weigh-ins land a few minutes after you step off, and your full Withings history comes in too.</p>
+            <p class="small muted">${EXISTING_ACCOUNT}</p>
+          </div>
+        </details>
       </div>` : `
       ${w.needs_reconnect ? `<div class="notice warn">Withings stopped accepting Forge’s sign-in. <button class="link" data-connect>Connect again</button> (${EXISTING_ACCOUNT})</div>` : ''}
       ${connectUrl && w.needs_reconnect ? `<a class="btn" href="${esc(connectUrl)}" target="_blank" rel="noopener" data-go>Continue to Withings →</a>` : ''}
@@ -61,7 +69,7 @@ export function renderWithings(el, sub) {
         <div class="stats">
           <div><span>Last weigh-in</span><b>${w.last_weigh_in_at ? when(w.last_weigh_in_at) : '—'}</b></div>
           <div><span>Arrived in</span><b>${w.last_latency_s == null ? '<small class="muted" data-arrived>waiting for your next weigh-in</small>' : mins(w.last_latency_s)}</b></div>
-          <div><span>Notifications</span><b>${w.subscription_ok === true ? '✓ On' : w.subscription_ok === false ? '✗ Off' : '…'}</b></div>
+          <div><span>Notifications</span><b>${w.subscription_ok === true ? 'On' : w.subscription_ok === false ? 'Off' : '…'}</b></div>
         </div>
         <p class="small muted" data-history>${historyLine(bf)}</p>
         ${years.length ? `<details class="small"><summary>History by year</summary>
@@ -207,7 +215,7 @@ export function historyLine(bf) {
   const n = (x) => (x || 0).toLocaleString();
   const what = bf.weighins != null ? `${n(bf.weighins)} weigh-ins (${n(bf.groups)} measurements)` : `${n(bf.groups)} measurements`;
   if (bf.error) return `History import stopped (<code>${esc(bf.error)}</code>) after ${what}. Try Re-import; if it stops again, run the data check and send it to me.`;
-  if (bf.done) return `History: ✓ ${what} since ${dateOnly(bf.from)}`;
+  if (bf.done) return `History: ${what} since ${dateOnly(bf.from)}`;
   if (!bf.updated_at && !bf.groups) return 'History: starting…';
   return `History: importing… ${what} so far${bf.year ? `, now at ${bf.year}` : ''}${bf.from ? ` (back to ${dateOnly(bf.from)})` : ''}`;
 }
@@ -260,7 +268,7 @@ function openDisconnect(el) {
 export function reconcileLine(r) {
   if (!r) return '<p class="small muted" data-reconcile>Nightly check for weigh-ins deleted in the Withings app: hasn’t run yet (04:00 each night).</p>';
   const at = r.at ? when(r.at) : 'last night';
-  if (r.aborted) return `<p class="small" data-reconcile>⚠️ Nightly check ${at}: <b>stopped for safety</b>. Withings listed far fewer weigh-ins than Forge has (${r.suspicious || 'many'} would have gone; the limit is 3 or 20% of the last 90 days, whichever is more), so nothing was removed.</p>`;
+  if (r.aborted) return `<p class="small" data-reconcile>${icon('warn')} Nightly check ${at}: <b>stopped for safety</b>. Withings listed far fewer weigh-ins than Forge has (${r.suspicious || 'many'} would have gone; the limit is 3 or 20% of the last 90 days, whichever is more), so nothing was removed.</p>`;
   const bits = [`${r.removed || 0} removed`];
   if (r.restored) bits.push(`${r.restored} restored`);
   return `<p class="small muted" data-reconcile>Nightly check ${at}: ${bits.join(', ')} (weigh-ins deleted in the Withings app in the last 90 days).</p>`;
@@ -334,7 +342,7 @@ function renderCheck(el) {
       <div class="card stack">
         <p class="label">Webhook and history</p>
         <div class="stats">
-          <div><span>Notifications</span><b>${report.subscription && report.subscription.present ? (report.subscription.key_ok ? '✓ On' : '⚠️ Old URL') : '✗ Off'}</b></div>
+          <div><span>Notifications</span><b>${report.subscription && report.subscription.present ? (report.subscription.key_ok ? 'On' : 'Old URL') : 'Off'}</b></div>
           <div><span>Median arrival</span><b>${mins(med)}</b></div>
           <div><span>Weigh-ins seen</span><b>${lat.length}/7</b></div>
         </div>
@@ -369,7 +377,7 @@ function renderCheck(el) {
           <li><label class="choice check small"><input type="checkbox" name="cmp" value="${i}" ${sel.includes(i) ? 'checked' : ''}><span>${esc(h.label)}<small>${when(h.saved_at)}</small></span></label></li>`).join('')}</ul>
           <p class="small muted">Tick two to compare.</p>` : '<p class="small muted">None yet.</p>'}
         ${cmp ? `<ul class="list dc-cmp">${cmp.map((c) => `<li class="${c.lost ? 'dc-lost' : c.changed ? 'dc-changed' : ''}"><span>${esc(c.label)}</span><small>${esc(STATE_LABEL[c.before].split(' ')[0])} ${c.before_count} → ${esc(STATE_LABEL[c.after].split(' ')[0])} ${c.after_count}${c.lost ? ' · lost' : ''}</small></li>`).join('')}</ul>
-          <p class="small">${cmp.some((c) => c.lost) ? '⚠️ Something stopped arriving. You can resubscribe to Withings+ and nothing is deleted on their side.' : '✓ Nothing lost between these two reports.'}</p>` : ''}
+          <p class="small">${cmp.some((c) => c.lost) ? `${icon('warn')} Something stopped arriving. You can resubscribe to Withings+ and nothing is deleted on their side.` : `${icon('check')} Nothing lost between these two reports.`}</p>` : ''}
       </div>
 
       <div class="card verdict ${v.safe ? 'ok' : 'warn'}">

@@ -32,6 +32,13 @@ export function rubberBand(offset, limit = 80) {
 /** 0..1 for how far a sheet has been dragged down, for fading the backdrop. */
 export const dragProgress = (offset, size) => (size > 0 ? Math.min(1, Math.max(0, offset / size)) : 0);
 
+/** Parent-screen parallax during a swipe-back: starts 30% to the left of rest and slides to 0 as the screen leaves. */
+export function parallaxOffset(dx, width, back = 30) {
+  if (!(width > 0)) return 0;
+  const progress = Math.min(1, Math.max(0, dx / width));
+  return +(-back * (1 - progress)).toFixed(2);
+}
+
 /** Edge swipe-back: how dark the dim scrim behind the sliding screen is. Full strength at rest, gone once it has slid across. */
 export function scrimOpacity(dx, width, max = 0.5) {
   if (!(width > 0)) return max;

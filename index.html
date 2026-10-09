@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://www.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://us-east1-forge-web-f2351.cloudfunctions.net; img-src 'self' data: blob: https://www.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <!-- Dark only until the light theme lands (Part B), so both variants are the dark colour. -->
+  <!-- Dark first; the light theme follows the system setting (css/tokens.css). -->
   <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: light)">
-  <meta name="color-scheme" content="dark">
-  <style>html,body{background:#0a0a0b;color:#f5f5f7;margin:0;color-scheme:dark}</style>
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="color-scheme" content="dark light">
+  <style>html,body{background:#0a0a0b;color:#f5f5f7;margin:0;color-scheme:dark light}@media(prefers-color-scheme:light){html,body{background:#f2f2f7;color:#0d0d10}}</style>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,6 +18,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/motion.css">

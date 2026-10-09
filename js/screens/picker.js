@@ -2,6 +2,7 @@
 import { sheet, esc, $ } from '../ui.js';
 import { allExercises } from '../workouts/library.js';
 import { EQUIPMENT_LABELS } from '../workouts/equipment.js';
+import { icon } from '../ui/icons.js';
 
 export const PATTERN_LABELS = {
   horizontal_push: 'Chest press / push-up', vertical_push: 'Overhead press', horizontal_pull: 'Row', vertical_pull: 'Pull-up / pulldown',
@@ -45,7 +46,7 @@ export function openExercisePicker({ title = 'Choose an exercise', filter = () =
         ? items.map((e) => `
           <li class="tap" data-id="${esc(e.id)}">
             <div><b>${esc(e.name)}</b><small class="muted">${esc(equipmentText(e))}${e.custom ? ' · custom' : ''}</small></div>
-            <span aria-hidden="true">›</span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')
         : '<li class="muted">Nothing matches here.</li>';
     };

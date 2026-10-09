@@ -1,0 +1,133 @@
+/* Forge design tokens: the single source for colour, radius, spacing, type and elevation.
+   Dark first; light follows the system setting with the same names. No hex colours anywhere else in css/. */
+:root {
+  color-scheme: dark light;
+
+  /* Colour: near-black canvas, surfaces step up in small lightness increments, no outlines. */
+  --bg: #0a0a0b;
+  --surface-1: #161618;
+  --surface-2: #212124;
+  --surface-3: #2d2d31;
+  --separator: rgba(255, 255, 255, .1);
+  --text-1: #f5f5f7;
+  --text-2: #a3a3ab;
+  --text-3: #7d7d86;
+  --on-bright: #0e1013;        /* ink on bright fills (gold, white pills) */
+
+  /* One restrained accent */
+  --accent: #c6ff3d;
+  --accent-ink: #11160a;
+  --accent-text: #c6ff3d;      /* accent used as text/icons on --bg */
+  --accent-2: #4fe08f;
+  --accent-gradient: linear-gradient(135deg, #d4ff5c 0%, #8be86a 55%, #4fe08f 100%);
+  --accent-tint: rgba(198, 255, 61, .14);
+  --accent-glow: rgba(198, 255, 61, .38);
+
+  /* Semantic */
+  --good: #5be49b;
+  --warn: #ffb547;
+  --danger: #ff5d6c;
+  --ember: #ff6a2b;
+  --gold: #ffc94d;
+  --info: #6cb4ff;
+  --good-tint: rgba(91, 228, 155, .14);
+  --warn-tint: rgba(255, 181, 71, .14);
+  --danger-tint: rgba(255, 93, 108, .14);
+  --ember-tint: rgba(255, 106, 43, .16);
+  --gold-tint: rgba(255, 201, 77, .14);
+  --info-tint: rgba(108, 180, 255, .14);
+
+  /* Glass + overlays */
+  --glass: rgba(10, 10, 11, .66);
+  --glass-sheet: rgba(24, 24, 27, .86);
+  --glass-float: rgba(44, 44, 49, .72);
+  --hairline: rgba(255, 255, 255, .14);
+  --scrim: rgba(0, 0, 0, .55);
+  --top-light: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, 0));
+
+  /* Radius */
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 24px; --r-pill: 999px;
+
+  /* Spacing (8pt grid) */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
+
+  /* Elevation: 0 flat · 1 card · 2 floating · 3 sheet/modal. Shadows only on floating layers. */
+  --elev-0: none;
+  --elev-1: none;
+  --elev-2: 0 8px 30px rgba(0, 0, 0, .45);
+  --elev-3: 0 20px 60px rgba(0, 0, 0, .6);
+
+  /* Type */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  --num: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+
+  --tap: 48px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Heatmap + plate colours */
+  --heat-1: rgba(198, 255, 61, .24); --heat-2: rgba(198, 255, 61, .48); --heat-3: rgba(198, 255, 61, .74); --heat-4: var(--accent);
+  --plate-blue: #3b82f6; --plate-yellow: #eab308; --plate-green: #22c55e;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2f2f7;
+    --surface-1: #ffffff;
+    --surface-2: #f0f0f4;
+    --surface-3: #e3e3e9;
+    --separator: rgba(60, 60, 67, .16);
+    --text-1: #0d0d10;
+    --text-2: #55555d;
+    --text-3: #6d6d76;
+
+    --accent: #4f8a00;
+    --accent-ink: #ffffff;
+    --accent-text: #3f7000;
+    --accent-2: #12905a;
+    --accent-gradient: linear-gradient(135deg, #5d9a00 0%, #2f9a4a 55%, #12905a 100%);
+    --accent-tint: rgba(79, 138, 0, .12);
+    --accent-glow: rgba(79, 138, 0, .28);
+
+    --good: #12875a;
+    --warn: #a05a00;
+    --danger: #c9283a;
+    --ember: #c8460a;
+    --gold: #946500;
+    --info: #1b64c4;
+    --good-tint: rgba(18, 135, 90, .12);
+    --warn-tint: rgba(160, 90, 0, .12);
+    --danger-tint: rgba(201, 40, 58, .1);
+    --ember-tint: rgba(200, 70, 10, .1);
+    --gold-tint: rgba(148, 101, 0, .12);
+    --info-tint: rgba(27, 100, 196, .1);
+
+    --glass: rgba(242, 242, 247, .72);
+    --glass-sheet: rgba(250, 250, 253, .88);
+    --glass-float: rgba(255, 255, 255, .78);
+    --hairline: rgba(60, 60, 67, .2);
+    --scrim: rgba(0, 0, 0, .32);
+    --top-light: linear-gradient(180deg, rgba(255, 255, 255, .6), rgba(255, 255, 255, 0));
+
+    --elev-1: 0 1px 2px rgba(0, 0, 0, .05);
+    --elev-2: 0 8px 28px rgba(0, 0, 0, .14);
+    --elev-3: 0 20px 50px rgba(0, 0, 0, .2);
+    --heat-1: rgba(79, 138, 0, .2); --heat-2: rgba(79, 138, 0, .42); --heat-3: rgba(79, 138, 0, .7);
+  }
+}
+
+/* Old names kept as aliases so every stylesheet reads from this file. */
+:root {
+  --surface: var(--surface-1);
+  --line: var(--separator);
+  --text: var(--text-1);
+  --muted: var(--text-2);
+  --volt: var(--accent);
+  --radius: var(--r-xl);
+  --rec-red: var(--danger);
+  --rec-amber: var(--warn);
+  --rec-green: var(--good);
+  --ready-green: var(--good);
+  --ready-amber: var(--warn);
+  --ready-red: var(--danger);
+}

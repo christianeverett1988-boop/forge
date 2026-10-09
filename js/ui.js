@@ -1,6 +1,7 @@
 // Small UI helpers: escaping, toasts, bottom sheets, confirm.
 
 import { reducedMotion, DUR } from './ui/motion.js';
+import { icon } from './ui/icons.js';
 import { shouldDismiss, rubberBand, dragProgress, velocityOf } from './ui/gesture.js';
 
 export function esc(s) {
@@ -10,11 +11,13 @@ export function esc(s) {
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-export function toast(message, ms = 2600) {
+/** A glass capsule above the tab bar. toast('Saved', 2600, { icon: 'check' }) adds an icon; the text is never HTML. */
+export function toast(message, ms = 2600, { icon: name = '' } = {}) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
-  el.textContent = message;
+  if (name) el.insertAdjacentHTML('afterbegin', icon(name));
+  el.append(document.createTextNode(message));
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {
@@ -39,7 +42,7 @@ export function sheet(title, render) {
     <div class="sheet-grab" aria-hidden="true"><i></i></div>
     <div class="sheet-head">
       <h2 id="${titleId}">${esc(title)}</h2>
-      <button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="icon-btn" data-close aria-label="Close">${icon('close', { size: 18 })}</button>
     </div>
     <div class="sheet-body"></div>`;
   document.body.appendChild(dlg);

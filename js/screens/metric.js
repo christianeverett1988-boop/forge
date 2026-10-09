@@ -7,8 +7,10 @@ import { esc, $, $$, sheet, todayKey } from '../ui.js';
 import { addDays, daysBetween } from '../weight/smoothing.js';
 import { weightToDisplay } from '../units.js';
 import { lineChartSVG } from '../ui/linechart.js';
-import { metricDef, metricSeries, dailySeries, fmtMetric, heightM, periodAverage } from '../withings/body.js';
+import { metricDef, metricPoints, metricEmptyChoice, dailySeries, fmtMetric, heightM, periodAverage } from '../withings/body.js';
+import { suspectIds } from '../withings/review.js';
 import { weekOf } from '../workouts/awards.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 let range = 90;
 let explainers = null;
@@ -51,7 +53,8 @@ export function renderMetric(el, key) {
   const u = getUnits();
   const docs = myBodyMeasures();
   const h = heightM(docs, state.profile);
-  const daily = dailySeries(metricSeries(docs, key, { height: h }));
+  const sus = suspectIds(state.weights);
+  const daily = dailySeries(metricPoints(docs, key, { height: h, weights: state.weights.filter((w) => !sus.has(w.id)) }));
   const disp = (v) => (def.kind === 'mass' ? weightToDisplay(v, u) : v);
   const last = daily[daily.length - 1];
   const end = todayKey();
@@ -67,6 +70,8 @@ export function renderMetric(el, key) {
   const bars = showSets ? weeklySets(state.workouts) : [];
   const fmtAxis = (v) => (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1));
 
+  const wConnected = !!(state.integrations.withings && state.integrations.withings.connected);
+  const choice = metricEmptyChoice(key, wConnected);
   el.innerHTML = `
     <section class="stack">
       <div class="row between center"><h1>${esc(def.label)}</h1><button class="btn ghost small" data-explain>What is this?</button></div>
@@ -84,7 +89,7 @@ export function renderMetric(el, key) {
         <p class="small muted legend"><span class="key dot"></span>readings <span class="key line"></span>7-day average ${prev.length ? '<span class="key dash"></span>previous period' : ''} ${bars.length ? '<span class="key bar"></span>training sets/week' : ''}</p>
         ${def.overlay !== 'sets' ? `<label class="choice check small"><input type="checkbox" name="sets" ${showSets ? 'checked' : ''}><span>Show training sets per week</span></label>` : ''}
         <p class="small muted">Last reading ${new Date(last.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${daily.length.toLocaleString()} days with readings</p>
-      </div>` : `<div class="card empty">No ${esc(def.label.toLowerCase())} readings yet.${state.integrations.withings && state.integrations.withings.connected ? ' The data check shows whether Withings sends this one.' : ' Connect Withings in Settings to bring them in.'}</div>`}
+      </div>` : `<div class="card">${emptyState({ icon: 'scale', title: `No ${esc(def.label.toLowerCase())} readings yet`, text: key === 'weight_kg' ? 'Log your weight and it shows up here.' : wConnected ? 'The data check shows whether Withings sends this one.' : 'Connect Withings to bring your readings in.', action: choice.primary })}${choice.secondary ? `<a class="link" href="${choice.secondary.href}">${choice.secondary.label}</a>` : ''}</div>`}
       ${key === 'bmi' ? '<p class="small muted">BMI ignores muscle. Look at FFMI and FMI too.</p>' : ''}
     </section>`;
 

@@ -9,6 +9,7 @@ import { dayKey, addDays } from '../weight/smoothing.js';
 import { softDelete } from '../db.js';
 import { CARDIO_TYPES } from './tools.js';
 import { progressTabs } from './progress.js';
+import { icon, emptyState } from '../ui/icons.js';
 
 let trendId = null;
 
@@ -140,10 +141,10 @@ export function renderHistory(el) {
       <h2>Recent</h2>
       ${recent.length ? `<ul class="list">${recent.map((r) => r.kind === 'w' ? `
         <li class="tap" data-w="${esc(r.w.id)}"><div><b>${esc(r.w.label)}</b>
-          <small class="muted">${formatDay(dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(state.locations.find((l) => l.id === r.w.location_id)?.name || '')} · ${(r.w.exercises || []).reduce((n, it) => n + it.sets.filter((s) => s.done && !s.warmup).length, 0)} sets${(r.w.prs || []).length ? ` · 🏆 ${r.w.prs.length}` : ''}</small></div><span aria-hidden="true">›</span></li>` : `
+          <small class="muted">${formatDay(dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${esc(state.locations.find((l) => l.id === r.w.location_id)?.name || '')} · ${(r.w.exercises || []).reduce((n, it) => n + it.sets.filter((s) => s.done && !s.warmup).length, 0)} sets${(r.w.prs || []).length ? ` · ${icon('trophy')} ${r.w.prs.length}` : ''}</small></div><span class="chev" aria-hidden="true">${icon('chev')}</span></li>` : `
         <li class="tap" data-c="${esc(r.c.id)}"><div><b>${esc(CARDIO_TYPES[r.c.activity] || r.c.activity)}</b>
-          <small class="muted">${formatDay(r.c.day || dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${r.c.duration_min} min${r.c.calories ? ` · ${r.c.calories} kcal` : ''} · Manual</small></div><span aria-hidden="true">›</span></li>`).join('')}</ul>`
-        : '<div class="card empty">No sessions yet.</div>'}
+          <small class="muted">${formatDay(r.c.day || dayKey(r.at), { weekday: 'short', month: 'short', day: 'numeric' })} · ${r.c.duration_min} min${r.c.calories ? ` · ${r.c.calories} kcal` : ''} · Manual</small></div><span class="chev" aria-hidden="true">${icon('chev')}</span></li>`).join('')}</ul>`
+        : `<div class="card">${emptyState({ icon: 'chart', title: 'No workouts yet', text: 'Finish a workout and it shows up here, with your records.', action: { href: '#/train', label: 'Start your first workout' } })}</div>`}
     </section>`;
 
   const sel = $('[data-trend]', el);
@@ -184,7 +185,7 @@ function openWorkout(id) {
     body.innerHTML = `
       <div class="stack">
         <p class="muted small">${new Date(w.started_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}${w.finished_at ? ` · ${Math.round((Date.parse(w.finished_at) - Date.parse(w.started_at)) / 60000)} min` : ''}</p>
-        ${(w.prs || []).length ? `<div class="card prs"><p class="label">PRs 🏆</p><ul class="reasons">${w.prs.map((p) => `<li>${esc(p.label)}</li>`).join('')}</ul></div>` : ''}
+        ${(w.prs || []).length ? `<div class="card prs"><p class="label">PRs ${icon('trophy')}</p><ul class="reasons">${w.prs.map((p) => `<li>${esc(p.label)}</li>`).join('')}</ul></div>` : ''}
         ${(w.exercises || []).map((it) => {
           const ex = exerciseById(it.exercise_id);
           const sets = it.sets.filter((s) => s.done);

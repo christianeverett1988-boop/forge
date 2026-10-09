@@ -2,8 +2,11 @@
 // Weekly sets) gets a burst, once per week. Room is left in the legend grid for food rings (Checkpoint C).
 import { reducedMotion } from './motion.js';
 import { esc } from '../ui.js';
+import { icon } from './icons.js';
 
-const COLORS = { training: '#FF6A2B', sets: '#C6FF3D', recovery: '#3AD0FF' };
+const COLORS = { training: 'var(--ember)', sets: 'var(--accent-text)', recovery: 'var(--info)' };
+// Canvas confetti can't read CSS variables, so the burst keeps plain colours.
+const BURST = { training: '#FF6A2B', sets: '#C6FF3D', recovery: '#3AD0FF' };
 const SIZE = 132;
 const STROKE = 13;
 const GAP = 3;
@@ -14,13 +17,13 @@ export function ringsHtml(rings) {
     const R = radius(i);
     const C = 2 * Math.PI * R;
     const v = Math.max(0, Math.min(1, r.value || 0));
-    return `<circle class="ring-track" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" stroke="${COLORS[r.key]}"/>
-      <circle class="ring-arc${v >= 1 && r.key !== 'recovery' ? ' ring-closed' : ''}" data-ring="${r.key}" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" stroke="${COLORS[r.key]}"
-        stroke-dasharray="${C.toFixed(1)}" style="color:${COLORS[r.key]};--c:${C.toFixed(1)};--off:${(C * (1 - v)).toFixed(1)}"/>`;
+    return `<circle class="ring-track" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" style="stroke:${COLORS[r.key]}"/>
+      <circle class="ring-arc${v >= 1 && r.key !== 'recovery' ? ' ring-closed' : ''}" data-ring="${r.key}" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" 
+        stroke-dasharray="${C.toFixed(1)}" style="color:${COLORS[r.key]};stroke:${COLORS[r.key]};--c:${C.toFixed(1)};--off:${(C * (1 - v)).toFixed(1)}"/>`;
   }).join('');
   const legend = rings.map((r) => `
     <li style="--rc:${COLORS[r.key]}"><span class="ring-dot" aria-hidden="true"></span>
-      <span><b>${esc(r.label)}${r.value >= 1 ? ' <span class="ring-done">✓</span>' : ''}</b><small class="muted">${esc(r.text)}</small></span></li>`).join('');
+      <span><b>${esc(r.label)}${r.value >= 1 ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="muted">${esc(r.text)}</small></span></li>`).join('');
   const aria = rings.map((r) => `${r.label}: ${r.text}`).join('; ');
   return `<div class="rings" role="img" aria-label="${esc(aria)}">
     <svg class="rings-svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" aria-hidden="true"><g transform="rotate(-90 ${SIZE / 2} ${SIZE / 2})">${arcs}</g></svg>
@@ -54,7 +57,7 @@ export function animateRings(root, rings, week) {
     remember(week, seen);
     const box = root.querySelector('.rings-svg').getBoundingClientRect();
     import('./fx.js').then(({ burst }) => fresh.forEach((r, k) => setTimeout(() => {
-      burst(box.left + box.width / 2, box.top + box.height * 0.08, { count: still ? 0 : 46, colors: [COLORS[r.key], '#FFFFFF'] });
+      burst(box.left + box.width / 2, box.top + box.height * 0.08, { count: still ? 0 : 46, colors: [BURST[r.key], '#FFFFFF'] });
     }, k * 350)));
   }, still ? 0 : 1100);
 }

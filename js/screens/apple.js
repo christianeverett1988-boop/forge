@@ -8,6 +8,7 @@ import { fieldStatus } from '../health/status.js';
 import { currentReadiness } from '../health/today.js';
 import { shiftDay } from '../health/metrics.js';
 import { NEEDED_DAYS } from '../health/readiness.js';
+import { icon } from '../ui/icons.js';
 
 const call = async (...args) => (await import('../functions.js')).call(...args);
 const INGEST_URL = `https://us-east1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/healthIngest`;
@@ -97,7 +98,7 @@ function recipe() {
   <details class="card" data-recipe>
     <summary>${APPLE_SHORTCUT_URL ? 'Or build it yourself' : 'Build the Shortcut'} (about 10 minutes, once)</summary>
     <div class="stack" style="margin-top:12px">
-      <p class="notice info small">This uses the <b>iPhone and Apple Watch you already have</b> and the Shortcuts app that comes with iOS. There’s nothing new to sign up for. Tap any <b>Copy</b> chip to copy that text.</p>
+      <p class="callout">${icon('info')}<span>Uses the iPhone and Apple Watch you already have. Tap any <b>Copy</b> chip to copy that text.</span></p>
       <ol class="steps">
         <li><div><b>Create your token above</b> and copy it. You’ll paste it in step 6.</div></li>
         <li><div><b>Shortcuts app → + (new shortcut).</b> Name it <b>Forge Health</b>. Add <b>Current Date</b>, then <b>Adjust Date</b> → subtract <b>1 day</b>, then <b>Adjust Date</b> again → <b>Start of Day</b> plus <b>18 hours</b>. Call the result <b>Since</b> (yesterday 6 pm). Add <b>Current Date</b> → <b>Start of Day</b> plus <b>11 hours</b> and call it <b>Cutoff</b> (today 11 am).</div></li>
@@ -168,7 +169,7 @@ export function renderApple(el) {
       <div class="card stack">
         <p class="label">Delete Apple Health data</p>
         <p class="small muted">Removes every Apple Health day from Forge and turns the Shortcut token off. Your Withings data and your workouts stay.</p>
-        <button class="btn danger-ghost bigbtn" data-delete ${busy === 'delete' ? 'disabled' : ''}>Delete Apple Health data from Forge</button>
+        <button class="btn danger-ghost bigbtn" data-delete ${busy === 'delete' ? 'disabled' : ''}>Delete Apple Health data</button>
       </div>
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
@@ -188,7 +189,7 @@ async function copyText(text, btn) {
   const was = span.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    span.textContent = 'Copied ✓';
+    span.textContent = 'Copied';
   } catch {
     const code = btn.querySelector('code');
     if (code) {
@@ -225,7 +226,7 @@ function showToken(token) {
         <p class="notice warn small"><b>This is the only time you’ll see it.</b> Copy it now and paste it into your Shortcut. If you lose it, make a new one.</p>
         <div class="token-box" data-token>${esc(token)}</div>
         <button class="btn bigbtn" data-copy>Copy token</button>
-        <button class="btn ghost bigbtn" data-copy-bearer>Copy “Bearer + token” (for the header)</button>
+        <button class="btn ghost bigbtn" data-copy-bearer>Copy “Bearer + token”</button>
         <button class="btn ghost bigbtn" data-copy-url>Copy the Forge address</button>
         <p class="small muted">Keep it private, like a password. Anyone with it could add data to your Forge. If it ever leaks, tap <b>Turn it off</b>.</p>
         <button class="btn ghost bigbtn" data-done>Done</button>
@@ -233,7 +234,7 @@ function showToken(token) {
     $('[data-copy]', body).onclick = async (e) => {
       try {
         await navigator.clipboard.writeText(token);
-        e.currentTarget.textContent = 'Copied ✓';
+        e.currentTarget.textContent = 'Copied';
       } catch {
         const range = document.createRange();
         range.selectNodeContents($('[data-token]', body));
@@ -251,8 +252,8 @@ function showToken(token) {
         setTimeout(() => { b.textContent = was; }, 2000);
       };
     };
-    plain('[data-copy-bearer]', `Bearer ${token}`, 'Copied ✓');
-    plain('[data-copy-url]', INGEST_URL, 'Copied ✓');
+    plain('[data-copy-bearer]', `Bearer ${token}`, 'Copied');
+    plain('[data-copy-url]', INGEST_URL, 'Copied');
     $('[data-done]', body).onclick = close;
   });
 }

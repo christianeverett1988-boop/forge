@@ -9,11 +9,12 @@ import { GOALS } from '../nutrition/targets.js';
 import { VERSION } from '../version.js';
 import { unlockAudio, coach, sfx, beep } from '../ui/sound.js';
 import { hapticSupport } from '../ui/haptic.js';
+import { icon } from '../ui/icons.js';
 
 function withingsLine() {
   const w = state.integrations && state.integrations.withings;
   if (!w || !w.connected) return 'Not connected';
-  if (w.needs_reconnect) return '⚠️ Needs reconnecting';
+  if (w.needs_reconnect) return 'Needs reconnecting';
   return `Connected${w.model ? ` · ${esc(w.model)}` : ''}`;
 }
 
@@ -33,90 +34,77 @@ export function renderSettings(el) {
   const sfxOn = st.sfx !== false;
   const hapOn = st.haptics !== false;
   const hapSupport = hapticSupport();
+  const nav = (href, ic, title, sub, attrs = '') => `
+        <a class="g-row" href="${href}" ${attrs}><span class="g-ic">${icon(ic)}</span><span class="g-text"><span>${title}</span><small>${sub}</small></span><span class="chev">${icon('chev')}</span></a>`;
   el.innerHTML = `
     <section class="stack">
       <h1>Settings</h1>
 
-      <div class="card" data-tour="settings-profile">
-        <p class="label">Profile</p>
-        <p>${esc(GOALS[p.goal]?.label || '')} · ${esc(p.age)} yrs · ${formatHeight(p.heightCm, u)}${p.targetWeightKg ? ` · goal ${formatWeight(p.targetWeightKg, u, 0)}` : ''}</p>
-        <a class="btn ghost" href="#/profile">Edit profile &amp; targets</a>
+      <div class="group" data-tour="settings-profile">
+        <a class="g-row" href="#/profile"><span class="g-ic">${icon('person')}</span><span class="g-text"><span>${esc(GOALS[p.goal]?.label || 'Profile')}</span><small>${esc(p.age)} yrs · ${formatHeight(p.heightCm, u)}${p.targetWeightKg ? ` · goal ${formatWeight(p.targetWeightKg, u, 0)}` : ''}</small></span><span class="chev">${icon('chev')}</span></a>
       </div>
 
-      <div class="card">
-        <p class="label">Units</p>
-        <div class="seg" role="radiogroup" aria-label="Units">
-          <label><input type="radio" name="units" value="imperial" ${u === 'imperial' ? 'checked' : ''}><span>lb, ft, in</span></label>
-          <label><input type="radio" name="units" value="metric" ${u === 'metric' ? 'checked' : ''}><span>kg, cm</span></label>
-        </div>
+      <p class="sec-title">Units</p>
+      <div class="seg" role="radiogroup" aria-label="Units">
+        <label><input type="radio" name="units" value="imperial" ${u === 'imperial' ? 'checked' : ''}><span>lb, ft, in</span></label>
+        <label><input type="radio" name="units" value="metric" ${u === 'metric' ? 'checked' : ''}><span>kg, cm</span></label>
       </div>
 
-      <div class="card stack">
-        <p class="label">Workouts</p>
-        <fieldset class="field"><legend class="small">Workout screen</legend>
+      <p class="sec-title">Workouts</p>
+      <div class="group">
+        <div class="g-row col static"><span>Workout screen</span>
           <div class="seg" role="radiogroup" aria-label="Workout screen">
             <label><input type="radio" name="player" value="guided" ${pl === 'guided' ? 'checked' : ''}><span>Guided</span></label>
             <label><input type="radio" name="player" value="list" ${pl === 'list' ? 'checked' : ''}><span>List</span></label>
           </div>
-        </fieldset>
-        <fieldset class="field"><legend class="small">Coach audio</legend>
+        </div>
+        <div class="g-row col static"><span>Coach audio</span>
           <div class="seg" role="radiogroup" aria-label="Coach audio">
             <label><input type="radio" name="coach" value="off" ${coachMode === 'off' ? 'checked' : ''}><span>Off</span></label>
             <label><input type="radio" name="coach" value="beeps" ${coachMode === 'beeps' ? 'checked' : ''}><span>Beeps</span></label>
             <label><input type="radio" name="coach" value="voice" ${coachMode === 'voice' ? 'checked' : ''}><span>Voice</span></label>
           </div>
-          <small class="muted">Mixes with your music. Silent when your ringer switch is off.</small>
-        </fieldset>
-        <label class="choice check small"><input type="checkbox" name="sfx" ${sfxOn ? 'checked' : ''}><span>Sound effects<small>Power-up, PR and finish sounds.</small></span></label>
-        <label class="choice check small"><input type="checkbox" name="haptics" ${hapOn ? 'checked' : ''}><span>Haptic tick (experimental)<small>${hapSupport === 'switch' ? 'A light tap on Done set (iOS 18+ trick).' : 'Not supported on this device.'}</small></span></label>
-        <div class="stack" data-photos hidden>
-          <p class="small"><b>Demo photos</b> <span class="muted" data-photo-status></span></p>
-          <button class="btn ghost" data-photo-dl>Download all demo photos</button>
-          <small class="muted">Start/end photos for exercises without an animated demo. Today’s are saved automatically when you start a workout.</small>
         </div>
+        <label class="g-row sw"><span class="g-text"><span>Sound effects</span><small>Power-up, PR and finish sounds.</small></span><input type="checkbox" switch name="sfx" ${sfxOn ? 'checked' : ''}></label>
+        <label class="g-row sw"><span class="g-text"><span>Haptic tick</span><small>${hapSupport === 'switch' ? 'A light tap on tabs, controls and Done set.' : 'Not supported on this device.'}</small></span><input type="checkbox" switch name="haptics" ${hapOn ? 'checked' : ''}></label>
+      </div>
+      <p class="sec-foot">Coach audio mixes with your music and is silent when your ringer switch is off.</p>
+      <div class="stack" data-photos hidden>
+        <p class="small"><b>Demo photos</b> <span class="muted" data-photo-status></span></p>
+        <button class="btn ghost" data-photo-dl>Download demo photos</button>
       </div>
 
-      <a class="card row between center nav-card" href="#/locations">
-        <div><p class="label">Locations</p><p>${state.locations.map((l) => esc(l.name)).join(', ') || 'None yet'}</p></div>
-        <span aria-hidden="true">›</span>
-      </a>
-
-      <a class="card row between center nav-card" href="#/withings" data-withings-card>
-        <div><p class="label">Withings</p><p>${withingsLine()}</p></div>
-        <span aria-hidden="true">›</span>
-      </a>
-
-      <a class="card row between center nav-card" href="#/apple" data-apple-card>
-        <div><p class="label">Apple Health</p><p>${appleLine()}</p></div>
-        <span aria-hidden="true">›</span>
-      </a>
-
-      <div class="card stack">
-        <p class="label">Your data</p>
-        <button class="btn ghost" data-export-json>Export everything (JSON)</button>
-        <button class="btn ghost" data-export-csv>Export weights (CSV)</button>
-        <button class="btn ghost" data-export-workouts>Export workouts (CSV)</button>
-        <button class="btn ghost" data-export-cardio>Export cardio (CSV)</button>
-        <button class="btn ghost" data-export-body>Export body measurements (CSV)</button>
-        <button class="btn danger-ghost" data-delete>Delete everything</button>
-        <p class="small muted">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
+      <p class="sec-title">Connections</p>
+      <div class="group">
+        ${nav('#/locations', 'pin', 'Locations', state.locations.map((l) => esc(l.name)).join(', ') || 'None yet')}
+        ${nav('#/withings', 'scale', 'Withings', withingsLine(), 'data-withings-card')}
+        ${nav('#/apple', 'heart', 'Apple Health', appleLine(), 'data-apple-card')}
       </div>
 
-      <div class="card stack">
-        <p class="label">Help</p>
-        <button class="btn ghost" data-tour-again>Show the how-to tour again</button>
+      <p class="sec-title">Your data</p>
+      <div class="group">
+        <button class="g-row" data-export-json><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export everything (JSON)</span></span></button>
+        <button class="g-row" data-export-csv><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
+        <button class="g-row" data-export-workouts><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>
+        <button class="g-row" data-export-cardio><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export cardio (CSV)</span></span></button>
+        <button class="g-row" data-export-body><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export body measurements (CSV)</span></span></button>
+      </div>
+      <p class="sec-foot">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
+
+      <div class="group">
+        <button class="g-row" data-tour-again><span class="g-ic">${icon('help')}</span><span class="g-text"><span>Show the how-to tour again</span></span></button>
       </div>
 
-      <div class="card">
-        <p class="label">Account</p>
-        <p>${esc(state.user.email)}</p>
-        <button class="btn ghost" data-signout>Sign out</button>
+      <p class="sec-title">Account</p>
+      <div class="group">
+        <div class="g-row static"><span class="g-text"><span>${esc(state.user.email)}</span></span></div>
+        <button class="g-row" data-signout><span class="g-text"><span>Sign out</span></span></button>
+        <button class="g-row g-danger" data-delete><span class="g-text"><span>Delete everything</span></span></button>
       </div>
 
-      <div class="card small">
-        <p class="label">About</p>
-        <p>Version ${VERSION}</p>
-        <p class="muted">General fitness information, not medical advice. Calorie math: Mifflin-St Jeor (1990). Safe floors: Harvard Health (more cautious than NIH/NHLBI). Exercise library: free-exercise-db (public domain, Unlicense) by Yuhonas. Weight trend: Hacker’s Diet exponential smoothing.</p>
+      <div class="small muted g-pad">
+        <p>Forge ${VERSION}</p>
+        <p>General fitness information, not medical advice. Calorie math: Mifflin-St Jeor (1990). Safe floors: Harvard Health (more cautious than NIH/NHLBI). Exercise library: free-exercise-db (public domain, Unlicense) by Yuhonas. Weight trend: Hacker’s Diet exponential smoothing.</p>
       </div>
     </section>`;
 
@@ -142,9 +130,9 @@ export function renderSettings(el) {
     const box = $('[data-photos]', el);
     if (!box || !st.total) return;
     box.hidden = false;
-    $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline`;
+    $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline${st.saved >= st.total ? '' : ` · ≈ ${st.mb.toFixed(1)} MB to download`}`;
     const btn = $('[data-photo-dl]', el);
-    btn.textContent = st.saved >= st.total ? 'All demo photos saved' : `Download all demo photos (≈ ${st.mb.toFixed(1)} MB)`;
+    btn.textContent = st.saved >= st.total ? 'All demo photos saved' : 'Download demo photos';
     btn.disabled = st.saved >= st.total;
   };
   paintPhotos();
