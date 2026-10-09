@@ -196,7 +196,8 @@ test('shell: no spinner, no floating sync pill, manifest has id and a maskable i
 test('nav bar: title column shrinks and ellipsizes instead of overlapping the back button', () => {
   const css = readFileSync(new URL('../css/nav.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const bar = css.match(/\.navbar\s*\{[^}]*\}/)[0];
-  assert(/grid-template-columns:\s*minmax\(auto,\s*1fr\)\s+minmax\(0,\s*max-content\)\s+minmax\(auto,\s*1fr\)/.test(bar), 'navbar grid rule');
+  assert(/grid-template-columns:\s*minmax\(max-content,\s*1fr\)\s+minmax\(0,\s*max-content\)\s+minmax\(max-content,\s*1fr\)/.test(bar), 'navbar grid rule');
+  assert(/\.nb-back\s*\{[^}]*flex-shrink:\s*0;\s*white-space:\s*nowrap/.test(css), 'back button keeps its width');
   const title = css.match(/\.nb-title\s*\{[^}]*\}/)[0];
   assert(/min-width:\s*0/.test(title) && /text-overflow:\s*ellipsis/.test(title) && !/max-width:\s*56vw/.test(title), 'title can shrink and ellipsizes');
   assert(/\.nb-back\.icon-only span\s*\{\s*display:\s*none/.test(css), 'chevron-only fallback');

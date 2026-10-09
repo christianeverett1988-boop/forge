@@ -20,7 +20,7 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .navbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 6;
   height: calc(var(--safe-top) + 44px); padding: var(--safe-top) 8px 0;
-  display: grid; grid-template-columns: minmax(auto, 1fr) minmax(0, max-content) minmax(auto, 1fr); align-items: center;
+  display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr); align-items: center;
   column-gap: 4px; /* side columns grow to fit the back button; the title column is what shrinks and ellipsizes */
   pointer-events: none;
   /* The blur lives on the .navbar itself, not a child: .navbar has a view-transition-name, which makes it a
@@ -39,7 +39,7 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 }
 .nb-back {
   pointer-events: auto; justify-self: start;
-  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; min-width: 44px; padding: 0 10px 0 4px;
+  display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; white-space: nowrap; min-height: 44px; min-width: 44px; padding: 0 10px 0 4px;
   border: 0; background: none; color: var(--accent-text); font: 17px var(--font); cursor: pointer;
 }
 .nb-back[hidden] { display: none; }
