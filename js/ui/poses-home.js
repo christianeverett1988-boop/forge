@@ -78,12 +78,13 @@ export const HOME = {
     b: { px: 0.01, py: 0.93, trunk: 0, head: 0, sh: 25, el: 150, abd: 24 },
   }),
   sliding_floor_pulldown: T({
-    cam: { yaw: 30, pitch: 9 },
+    cam: { yaw: 34, pitch: 18 },
     gear: ['towel'],
-    // Kneeling with the hands on a towel: start stretched out, then pull the towel in and sit the hips back.
-    rig: QUAD({ pivot: { at: [-0.4, 0.07], joint: 'knee' }, hands: { x: 0.98, y: 0.03 }, grip: 0.2 }),
-    a: { line: 24, pike: -4, head: 8, hx: 0.96 },
-    b: { line: 62, pike: -40, head: -4, hx: 0.34 },
+    // Face down on the floor, arms overhead on a towel. The towel stays put while the body slides toward it,
+    // so the hands come back to the shoulders and the elbows rake back toward the ribs. The chest stays low.
+    rig: { root: 'plank', pivot: { at: [-0.9, 0.12], joint: 'ankle' }, feet: { z: 0.1, angle: 80 }, arms: 'ik', hands: { x: 1.0, y: 0.04 }, grip: 0.2, pole: [-1, 0.5, 0.45] },
+    a: { line: 3, head: 12, hx: 1.0 },
+    b: { line: 6, head: 16, hx: 0.6 },
     first: 'up',
   }),
   towel_pull_apart: T({
@@ -105,20 +106,22 @@ export const HOME = {
     tempo: HOLD, slow: HOLD,
   }),
   towel_lateral_raise_iso: T({
-    cam: { yaw: 40 },
+    cam: { yaw: 64, pitch: 8 },
     gear: ['strap'],
     anchor: [0.0, 0.05],
     anchorZ: 0.35,
     rig: STAND({ feet: { x: 0, z: 0.12, kneesOut: 0.2 } }),
-    a: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 0, el: 0, abd: 12 },
-    b: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 0, el: 0, abd: 30 },
+    // Arms straight out to the sides, pressing up and out against the towel under the feet.
+    a: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 0, el: 0, abd: 40, foreAbd: 1 },
+    b: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 0, el: 0, abd: 58, foreAbd: 1 },
     tempo: HOLD, slow: HOLD,
   }),
   towel_slider_fly: T({
-    cam: { yaw: 36, pitch: 9 },
-    rig: { root: 'plank', pivot: { at: [-0.95, 0.09], joint: 'ankle' }, feet: { z: 0.1, angle: 80 }, arms: 'ik', hands: { x: 0.3, y: 0.03 }, grip: 0.22, pole: [-0.6, 0.3, 0.55] },
-    a: { line: 21, head: 6, hz: 0.22 },
-    b: { line: 6, head: 6, hz: 0.7 },
+    cam: { yaw: 62, pitch: 14 },
+    // Kneeling plank (knees on the floor), hands on towels: slide them out wide, chest low but off the floor.
+    rig: { root: 'plank', pivot: { at: [-0.55, 0.07], joint: 'knee' }, feet: { z: 0.1, angle: 175 }, arms: 'ik', hands: { x: 0.34, y: 0.03 }, grip: 0.22, pole: [-0.3, 0.6, 0.55] },
+    a: { line: 30, head: 6, hz: 0.22 },
+    b: { line: 16, head: 6, hz: 0.62 },
     first: 'down',
   }),
 
@@ -131,21 +134,23 @@ export const HOME = {
     tempo: BREATH, slow: BREATH,
   }),
   bw_prone_ytw: T({
-    cam: { yaw: 44, pitch: 12 },
+    // From above and a little to the side, so the arm shapes read as they sweep out and in.
+    cam: { yaw: 15, pitch: 68 },
     rig: PRONE,
-    // Y, then T (m), then W, and back.
-    a: { line: 0, pike: 10, head: -12, ...prone(-90), sh: 100, el: 0, abd: 35, foreAbd: 1 },
-    m: { sh: 130, el: 0, abd: 78, foreAbd: 1 },
-    b: { line: 0, pike: 10, head: -12, ...prone(-90), sh: -100, el: 195, abd: 60, foreAbd: 0.3 },
-    tempo: { con: 1.1, top: 0.3, ecc: 1.1, pause: 0.3 }, slow: { con: 1.6, top: 0.4, ecc: 1.6, pause: 0.4 },
+    // Y (arms overhead and wide), then T (straight out), then W (elbows bent, upper arms back), and back.
+    a: { line: 0, pike: 8, head: -12, ...prone(-90), sh: 100, el: 0, abd: 40, foreAbd: 1 },
+    m: { sh: 100, el: 0, abd: 90, foreAbd: 1 },
+    b: { line: 0, pike: 8, head: -12, ...prone(-90), sh: 240, el: -140, abd: 45, foreAbd: 1 },
+    tempo: { con: 1.8, top: 0.3, ecc: 1.8, pause: 0.3 }, slow: { con: 2.6, top: 0.4, ecc: 2.6, pause: 0.4 },
   }),
   reverse_snow_angel: T({
-    cam: { yaw: 44, pitch: 12 },
+    cam: { yaw: 15, pitch: 68 },
     rig: PRONE,
-    a: { line: 0, pike: 8, head: -10, ...prone(-90), sh: 75, el: 0, abd: 165, foreAbd: 1 },
-    m: { sh: 90, abd: 90 },
-    b: { line: 0, pike: 8, head: -10, ...prone(-90), sh: 105, el: 0, abd: 15, foreAbd: 1 },
-    tempo: { con: 1.6, top: 0.3, ecc: 1.6, pause: 0.3 }, slow: { con: 2.4, top: 0.4, ecc: 2.4, pause: 0.4 },
+    // Arms hover just off the floor and sweep from the hips, out to the sides, to overhead.
+    a: { line: 0, pike: 8, head: -10, ...prone(-90), sh: 268, el: 0, abd: 12, foreAbd: 1 },
+    m: { sh: 225, abd: 60 },
+    b: { line: 0, pike: 8, head: -10, ...prone(-90), sh: 92, el: 0, abd: 12, foreAbd: 1 },
+    tempo: { con: 1.8, top: 0.3, ecc: 1.8, pause: 0.3 }, slow: { con: 2.6, top: 0.4, ecc: 2.6, pause: 0.4 },
   }),
   // On the far forearm (elbow under the shoulder, forearm toward the viewer), near arm reaching up.
   side_plank: T({
@@ -172,9 +177,10 @@ export const HOME = {
     b: { line: 8, head: 0, shF: 100, elF: 0, abdF: 0, hipN: -90, kneeN: 0, footN: -90, splayN: 42 },
   }),
   bw_fire_hydrant: T({
-    cam: { yaw: 46, pitch: 10 },
+    cam: { yaw: -62, pitch: 26 },
     rig: QUAD({ legsN: 'fk', legsF: 'fk' }),
-    // The near thigh swings out sideways, shin still pointing back.
+    // Seen from behind and a little above: the knee stays bent at 90° and the near thigh lifts out to the side
+    // with the hips level (shin still pointing back, not a kick).
     a: { line: 90, pike: -90, head: -15, hipN: 0, kneeN: 90, footN: -90, splayN: 2, shinSplayN: 0, hipF: 0, kneeF: 90, footF: -90 },
     b: { line: 90, pike: -90, head: -15, hipN: 0, kneeN: 90, footN: -90, splayN: 84, shinSplayN: 0, hipF: 0, kneeF: 90, footF: -90 },
   }),
