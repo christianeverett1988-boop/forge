@@ -6,14 +6,14 @@ import { TEMPLATES, EXERCISE_TEMPLATES } from '../js/ui/poses.js';
 import { GYM, GYM_MAP } from '../js/ui/poses-gym.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
 
-// Every move the v0.14.2 brief lists (issue #48). Nothing is skipped: all seven read clearly from the geometry.
+// Every move the v0.14.2 brief lists (issue #48). The hip abductor machine is skipped: its far leg drew wrong on screen, so it has no figure for now.
 const BRIEF = [
   'machine_leg_press', 'machine_single_leg_press', 'machine_leg_press_calf', 'machine_hip_abductor', 'machine_hip_adductor',
   'cable_hip_abduction', 'cable_hip_adduction',
 ];
-const SKIPPED = [];
+const SKIPPED = ['machine_hip_abductor'];
 const PRESSES = ['machine_leg_press', 'machine_single_leg_press', 'machine_leg_press_calf'];
-const HIP_MACHINES = ['machine_hip_abductor', 'machine_hip_adductor'];
+const HIP_MACHINES = ['machine_hip_adductor'];
 const CABLES = ['cable_hip_abduction', 'cable_hip_adduction'];
 
 const SAMPLES = 24;
@@ -50,14 +50,14 @@ const along = (p) => p[0] * D[0] + p[1] * D[1];
 const up = (p) => p[0] * P[0] + p[1] * P[1];
 
 test('gym figures: every id in the brief has a template, or is listed as skipped', () => {
-  for (const id of BRIEF) {
+  for (const id of BRIEF.filter((x) => !SKIPPED.includes(x))) {
     assert(EXERCISES.some((e) => e.id === id), `${id} is a real exercise`);
     assert(EXERCISE_TEMPLATES[id], `${id} has a template`);
     assert(GYM[EXERCISE_TEMPLATES[id]], `${id} is drawn from poses-gym.js`);
   }
-  eq(Object.keys(GYM_MAP).sort().join(), [...BRIEF].sort().join(), 'the map holds exactly the brief');
+  eq(Object.keys(GYM_MAP).sort().join(), BRIEF.filter((x) => !SKIPPED.includes(x)).sort().join(), 'the map holds exactly the brief, minus the skipped');
   for (const id of SKIPPED) assert(!EXERCISE_TEMPLATES[id], `${id} stays unmapped`);
-  eq(SKIPPED.length, 0, 'nothing was skipped');
+  for (const id of SKIPPED) assert(EXERCISES.some((e) => e.id === id), `${id} is a real exercise`);
 });
 
 test('gym figures: every a / b number is finite, every frame solves and frames', () => {
@@ -192,7 +192,7 @@ test('leg press: the body sits on the seat and against the back pad, the knees c
 test('hip machine: knees never pass through the pads, which are outside the knees (abductor) or inside them (adductor)', () => {
   for (const id of HIP_MACHINES) {
     const tpl = tplOf(id);
-    const out = id === 'machine_hip_abductor';
+    const out = false;
     for (const j of poses(tpl)) {
       for (const S of ['N', 'F']) {
         const pad = kneePad(tpl, j, S);
@@ -209,49 +209,12 @@ test('hip machine: knees never pass through the pads, which are outside the knee
   }
 });
 
-test('hip machine: the legs move the right way — apart for the abductor, together for the adductor', () => {
+test('hip machine: the adductor squeezes the knees together, and the abductor stays unmapped', () => {
   const gapOf = (tpl, k) => { const j = solve(tpl, tpl[k]); return Math.abs(j.kneeN[2] - j.kneeF[2]); };
-  const ab = tplOf('machine_hip_abductor');
   const ad = tplOf('machine_hip_adductor');
-  assert(gapOf(ab, 'b') - gapOf(ab, 'a') > 0.2, 'abductor: knees spread');
   assert(gapOf(ad, 'a') - gapOf(ad, 'b') > 0.2, 'adductor: knees close');
   assert(gapOf(ad, 'b') > 0.28, 'adductor: the knees do not cross or touch the other pad');
-  // The same seat and back for both; the thumbnail (b) shows the hardest point.
-  eq(JSON.stringify(ab.env), JSON.stringify(ad.env), 'same machine');
-});
-
-test('hip abductor: both knees open together by the same amount, feet stay under the knees, each pad stays against its knee', () => {
-  const tpl = tplOf('machine_hip_abductor');
-  const project = camera(tpl.cam);
-  const screenGap = (p, q) => Math.abs(project(p)[0] - project(q)[0]);
-  const js = poses(tpl);
-  const start = js[0];
-  let maxOpen = 0;
-  for (const j of js) {
-    const openN = Math.abs(j.kneeN[2]) - Math.abs(start.kneeN[2]);
-    const openF = Math.abs(j.kneeF[2]) - Math.abs(start.kneeF[2]);
-    maxOpen = Math.max(maxOpen, openN);
-    assert(Math.abs(openN - openF) < 0.005, `knees open by the same amount (${openN.toFixed(3)} vs ${openF.toFixed(3)})`);
-    assert(Math.abs(j.kneeN[2] + j.kneeF[2]) < 0.005, 'knees stay mirrored about the midline');
-    for (const S of ['N', 'F']) {
-      const side = S === 'N' ? -1 : 1;
-      assert(Math.abs(j['ankle' + S][0] - j['knee' + S][0]) < 0.03, `${S} foot stays under the knee front to back`);
-      assert(Math.abs(Math.abs(j['ankle' + S][2]) - Math.abs(j['knee' + S][2])) < 0.14, `${S} foot stays roughly under the knee sideways`);
-      assert(j['ankle' + S][1] < 0.15, `${S} foot rests on the footrest`);
-      const pad = kneePad(tpl, j, S);
-      assert(dist(pad.centre, j['knee' + S]) < 0.12, `${S} pad is touching its knee (${dist(pad.centre, j['knee' + S]).toFixed(3)} m)`);
-      assert(side * (pad.centre[2] - j['knee' + S][2]) > 0.05, `${S} pad is on the outside of its knee`);
-      // As the viewer sees it: the pad stays beside the knee, the same distance for both legs.
-      assert(screenGap(pad.centre, j['knee' + S]) < 12, `${S} pad is beside its knee on screen`);
-    }
-    const gN = screenGap(kneePad(tpl, j, 'N').centre, j.kneeN);
-    const gF = screenGap(kneePad(tpl, j, 'F').centre, j.kneeF);
-    assert(Math.abs(gN - gF) < 1, 'both pads sit the same distance from their knees on screen');
-  }
-  assert(maxOpen > 0.1, 'both knees really open');
-  // On screen, the far knee travels about as far as the near one.
-  const travel = (S) => Math.abs(project(solve(tpl, tpl.b)['knee' + S])[0] - project(solve(tpl, tpl.a)['knee' + S])[0]);
-  assert(travel('F') > 0.75 * travel('N') && travel('N') > 0.75 * travel('F'), `far knee moves ${travel('F').toFixed(1)}px, near ${travel('N').toFixed(1)}px`);
+  assert(!EXERCISE_TEMPLATES.machine_hip_abductor && !GYM.hip_abductor_machine, 'abductor has no figure for now');
 });
 
 test('hip machine: sits on the seat, spine on the back pad, thighs level over the seat, feet on the floor, hands clear of the pads', () => {
@@ -332,6 +295,7 @@ test('gym figures: no body point passes through the seat, back pad, rails or tow
   }
 });
 
-test('gym figures: library coverage — the seven machine and cable moves are mapped', () => {
-  for (const id of BRIEF) assert(EXERCISE_TEMPLATES[id], `${id} is mapped`);
+test('gym figures: library coverage — the six machine and cable moves are mapped, the abductor is not', () => {
+  for (const id of BRIEF.filter((x) => !SKIPPED.includes(x))) assert(EXERCISE_TEMPLATES[id], `${id} is mapped`);
+  for (const id of SKIPPED) assert(!EXERCISE_TEMPLATES[id], `${id} is skipped`);
 });

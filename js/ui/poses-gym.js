@@ -69,7 +69,7 @@ const calfPress = () => {
   return tpl;
 };
 
-// ---------------- hip abductor / adductor machine: seated, front view ----------------
+// ---------------- hip adductor machine: seated, front view ----------------
 const MACHINE_SEAT = [
   { type: 'slab', a: [-0.28, 0.39], b: [0.2, 0.39], w: 0.22, t: 0.39, col: FRAME },
   { type: 'slab', a: [-0.3, 0.46], b: [0.26, 0.46], w: 0.4, t: 0.07, col: PAD },
@@ -119,13 +119,6 @@ export const GYM = {
   // Legs almost straight; the balls of the feet push the plate away and let it back.
   leg_press_calf: calfPress(),
 
-  // Sit tall, pads on the outside of the knees; push the knees apart.
-  hip_abductor_machine: T({
-    ...MACHINE_BASE,
-    pads: { out: true, off: 0.1, h: 0.18 },
-    a: { ...SEATED, ...knees(14) },
-    b: { ...SEATED, ...knees(34) },
-  }),
   // Pads on the inside of the knees; squeeze them together.
   hip_adductor_machine: T({
     ...MACHINE_BASE,
@@ -156,12 +149,11 @@ export const GYM = {
   }),
 };
 
-// Exercise id → template name. Moves left out are listed in the CHANGELOG.
+// Exercise id → template name. Moves left out are listed in the CHANGELOG (machine_hip_abductor: no figure for now).
 export const GYM_MAP = {
   machine_leg_press: 'leg_press',
   machine_single_leg_press: 'leg_press_single',
   machine_leg_press_calf: 'leg_press_calf',
-  machine_hip_abductor: 'hip_abductor_machine',
   machine_hip_adductor: 'hip_adductor_machine',
   cable_hip_abduction: 'cable_hip_abduction',
   cable_hip_adduction: 'cable_hip_adduction',
