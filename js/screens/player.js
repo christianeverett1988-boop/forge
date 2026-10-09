@@ -12,7 +12,7 @@ import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { restInfo, onRestChange, adjustRest, stopRest, fmtClock, setWantAwake, unlockAudio } from '../timer.js';
 import { coach } from '../ui/sound.js';
 import { powerUp, prExplosion, enqueue } from '../ui/fx.js';
-import { onFrame, reducedMotion, viewTransition } from '../ui/motion.js';
+import { onFrame, reducedMotion, viewTransition, EASE } from '../ui/motion.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
 import { photoLoop, hasPhotos, photoFallback } from '../ui/photos.js';
 import { hapticInput, onHapticTap } from '../ui/haptic.js';
@@ -151,7 +151,7 @@ function countdown(done) {
     n.classList.toggle('go', seq[i] === 'GO!');
     if (seq[i] === 'GO!') coach.go();
     else coach.count(Number(seq[i]));
-    if (!reducedMotion()) n.animate([{ transform: 'scale(1.8)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.35 }, { transform: 'scale(.9)', opacity: 0.9 }], { duration: 800, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    if (!reducedMotion()) n.animate([{ transform: 'scale(1.8)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.35 }, { transform: 'scale(.9)', opacity: 0.9 }], { duration: 800, easing: EASE.out });
     i++;
     if (i < seq.length) setTimeout(show, 800);
     else setTimeout(() => { ov.remove(); counting = false; done(); }, 650);

@@ -1,6 +1,7 @@
 import { state, units as getUnits } from '../state.js';
 import { put, newRecord, softDelete, tombstone } from '../db.js';
-import { esc, $, $$, sheet, toast, todayKey, formatDay, confirmSheet, haptic } from '../ui.js';
+import { esc, $, $$, sheet, toast, todayKey, formatDay, confirmSheet } from '../ui.js';
+import { tick } from '../ui/haptic.js';
 import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../units.js';
 import { trendChange, weeklyRate, projectGoalDate, dayKey } from '../weight/smoothing.js';
 import { weightChartSVG } from '../weight/chart.js';
@@ -51,7 +52,7 @@ export function openLogWeight() {
       const day = form.day.value || todayKey();
       const measured = day === todayKey() ? new Date() : new Date(day + 'T08:00:00');
       put('weights', newRecord({ kg, day, measured_at: measured.toISOString() }));
-      haptic();
+      tick();
       close();
       toast(`Saved ${formatWeight(kg, u)}`);
     });
@@ -85,9 +86,9 @@ export function renderWeight(el) {
       ${latest ? `
       <div class="card">
         <div class="stats">
-          <div><span>Trend</span><b>${formatWeight(latest.trend, u)}</b></div>
-          <div><span>7 days</span><b>${change7 == null ? '—' : `${change7 > 0 ? '+' : ''}${weightToDisplay(change7, u).toFixed(1)}`}</b></div>
-          <div><span>Per week</span><b>${rate == null ? '—' : `${rate > 0 ? '+' : ''}${weightToDisplay(rate, u).toFixed(2)}`}</b></div>
+          <div><span>Trend</span><b data-count>${formatWeight(latest.trend, u)}</b></div>
+          <div><span>7 days</span><b data-count>${change7 == null ? '—' : `${change7 > 0 ? '+' : ''}${weightToDisplay(change7, u).toFixed(1)}`}</b></div>
+          <div><span>Per week</span><b data-count>${rate == null ? '—' : `${rate > 0 ? '+' : ''}${weightToDisplay(rate, u).toFixed(2)}`}</b></div>
         </div>
         <div class="seg small" role="radiogroup" aria-label="Range">
           ${[[30, '30d'], [90, '90d'], [365, '1y'], [0, 'All']].map(([d, l]) =>

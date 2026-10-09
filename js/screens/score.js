@@ -46,7 +46,7 @@ export function renderScore(el) {
     <div class="card stack">
       <div class="score-hero" role="img" aria-label="Forge Score ${round(s.score)} out of 100, 7-day average">
         ${ringSvg(s.score, { size: 212, stroke: 16 })}
-        <div class="num"><b>${round(s.score)}</b><small>7-day average</small></div>
+        <div class="num"><b data-count>${round(s.score)}</b><small>7-day average</small></div>
       </div>
       <p class="tcenter small ${diff == null || diff === 0 ? 'muted' : diff > 0 ? 'good' : 'warn'}" style="text-align:center">${diff == null ? 'Your first week of scores' : diff === 0 ? 'Same as last week' : `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} ${diff > 0 ? 'up' : 'down'} from last week`}</p>
       <div class="score-days" role="img" aria-label="Your daily score for the last 14 days">

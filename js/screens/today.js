@@ -62,7 +62,7 @@ function readinessCard() {
   if (r.status === 'building' || r.status === 'none') {
     const have = Math.min(r.needed, r.baselineDays || 0);
     return `<a class="card stack nav-card" href="#/apple" data-readiness><p class="label">Readiness</p>
-      <p>Getting to know your normal: <b>${have} of ${r.needed} days</b>.</p>
+      <p>Getting to know your normal: <b data-count>${have} of ${r.needed} days</b>.</p>
       <div class="ready-progress"><i style="width:${Math.round((have / r.needed) * 100)}%"></i></div>
       <p class="small muted">Import your Health export in Settings → Apple Health to get there today.</p></a>`;
   }
@@ -89,7 +89,7 @@ function scoreCard() {
   const s = currentScore();
   if (s.score == null) return '';
   return `<a class="card score-card" href="#/score" data-score>
-    <div class="score-mini">${ringSvg(s.score, { size: 84, stroke: 9 })}<b>${round(s.score)}</b></div>
+    <div class="score-mini">${ringSvg(s.score, { size: 84, stroke: 9 })}<b data-count>${round(s.score)}</b></div>
     <div><p class="label" style="margin:0">Forge Score</p><p class="small muted">7-day average${s.movers[0] ? ` · ${esc(s.movers[0].label)} ${s.movers[0].delta >= 0 ? 'up' : 'down'}` : ''}</p></div>
     <span class="chev" aria-hidden="true">›</span></a>`;
 }
@@ -153,7 +153,7 @@ export function renderToday(el) {
         <div class="row between center">
           <div>
             <p class="label">Weight trend</p>
-            <p class="big">${latest ? formatWeight(latest.trend, u) : '—'}</p>
+            <p class="big" data-count>${latest ? formatWeight(latest.trend, u) : '—'}</p>
             <p class="small ${tone}">${change == null ? 'Log a few days to see your trend' : `${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week`}</p>
           </div>
           ${sparklineSVG(series)}
@@ -168,7 +168,7 @@ export function renderToday(el) {
       <div class="card">
         <p class="label">Daily targets</p>
         <div class="target-hero">
-          <div class="big">${t.calories.toLocaleString()}<small>kcal</small></div>
+          <div class="big"><span data-count>${t.calories.toLocaleString()}</span><small>kcal</small></div>
           <div class="macros">
             <div><b>${t.proteinG} g</b><span>Protein</span></div>
             <div><b>${t.carbG} g</b><span>Carbs</span></div>

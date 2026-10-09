@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.2 — Feels like an iPhone app: shell, navigation and motion (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy. (This is Part A of issue #18. The full visual restyle is Part B, later.)
+
+- **No more web-page behaviour.** The page no longer rubber-bands, chrome (tabs, buttons, cards) can't be selected or long-pressed, taps have no delay, and a test makes sure form fields stay at 16px so iOS never zooms in. The background is near-black from the very first frame (no white flash), and the first screen is a grey skeleton of the page instead of a spinner.
+- **New top and bottom bars.** Every screen has a big 34pt title that shrinks into a frosted bar as you scroll. Detail screens (Locations, Withings, Data check, Exercises, Timer, Metrics) get a **‹ Back** button, and swiping from the left edge goes back too. The tab bar is properly see-through with a hairline on top, and has new filled/outline icons (Settings is sliders now, not a sun). Tapping the tab you're on scrolls to the top, or returns to that tab's first screen.
+- **The always-on "Synced" pill is gone.** You only see "Saving…" or "Offline" in the top bar, plus a short note if you stay offline for a few seconds. The update prompt is now a small "Update available · Reload" capsule.
+- **Progress has one header.** Weight, History, Score and Awards share the "Progress" title with the switcher underneath.
+- **Screen changes feel native.** Detail screens slide in from the right over the old one (which slides back and dims); going back reverses it; switching tabs crossfades. Each tab remembers its scroll position. Phones without the animation API get a quick fade instead.
+- **Sheets you can drag.** Sheets have a grabber and frosted header, follow your finger, close with a flick or a long pull, and slide away smoothly with the backdrop fading along.
+- **Motion polish.** One set of timings and spring curves everywhere; everything tappable dips slightly when pressed. Weight trend, calories, Forge Score and other numbers count up once per visit (tabular figures, so they don't jitter). Tabs, segmented controls and records give the haptic tick when Settings → Haptic tick is on. Reduced Motion turns all of this into plain fades.
+- Manifest now has an `id` and the maskable icon for 192 and 512.
+
 ## 0.5.1 — Add a location from a preset (2026-10-09)
 
 No Cloud Functions, `firestore.rules` or `config.js` changes; nothing to redeploy.

@@ -103,7 +103,7 @@ export function renderHistory(el) {
       <h1>History</h1>
 
       <div class="card">
-        <p class="label">Last 12 weeks · ${activeDays} active days</p>
+        <p class="label">Last 12 weeks · <span data-count>${activeDays}</span> active days</p>
         <div class="heatmap" role="img" aria-label="Training calendar heatmap">${cells.join('')}</div>
         <p class="small muted legend">Less <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> More</p>
       </div>
