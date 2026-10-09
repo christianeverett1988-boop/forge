@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 — Trends, insights, weekly report, goal path and Body Profile (W2b) (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish. Everything is worked out on your phone from the data you already have.
+
+- **Progress → Trends:** every number on one list (weight, body fat, fat mass, fat-free mass, muscle, water, visceral fat, standing heart rate, HRV, resting heart rate, sleep, steps, exercise minutes) with a tiny chart, today's value and how it moved per week over the last 4 weeks. An arrow only counts when the change is real (not just day-to-day wobble). Green or red shows only where it's clear what's good for your goal; the rest stays grey. Tap one for its chart.
+- **Metric screens** now switch between 7, 28, 90 days, 1 year and All, compare this period with the one before, and say in a sentence which way it's going. HRV, resting heart rate, sleep, steps and exercise minutes have their own screens too.
+- **Insight cards** on Today and Body: at most three, picked by how much they matter and how recent they are. Each says what's happening, why, and one thing to try. Tap for the chart; ✕ hides it for 7 days. Examples: "Likely water. Your trend hasn't changed.", "Nice cut" (fat down, muscle steady), HRV low for a week, resting heart rate up for 3 days, short sleep three nights running, wrist temperature up for two nights, or a long gap since your last weigh-in. Heart-rate and temperature cards remind you it isn't medical advice.
+- **Progress → Week (weekly report):** Monday to Sunday, in your own time zone. Forge Score and each part vs. the week before, weight and body-fat changes, workouts done vs. planned, total weight lifted, PRs, cardio minutes, average HRV, resting heart rate and sleep, your best and worst number, and one suggestion for next week. ‹ › browse older weeks. Share sends a short text summary. On Sunday and Monday Today shows a small card for it.
+- **Goal path** on Body and Weight (replaces the old "around this date" line): your date to reach your goal weight with a likely range, your pace next to the usual safe limit, and, if your scale reads body composition, an estimate of the daily calorie balance behind your changes. If your trend is going the other way it says so kindly and gives no date.
+- **Body Profile** on Body: lean mass and body fat on one 4×4 grid, with a bright dot for now and faint dots for earlier months. Needs your height and fat mass from the scale. The ranges are approximate and not adjusted for age (see `docs/trends.md`).
+- Formulas and thresholds are written down in `docs/trends.md`.
+
 ## 0.5.1 — Add a location from a preset (2026-10-09)
 
 No Cloud Functions, `firestore.rules` or `config.js` changes; nothing to redeploy.

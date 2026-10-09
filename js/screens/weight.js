@@ -7,6 +7,7 @@ import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
 import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
+import { goalPathCard } from './body.js';
 
 const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', withings_csv: 'Withings (export)', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
@@ -62,7 +63,7 @@ export function renderWeight(el) {
   const u = getUnits();
   const series = weightSeries();
   const goalKg = state.profile && state.profile.targetWeightKg;
-  const projection = goalKg ? projectGoalDate(series, goalKg) : null;
+  const projection = goalKg ? projectGoalDate(series, goalKg) : null; // the dotted line on the chart
   const change7 = trendChange(series, 7);
   const rate = weeklyRate(series);
   const latest = series.length ? series[series.length - 1] : null;
@@ -95,9 +96,8 @@ export function renderWeight(el) {
         </div>
         ${weightChartSVG(series, { units: u, goalKg, projection, rangeDays: range || null })}
         <p class="small muted legend"><span class="key dot"></span>weigh-ins <span class="key line"></span>trend ${goalKg ? '<span class="key dash"></span>goal' : ''}</p>
-        ${projection ? `<p class="small">${projection.reached ? 'You’ve reached your goal weight. 🎉' : `At your current pace you’ll reach ${formatWeight(goalKg, u, 0)} around <b>${formatDay(projection.day, { month: 'short', day: 'numeric', year: 'numeric' })}</b>.`}</p>` : ''}
-        ${!projection && goalKg && series.length >= 2 ? '<p class="small muted">A goal date appears once your trend has about a week of data and is moving toward your goal.</p>' : ''}
-      </div>` : '<div class="card empty">No weigh-ins yet. Log your first one.</div>'}
+      </div>
+      ${goalPathCard()}` : '<div class="card empty">No weigh-ins yet. Log your first one.</div>'}
 
       ${entries.length ? `
       <h2>History</h2>

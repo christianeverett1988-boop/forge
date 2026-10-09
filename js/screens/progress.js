@@ -1,14 +1,13 @@
-// Progress tab: Weight | History | Score | Awards. Each part keeps its own route so links still work.
+// Progress tab: Weight | Trends | Score | Week | History | Awards. Each part keeps its own route so links still work.
 let last = 'weight';
+
+const TABS = [['weight', 'Weight'], ['trends', 'Trends'], ['score', 'Score'], ['weekly', 'Week'], ['history', 'History'], ['awards', 'Awards']];
 
 export function progressTabs(active) {
   last = active;
   return `
     <div class="seg progress-seg" role="tablist" aria-label="Progress">
-      <a role="tab" href="#/weight" class="${active === 'weight' ? 'on' : ''}" aria-selected="${active === 'weight'}">Weight</a>
-      <a role="tab" href="#/history" class="${active === 'history' ? 'on' : ''}" aria-selected="${active === 'history'}">History</a>
-      <a role="tab" href="#/score" class="${active === 'score' ? 'on' : ''}" aria-selected="${active === 'score'}">Score</a>
-      <a role="tab" href="#/awards" class="${active === 'awards' ? 'on' : ''}" aria-selected="${active === 'awards'}">Awards</a>
+      ${TABS.map(([k, l]) => `<a role="tab" href="#/${k}" class="${active === k ? 'on' : ''}" aria-selected="${active === k}">${l}</a>`).join('')}
     </div>`;
 }
 

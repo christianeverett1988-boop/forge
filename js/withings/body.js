@@ -32,14 +32,18 @@ export const KEY_OF_TYPE = {
 };
 
 /** A value in your units, as text: "181.4 lb", "21.4 %", "64 bpm"… */
-export function fmtMetric(key, v, units, { unit = true } = {}) {
+export function fmtMetric(key, v, units, { unit = true, kind: forced = null } = {}) {
   if (v == null || !Number.isFinite(v)) return '—';
-  const kind = (metricDef(key) || {}).kind || (/_kg$/.test(key) ? 'mass' : /_pct$/.test(key) ? 'pct' : key === 'height_m' ? 'height' : 'index');
+  const kind = forced || (metricDef(key) || {}).kind || (/_kg$/.test(key) ? 'mass' : /_pct$/.test(key) ? 'pct' : key === 'height_m' ? 'height' : 'index');
   if (kind === 'mass') return `${weightToDisplay(v, units).toFixed(1)}${unit ? ` ${weightUnit(units)}` : ''}`;
   if (kind === 'pct') return `${v.toFixed(1)}${unit ? ' %' : ''}`;
   if (kind === 'bpm') return `${Math.round(v)}${unit ? ' bpm' : ''}`;
   if (kind === 'kcal') return `${Math.round(v).toLocaleString()}${unit ? ' kcal' : ''}`;
   if (kind === 'vo2') return `${Math.round(v * 10) / 10}${unit ? ' ml/kg/min' : ''}`;
+  if (kind === 'ms') return `${Math.round(v)}${unit ? ' ms' : ''}`;
+  if (kind === 'minutes') return `${Math.round(v)}${unit ? ' min' : ''}`;
+  if (kind === 'count') return Math.round(v).toLocaleString();
+  if (kind === 'sleep') return unit ? `${Math.floor(v / 60)} h ${String(Math.round(v % 60)).padStart(2, '0')} min` : `${Math.round(v)}`;
   if (kind === 'years') return `${Math.round(v)}${unit ? ' yrs' : ''}`;
   if (kind === 'height') {
     if (units === 'metric') return `${Math.round(v * 100)} cm`;
