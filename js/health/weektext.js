@@ -16,6 +16,7 @@ export function reportText(r, units) {
     const d = fmtDelta(weightToDisplay(r.weight.change, units), { digits: 1, unit: weightUnit(units) });
     bits.push(`Weight trend ${d.same ? 'steady' : d.text}`);
   }
+  if (r.nutrition) bits.push(`Food ${r.nutrition.daysLogged}/7 days logged · about ${Math.round(r.nutrition.avgKcal).toLocaleString()} kcal, ${Math.round(r.nutrition.avgProtein)} g protein a day`);
   bits.push(`Next week: ${r.suggestion.text}`, '', 'Shared from Forge');
   return bits.join('\n');
 }

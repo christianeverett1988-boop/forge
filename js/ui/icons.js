@@ -7,6 +7,7 @@ const P = {
   back: '<path d="M15 5l-7 7 7 7"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   list: '<path d="M9 7h11M9 12h11M9 17h11"/><circle cx="4.6" cy="7" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17" r="1" fill="currentColor"/>',
@@ -44,6 +45,7 @@ const P = {
   play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   share: '<path d="M12 15V4M8 8l4-4 4 4M6 11H5.5A1.5 1.5 0 004 12.5v6A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-6a1.5 1.5 0 00-1.5-1.5H18"/>',
   star: '<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
+  food: '<path d="M7 3v7.5M4.5 3v5a2.5 2.5 0 005 0V3M7 10.5V21M17 21V3c-2.5 1.5-3.5 4.5-3.5 8.5H17"/>',
   moon:'<path d="M19.5 14.5A8 8 0 019.5 4.5a8 8 0 1010 10z"/>',
 };
 

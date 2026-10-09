@@ -57,6 +57,10 @@ export const MAP = {
   steps: [[2000, 0], [8000, 100]], // x: average steps a day
   acwr: [[0, 0], [0.4, 20], [0.8, 100], [1.3, 100], [1.6, 50], [2, 0]], // x: acute ÷ chronic weekly sets
   strength: [[-1.5, 0], [0, 60], [0.5, 100]], // x: e1RM change, % a week, main lifts
+  // Nutrition
+  logged: [[0, 0], [7, 100]], // x: days logged out of 7
+  kcalOff: [[0.1, 100], [0.3, 0]], // x: |eaten ÷ target − 1| on a logged day; within ±10% = 100
+  proteinRatio: [[0.5, 0], [1, 100]], // x: protein ÷ target on a logged day; at or over target = 100
 };
 
 // Components: weight inside the pillar. Equal unless noted (brief B.9).
@@ -65,8 +69,11 @@ export const COMPONENTS = {
   recovery: [['hrv', 'HRV', 1], ['rhr', 'Resting heart rate', 1], ['temp', 'Wrist temperature', 1], ['resp', 'Breathing rate', 1]],
   sleep: [['duration', 'Time asleep', 0.4], ['regularity', 'Regular bedtime', 0.4], ['stages', 'Deep + REM share', 0.2]],
   training: [['planned', 'Workouts done', 1], ['activity', 'Activity', 1], ['balance', 'Training balance', 1], ['strength', 'Strength trend', 1]],
-  nutrition: [], // lights up with food logging (Checkpoint C)
+  nutrition: [['logging', 'Days logged', 1], ['calories', 'Calories near target', 1], ['protein', 'Protein', 1]],
 };
+
+// Nutrition lights up only after this many logged days in the 7 ending on the day scored (docs/forge-score.md).
+export const MIN_FOOD_DAYS = 3;
 export const LABEL = Object.fromEntries(Object.entries(COMPONENTS).flatMap(([p, cs]) => cs.map(([k, l]) => [`${p}.${k}`, l])));
 
 const out = (value, raw, extra = {}) => (value == null ? null : { value: Math.round(clamp(value, 0, 100) * 10) / 10, raw, ...extra });
@@ -263,9 +270,44 @@ function trainingComponents(D, ctx) {
   return res;
 }
 
+// ---- Nutrition ----
+// ctx.food: Map(day → { kcal, protein_g }) of days with something logged; ctx.targets: { calories, proteinG } or null.
+function nutritionComponents(D, ctx) {
+  const res = {};
+  const logged = [];
+  for (let i = 0; i < 7; i++) { const f = ctx.food.get(shiftDay(D, -i)); if (f) logged.push(f); }
+  if (logged.length < MIN_FOOD_DAYS) return res;
+  res.logging = out(piecewise(MAP.logged, logged.length), `${logged.length} of 7 days logged`);
+  const t = ctx.targets;
+  if (t && t.calories > 0) {
+    res.calories = out(mean(logged.map((f) => piecewise(MAP.kcalOff, Math.abs(f.kcal / t.calories - 1)))),
+      `${logged.filter((f) => Math.abs(f.kcal / t.calories - 1) <= 0.1).length} of ${logged.length} logged days within 10% of ${t.calories.toLocaleString()} kcal`);
+  }
+  if (t && t.proteinG > 0) {
+    res.protein = out(mean(logged.map((f) => piecewise(MAP.proteinRatio, f.protein_g / t.proteinG))),
+      `${logged.filter((f) => f.protein_g >= t.proteinG).length} of ${logged.length} logged days at ${t.proteinG} g or more`);
+  }
+  return res;
+}
+
+/** Food log entries → Map(day → { kcal, protein_g }), only days with calories logged. */
+export function foodDays(logs = []) {
+  const m = new Map();
+  for (const l of logs) {
+    if (!l || l.deleted || !/^\d{4}-\d{2}-\d{2}$/.test(l.day || '')) continue;
+    const s = Number.isFinite(l.servings) && l.servings > 0 ? l.servings : 1;
+    const cur = m.get(l.day) || { kcal: 0, protein_g: 0 };
+    cur.kcal += (Number(l.kcal) || 0) * s;
+    cur.protein_g += (Number(l.protein_g) || 0) * s;
+    m.set(l.day, cur);
+  }
+  for (const [d, v] of m) if (!(v.kcal > 0)) m.delete(d);
+  return m;
+}
+
 /** All components for one day: { 'body.pace': { value, raw }, ... } */
 export function componentsFor(D, ctx) {
-  const c = { body: bodyComponents(D, ctx), recovery: recoveryComponents(D, ctx), sleep: sleepComponents(D, ctx), training: trainingComponents(D, ctx), nutrition: {} };
+  const c = { body: bodyComponents(D, ctx), recovery: recoveryComponents(D, ctx), sleep: sleepComponents(D, ctx), training: trainingComponents(D, ctx), nutrition: nutritionComponents(D, ctx) };
   return c;
 }
 
@@ -288,9 +330,9 @@ export function scoreDay(comps, weights = {}) {
  * Day scores for chosen days (long-term view): [{ day, score, pillars: { body, recovery, ... } }] in the order given.
  * A day only gets a score when at least MIN_PILLARS pillars have data that day. Same inputs as forgeScore.
  */
-export function scoreSamples({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, days = [] }) {
+export function scoreSamples({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, foodLogs = [], targets = null, days = [] }) {
   const done = finishedWorkouts(workouts).sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
-  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done };
+  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done, food: foodDays(foodLogs), targets };
   return days.map((day) => {
     const { score, pillars } = scoreDay(componentsFor(day, ctx));
     const n = Object.values(pillars).filter((v) => v != null).length;
@@ -300,13 +342,13 @@ export function scoreSamples({ rows = [], series = [], measures = [], workouts =
 
 /**
  * Forge Score for `today`. ctx: { rows (health_daily), series (weight trend [{day,trend}]), measures (body_measures),
- * workouts, cardio, profile }. Returns
+ * workouts, cardio, profile, foodLogs, targets ({ calories, proteinG }) }. Returns
  *   { score (7-day average), days: [{day, score}], pillars: [{key,label,weight,effective,score,tracked,components:[...]}],
  *     movers: top 3 component changes vs the 7 days before, notTracked: ['nutrition'] }
  */
-export function forgeScore({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, today }) {
+export function forgeScore({ rows = [], series = [], measures = [], workouts = [], cardio = [], profile = {}, foodLogs = [], targets = null, today }) {
   const done = finishedWorkouts(workouts).sort((a, b) => (a.started_at < b.started_at ? 1 : -1)); // newest first
-  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done };
+  const ctx = { days: indexDays(rows), series, measures, workouts, cardio: liveCardio(cardio), profile, done, food: foodDays(foodLogs), targets };
   const daily = [];
   for (let i = 13; i >= 0; i--) {
     const D = shiftDay(today, -i);

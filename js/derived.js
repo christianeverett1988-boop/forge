@@ -31,3 +31,9 @@ export function currentTargets() {
   if (!p) return null;
   return computeTargets({ ...p, weightKg: currentWeightKg() || p.weightKg });
 }
+
+/** The two targets the Forge Score and the weekly report judge food against, or null before a profile exists. */
+export function foodTargets() {
+  const t = currentTargets();
+  return t ? { calories: t.calories, proteinG: t.proteinG } : null;
+}

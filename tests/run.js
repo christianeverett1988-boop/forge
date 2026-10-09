@@ -32,6 +32,7 @@ import './longterm.test.js';
 import './report.test.js';
 import './bodyprograms.test.js';
 import './readiness-trends.test.js';
+import './food.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

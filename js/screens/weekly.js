@@ -82,6 +82,16 @@ export function renderWeekly(el) {
         ${line('Cardio', `${Math.round(t.cardioMin)} min`, null)}
       </ul>
     </div>
+    ${r.nutrition ? `
+    <div class="card stack" data-w-nutrition>
+      <p class="label">Nutrition</p>
+      <ul class="w-lines">
+        ${line('Days logged', `${r.nutrition.daysLogged} of 7`, null)}
+        ${line('Average calories', `${Math.round(r.nutrition.avgKcal).toLocaleString()} kcal`, null, { note: r.nutrition.targetKcal ? `target ${r.nutrition.targetKcal.toLocaleString()}` : null })}
+        ${line('Average protein', `${Math.round(r.nutrition.avgProtein)} g`, null, { note: r.nutrition.targetProtein ? `target ${r.nutrition.targetProtein} g` : null })}
+      </ul>
+      <p class="small muted">Averages cover the days you logged.</p>
+    </div>` : ''}
     ${r.recovery.hrv.now != null || r.recovery.rhr.now != null || r.recovery.sleep.now != null ? `
     <div class="card stack" data-w-recovery>
       <p class="label">Recovery</p>
