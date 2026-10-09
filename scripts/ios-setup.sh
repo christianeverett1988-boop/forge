@@ -89,6 +89,13 @@ ok "Forge is built and copied into the iPhone app"
 # ---- 5. Open Xcode ----
 say "Opening Xcode…"
 npx cap open ios >> "$LOG" 2>&1 || stop "Xcode didn’t open." "Open the file ios/App/App.xcodeproj by double-clicking it in Finder."
+# ---- 6. The weekly refresh button ----
+if [ -d "$HOME/Desktop" ] && cp "scripts/Refresh Forge.command" "$HOME/Desktop/Refresh Forge.command" 2>> "$LOG" && chmod +x "$HOME/Desktop/Refresh Forge.command"; then
+  ok "“Refresh Forge” is on your Desktop (double-click it every week)"
+else
+  say "  ! I couldn’t put “Refresh Forge” on your Desktop. Copy scripts/Refresh Forge.command there yourself."
+fi
+
 cat << 'DONE'
 
 All set. In Xcode:

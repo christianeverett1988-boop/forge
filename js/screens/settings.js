@@ -1,5 +1,6 @@
 import { state, units as getUnits } from '../state.js';
 import { isNative } from '../native/bridge.js';
+import { loadExpiry, expiryLine } from '../native/expiry.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
@@ -92,6 +93,7 @@ export function renderSettings(el) {
         ${nav('#/withings', 'scale', 'Withings', withingsLine(), 'data-withings-card')}
         ${nav('#/apple', 'heart', 'Apple Health', appleLine(), 'data-apple-card')}
       </div>
+      ${isNative() ? '<p class="small muted" data-app-refresh hidden></p>' : ''}
 
       <p class="sec-title">Your data</p>
       <div class="group">
@@ -127,6 +129,8 @@ export function renderSettings(el) {
   $$('input[name=units]', el).forEach((r) =>
     r.addEventListener('change', () => patch('settings', 'main', { units: r.value }))
   );
+  const refreshLine = $('[data-app-refresh]', el);
+  if (refreshLine) loadExpiry().then((e) => { const t = expiryLine(e); if (t && refreshLine.isConnected) { refreshLine.textContent = t; refreshLine.hidden = false; } });
   $$('input[name=player]', el).forEach((r) => r.addEventListener('change', () => patch('settings', 'main', { player: r.value })));
   $$('input[name=coach]', el).forEach((r) => r.addEventListener('change', () => {
     unlockAudio();

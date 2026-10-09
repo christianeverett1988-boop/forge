@@ -72,6 +72,8 @@ async function main() {
   }
   if (ok) for (const [p, t] of texts) await writeFile(p, localise(t));
   else console.warn('Firebase not bundled: the app will load it from the internet (it still works when online).');
+  // When this copy was built: the app's weekly-refresh countdown starts here (js/native/expiry.js).
+  await writeFile(join(OUT, 'app-install.json'), JSON.stringify({ builtAt: new Date().toISOString() }) + '\n');
   console.log(`www/ ready (${COPY.join(', ')}). Next: npx cap sync ios`);
 }
 

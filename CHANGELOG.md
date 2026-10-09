@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.1 — One-click weekly refresh for the iPhone app (2026-10-09)
+
+A free Apple ID signs the iPhone app for 7 days only. This makes the weekly re-install one double-click, and Forge tells you when it's due. The web app is unchanged. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.
+
+- **`Refresh Forge.command`:** `scripts/ios-setup.sh` now copies it to the Desktop. Double-click with the iPhone plugged in (or paired for Wi-Fi) and unlocked: it switches `~/forge-app` to `main`, pulls, runs the same build steps as the setup script, builds with `xcodebuild` (automatic signing, `-allowProvisioningUpdates`) and installs with `xcrun devicectl` on the first connected iPhone, without opening Xcode. Plain-words ✓/✗ steps, a fix for the usual problems (locked phone, not plugged in, Developer Mode, Apple ID signed out), a `refresh-forge.log`, and "Forge is refreshed: good for 7 more days."
+- **Countdown in the app (iPhone app only):** Settings shows "App refresh: expires in N days"; Today shows "Plug your iPhone into the Mac mini and double-click Refresh Forge." from 1 day before; a local notification goes out the day before (8:00 to 20:00). The expiry is the signing profile's ExpirationDate, which the refresh writes into the app (`app-install.json`); without it, build time + 7 days.
+- **Docs:** "Every week" in docs/ios-setup.md.
+- Tests for the expiry math.
+
 ## 0.15.0 — iPhone app proof of concept (Capacitor) (2026-10-09)
 
 - Morning read: from 4:00 to 12:00, until last night's sleep has arrived (HRV alone doesn't count), Forge reads Apple Health again on open (at most every 20 min, 30 min back-off after a failure). Readiness updates by itself.

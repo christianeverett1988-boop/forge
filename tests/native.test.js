@@ -202,3 +202,71 @@ test('morning auto-read: reads when today has no overnight data (every 20 min), 
   // the morning rule ends at 12:00
   eq(autoReadMode({ now: at(12, 10), last: at(11, 10).getTime(), today, rows: partial }), null);
 });
+
+// ---------- weekly refresh countdown (js/native/expiry.js) ----------
+import { expiryFrom, daysLeft, expiryLine, refreshDue, reminderAt, loadExpiry, DAY_MS } from '../js/native/expiry.js';
+import { scheduleExpiryReminder, EXPIRY_NOTIFICATION_ID } from '../js/native/bridge.js';
+
+test('expiry: the profile date wins, otherwise build/first-seen + 7 days, otherwise unknown', () => {
+  const built = Date.parse('2026-10-09T10:00:00Z');
+  eq(expiryFrom({ builtAt: '2026-10-09T10:00:00Z' }), built + 7 * DAY_MS);
+  eq(expiryFrom({ builtAt: '2026-10-09T10:00:00Z', expires: '2026-10-15T08:30:00Z' }), Date.parse('2026-10-15T08:30:00Z'));
+  eq(expiryFrom(null, built), built + 7 * DAY_MS);
+  eq(expiryFrom({ expires: 'nonsense' }), null);
+  eq(expiryFrom({}), null);
+});
+
+test('expiry: days left round up, the line and the banner follow', () => {
+  const exp = Date.parse('2026-10-16T10:00:00Z');
+  const at = (iso) => Date.parse(iso);
+  eq(daysLeft(exp, at('2026-10-09T10:00:00Z')), 7);
+  eq(daysLeft(exp, at('2026-10-09T10:00:01Z')), 7);
+  eq(daysLeft(exp, at('2026-10-15T20:00:00Z')), 1);
+  eq(daysLeft(exp, at('2026-10-16T09:59:00Z')), 1);
+  eq(daysLeft(exp, at('2026-10-17T00:00:00Z')), 0);
+  eq(daysLeft(null), null);
+  eq(expiryLine(exp, at('2026-10-12T10:00:00Z')), 'App refresh: expires in 4 days');
+  eq(expiryLine(exp, at('2026-10-15T12:00:00Z')), 'App refresh: expires in 1 day');
+  eq(expiryLine(exp, at('2026-10-17T00:00:00Z')), 'App refresh: due now');
+  eq(expiryLine(null), '');
+  assert(!refreshDue(exp, at('2026-10-14T09:00:00Z')), 'two days left: no banner');
+  assert(refreshDue(exp, at('2026-10-15T10:00:00Z')), 'exactly a day left: banner');
+  assert(refreshDue(exp, at('2026-10-16T08:00:00Z')), 'the morning it is due: banner');
+  assert(refreshDue(exp, at('2026-10-18T08:00:00Z')), 'already expired: banner');
+  assert(!refreshDue(null), 'unknown: no banner');
+});
+
+test('expiry: the reminder is the day before, kept between 8:00 and 20:00, never in the past', () => {
+  const local = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+  const now = local(2026, 10, 9, 12);
+  eq(reminderAt(local(2026, 10, 16, 14), now), local(2026, 10, 15, 14));
+  eq(reminderAt(local(2026, 10, 16, 3), now), local(2026, 10, 15, 8)); // 3:00 the day before → 8:00
+  eq(reminderAt(local(2026, 10, 16, 23), now), local(2026, 10, 15, 20)); // 23:00 → 20:00
+  eq(reminderAt(local(2026, 10, 10, 11), now), null); // the day before is already past
+  eq(reminderAt(null, now), null);
+});
+
+test('expiry: loadExpiry is null on the web; in the app it reads app-install.json', async () => {
+  web();
+  eq(await loadExpiry(), null);
+  fakeShell();
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ builtAt: '2026-10-09T10:00:00Z', expires: '2026-10-14T01:02:03Z' }) });
+  eq(await loadExpiry(), Date.parse('2026-10-14T01:02:03Z'));
+  web();
+  delete globalThis.fetch;
+});
+
+test('expiry reminder: its own notification, cancelled when there is none', async () => {
+  web();
+  eq(await scheduleExpiryReminder(Date.now() + 1e6), false);
+  const calls = fakeShell();
+  const at = Date.now() + 3 * DAY_MS;
+  eq(await scheduleExpiryReminder(at), true);
+  const sched = calls.find((c) => c[1] === 'schedule');
+  eq(sched[2].notifications[0].id, EXPIRY_NOTIFICATION_ID);
+  eq(sched[2].notifications[0].schedule.at.getTime(), at);
+  calls.length = 0;
+  await scheduleExpiryReminder(null);
+  assert(calls.some((c) => c[1] === 'cancel') && !calls.some((c) => c[1] === 'schedule'));
+  web();
+});

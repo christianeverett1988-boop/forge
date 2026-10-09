@@ -1,5 +1,5 @@
 // App boot: service worker, sign-in, live data, and a tiny hash router.
-import { isNative, syncStatusBar, hideSplash, setupKeyboard } from './native/bridge.js';
+import { isNative, syncStatusBar, hideSplash, setupKeyboard, scheduleExpiryReminder } from './native/bridge.js';
 import { configured } from './firebase.js';
 import { state, subscribe, LOADED_KEYS } from './state.js';
 import { esc, toast, closeAllSheets } from './ui.js';
@@ -282,6 +282,14 @@ function autoHealth() {
   import('./screens/apple.js').then((m) => m.autoHealthSync()).catch(() => {});
 }
 if (isNative()) document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoHealth(); });
+
+// iPhone app: a local notification the day before the free Apple ID signature runs out (js/native/expiry.js).
+if (isNative()) {
+  import('./native/expiry.js').then(async (m) => {
+    const at = m.reminderAt(await m.loadExpiry());
+    if (at != null) scheduleExpiryReminder(at); // none once it's past: the Today banner takes over
+  }).catch(() => {});
+}
 
 subscribe((patch) => {
   seedAwards();

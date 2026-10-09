@@ -96,6 +96,26 @@ async function applyRest() {
   }
 }
 
+// ---------- "refresh the app" reminder (free Apple ID: the app stops opening after 7 days) ----------
+export const EXPIRY_NOTIFICATION_ID = 4102;
+
+/** Schedule (atMs) or cancel (null) the one local notification that says the app needs its weekly refresh. */
+export async function scheduleExpiryReminder(atMs) {
+  if (!isNative()) return false;
+  const N = await notifications();
+  if (!N) return false;
+  try {
+    await N.cancel({ notifications: [{ id: EXPIRY_NOTIFICATION_ID }] });
+    if (atMs != null) {
+      await N.schedule({ notifications: [{ id: EXPIRY_NOTIFICATION_ID, title: 'Forge needs its weekly refresh',
+        body: 'Plug your iPhone into the Mac mini and double-click Refresh Forge.', schedule: { at: new Date(atMs), allowWhileIdle: true } }] });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ---------- links that leave the app (Withings sign-in) ----------
 /** Open a web page over the app (Safari view): you come straight back when you close it. False on the web. */
 export function openExternal(url) {
