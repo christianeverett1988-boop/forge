@@ -215,6 +215,9 @@ export function renderToday(el) {
 
       ${insightsBlock()}
 
+      <a class="card row between center nav-card" href="#/coach" data-coach-card>
+        <div><p class="label">Coach</p><p>Ask Coach</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
+
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
 

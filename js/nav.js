@@ -10,6 +10,7 @@ export const TAB_FOR = {
   history: 'weight', awards: 'weight', score: 'weight',
   locations: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
   metric: 'body', photos: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
+  coach: 'today',
 };
 export const tabOf = (route) => TAB_FOR[route] || route;
 

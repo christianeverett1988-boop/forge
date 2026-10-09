@@ -167,3 +167,22 @@
 .insight.compact .insight-head[aria-expanded="true"] .insight-body { -webkit-line-clamp: unset; display: block; }
 .insight-more { display: grid; gap: 6px; padding: 0 var(--s-4) var(--s-4); }
 
+
+/* ---------- v0.10.0: Coach (no-AI mode). Tokens only. ---------- */
+.coach-thread { display: grid; gap: var(--s-3); }
+.coach-thread:empty { display: none; }
+.coach-q { display: flex; justify-content: flex-end; }
+.bubble.user { max-width: 85%; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg) var(--r-lg) var(--r-sm) var(--r-lg); background: var(--accent-tint); color: var(--text-1); font-size: 17px; line-height: 24px; overflow-wrap: anywhere; }
+.coach-a { border-top-left-radius: var(--r-sm); }
+.coach-head { margin: 0; }
+.coach-lines { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-2); font-size: 16px; line-height: 22px; }
+.coach-action { display: grid; gap: var(--s-3); padding-top: var(--s-3); border-top: .5px solid var(--separator); }
+.coach-done { margin: 0; }
+.coach-chips { display: grid; gap: var(--s-2); }
+.coach-chip { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); width: 100%; min-height: 56px; padding: var(--s-3) var(--s-4); border: 0; border-radius: var(--r-xl); background: var(--top-light), var(--surface-1); color: var(--text-1); font: inherit; font-size: 17px; line-height: 22px; text-align: left; cursor: pointer; }
+.coach-chip:active { background: var(--surface-2); }
+.coach-chip .chev { flex: none; color: var(--text-3); display: inline-flex; }
+@media (prefers-reduced-motion: no-preference) {
+  .coach-q, .coach-a { animation: coach-in .25s ease-out both; }
+  @keyframes coach-in { from { opacity: 0; } to { opacity: 1; } }
+}

@@ -96,6 +96,7 @@ const routes = {
   score: () => import('./screens/score.js').then((m) => m.renderScore(main)),
   trends: () => import('./screens/trends.js').then((m) => m.renderTrends(main)),
   weekly: () => import('./screens/weekly.js').then((m) => m.renderWeekly(main)),
+  coach: () => import('./screens/coach.js').then((m) => m.renderCoach(main)),
   withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
   metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
   photos: (sub) => import('./screens/photos.js').then((m) => m.renderPhotos(main, sub)),
