@@ -149,8 +149,9 @@ export function openTimelapse({ sessions }) {
           title: isVideo ? 'Your time-lapse' : 'Your photo strip',
           blob: out.blob,
           name: `forge-${pose}-${frames[0].day}-to-${frames[frames.length - 1].day}.${out.ext}`,
-          preview: isVideo ? `<video src="${url}" controls playsinline loop muted></video>` : `<img src="${url}" alt="Photo strip of ${poseLabel(pose).toLowerCase()} photos">`,
+          preview: isVideo ? `<video src="${url}" controls autoplay muted loop playsinline></video>` : `<img src="${url}" alt="Photo strip of ${poseLabel(pose).toLowerCase()} photos">`,
           note: isVideo ? '' : 'Your browser can’t make a video, so this is a strip of all your photos in order.',
+          onClose: () => URL.revokeObjectURL(url),
         });
       } catch (err) {
         body.querySelector('[data-err]').textContent = 'Couldn’t make that. Try fewer photos.';

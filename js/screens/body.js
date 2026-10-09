@@ -3,7 +3,7 @@
 // this week. (Strength score and weekly set targets come later.)
 import { myBodyMeasures } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
-import { esc, $$, sheet, todayKey } from '../ui.js';
+import { esc, $, $$, sheet, todayKey } from '../ui.js';
 import { topInsights, dismissInsight, intel, currentGoalPath, currentEnergy, currentBodyProfile } from '../health/intel.js';
 import { insightCardsHtml, bindInsightCards, goalPathHtml, bodyProfileHtml } from '../health/cards.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';

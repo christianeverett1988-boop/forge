@@ -41,8 +41,9 @@ export async function shareOrSave(blob, name, title) {
 }
 
 /** A sheet that shows what was made with Share/Save and Save buttons. `preview` is HTML for the top. */
-export function deliverSheet({ title, blob, name, preview = '', note = '' }) {
+export function deliverSheet({ title, blob, name, preview = '', note = '', onClose }) {
   return sheet(title, (body) => {
+    if (onClose) body.closest('dialog').addEventListener('close', onClose);
     const file = new File([blob], name, { type: blob.type });
     const share = canShareFile(file);
     body.innerHTML = `<div class="stack tl-result">${preview}

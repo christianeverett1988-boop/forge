@@ -162,6 +162,26 @@ test('CSS: a global [hidden] rule beats class rules that set display', () => {
   assert(/(^|\n)\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css), 'css/app.css needs [hidden] { display: none !important }');
 });
 
+// ---- Import guard: a bare $( or $$( call needs that name imported from ui.js (a missing import only fails at render time) ----
+test('every js/ file that calls $( or $$( imports that name from ui.js', () => {
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(new URL(`${d.name}/`, dir)) : d.name.endsWith('.js') ? [new URL(d.name, dir)] : []));
+  let used = 0;
+  for (const f of walk(new URL('../js/', import.meta.url))) {
+    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+    const imported = new Set();
+    for (const [, names, from] of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
+      if (/(^|\/)ui\.js$/.test(from)) names.split(',').forEach((n) => imported.add(n.trim().split(/\s+as\s+/).pop()));
+    }
+    for (const [name, esc$] of [['$$', '\\$\\$'], ['$', '\\$']]) {
+      if (!new RegExp(`(^|[^\\w$.])${esc$}\\(`, 'm').test(src)) continue;
+      if (new RegExp(`(const|let|function)\\s+${esc$}(?![\\w$])`).test(src)) continue; // defines its own
+      used++;
+      assert(imported.has(name), `${f.pathname.split('/js/')[1]} calls ${name}( but does not import it from ui.js`);
+    }
+  }
+  assert(used >= 1, 'found no $( calls to check');
+});
+
 test('shell: no spinner, no floating sync pill, manifest has id and a maskable icon', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert(!/class="loading"/.test(html), 'spinner markup left in index.html');

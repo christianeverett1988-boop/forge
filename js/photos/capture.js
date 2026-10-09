@@ -41,6 +41,8 @@ export function openCapture({ store, sessions, day = todayKey(), onSaved }) {
         <button class="btn primary" type="button" data-save disabled>Save photos</button>
       </div>`;
     const q = (sel, root = body) => root.querySelector(sel);
+    // Revoke picked previews however the sheet goes away (close button, swipe, Escape, backdrop or save).
+    body.closest('dialog').addEventListener('close', () => Object.values(picked).forEach((p) => URL.revokeObjectURL(p.url)));
 
     const paint = (pose) => {
       const row = q(`[data-pose="${pose}"]`);
@@ -102,7 +104,6 @@ export function openCapture({ store, sessions, day = todayKey(), onSaved }) {
         await keepStorage();
         for (const [pose, p] of chosen) await store.save({ day: d, pose, blob: p.blob, w: p.w, h: p.h, note });
         if (note) await store.setNote(d, note);
-        Object.values(picked).forEach((p) => URL.revokeObjectURL(p.url));
         close();
         toast(`Saved ${chosen.length === 1 ? 'your photo' : `${chosen.length} photos`}`, 2600, { icon: 'check' });
         if (onSaved) onSaved();

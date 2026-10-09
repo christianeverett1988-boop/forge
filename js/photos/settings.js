@@ -19,7 +19,6 @@ export function photoSettingsHtml() {
           </select></label>
         <a class="g-row" href="#/photos"><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Open progress photos</span><small data-photo-usage>&nbsp;</small></span><span class="chev">${icon('chev')}</span></a>
         <button class="g-row" data-photo-export><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export all photos (zip)</span><small>Your backup. Save it to Files or iCloud Drive.</small></span></button>
-        <div class="g-row static disabled" aria-disabled="true"><span class="g-ic">${icon('info')}</span><span class="g-text"><span>AI analysis (coming later, off by default)</span><small>Nothing is ever sent anywhere.</small></span></div>
         <button class="g-row g-danger" data-photo-wipe><span class="g-ic">${icon('trash')}</span><span class="g-text"><span>Delete all photos on this phone</span></span></button>
       </div>
       <p class="sec-foot">Photos stay on this iPhone only. They aren’t backed up by Forge. If you delete the app or clear Safari data, they’re gone.</p>`;
