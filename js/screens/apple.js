@@ -3,7 +3,7 @@
 // have arrived. All data here is written by Cloud Functions; the app only reads it.
 import { state } from '../state.js';
 import { esc, $, $$, sheet, toast, confirmSheet, todayKey, formatDay } from '../ui.js';
-import { serverErrorText } from '../ui/errors.js';
+import { serverErrorText, errorFor } from '../ui/errors.js';
 import { FIREBASE_CONFIG } from '../../config.js';
 import { fieldStatus } from '../health/status.js';
 import { currentReadiness } from '../health/today.js';
@@ -152,10 +152,11 @@ function importCard() {
 export function renderApple(el) {
   const a = A();
   const has = !!a.connected;
+  const readErr = errorFor(state.serverErrors, ['health_daily', 'integrations']);
   el.innerHTML = `
     <section class="stack">
       <h1>Apple Health</h1>
-      ${state.serverError ? `<div class="notice warn">${esc(serverErrorText(state.serverError, 'Apple Health'))}</div>` : ''}
+      ${readErr ? `<div class="notice warn">${esc(serverErrorText(readErr, 'Apple Health'))}</div>` : ''}
       <p class="muted">Bring your Watch’s overnight HRV, resting heart rate, sleep and wrist temperature into Forge for Readiness and your Forge Score. Everything stays in your own Forge account.</p>
       ${statusCard()}
       <div class="card stack">

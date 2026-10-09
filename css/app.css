@@ -540,7 +540,8 @@ body.tour-on main { padding-bottom: 360px; } /* room to scroll the last cards ab
 
 /* v0.14.6 chart polish: unit label, bar scale, tap-to-read */
 .chart .unit { font-weight: 600; }
-.chart .bar-top { stroke: var(--accent-text); stroke-opacity: .25; stroke-width: 1; stroke-dasharray: 2 3; }
+.chart .bar-top { stroke: var(--accent-text); stroke-opacity: .15; stroke-width: 1; stroke-dasharray: 1 4; }
+.chart .bar-label { fill: var(--accent-text); opacity: .75; }
 .chart .scrub-line { stroke: var(--text-2); stroke-width: 1; }
 .chart .scrub-dot { fill: var(--accent-text); stroke: var(--bg); stroke-width: 2; }
 .chart-readout { min-height: 1.4em; font-variant-numeric: tabular-nums; }

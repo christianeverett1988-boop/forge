@@ -1,7 +1,7 @@
 // v0.14.6 polish: chart ticks, units, bar scale and tap-to-read; friendly server errors; the family-weigh-in seed.
 import { test, eq, assert } from './harness.js';
 import { niceTicks, axisLabel, lineChartSVG, nearestIndex, unitOf } from '../js/ui/linechart.js';
-import { serverErrorText } from '../js/ui/errors.js';
+import { serverErrorText, errorFor } from '../js/ui/errors.js';
 import { suspects, seedWeight } from '../js/withings/review.js';
 
 test('chart ticks are round numbers with the decimals their step needs', () => {
@@ -86,6 +86,14 @@ test('classifier seed: an onboarding weight from months ago never flags you afte
   const scale = Array.from({ length: 35 }, (_, i) => ({ id: `s${i}`, kg: 120 - (20 * (i + 1)) / 35, measured_at: new Date(t0 + (i + 1) * 5 * 864e5).toISOString(), source: 'withings' }));
   eq(scale.filter((w) => suspects([typed, ...scale], 0.15, 120).has(w.id)).length, 0);
   eq(scale.filter((w) => suspects([typed, ...scale]).has(w.id)).length, 0);
+});
+
+test('server errors are per collection: a failed body_measures does not warn on the Apple Health screen', () => {
+  const errs = { body_measures: 'permission-denied', health_daily: null, integrations: null };
+  eq(errorFor(errs, ['health_daily', 'integrations']), null);
+  eq(errorFor(errs, ['body_measures', 'integrations']), 'permission-denied');
+  eq(errorFor({ health_daily: 'unavailable' }, ['health_daily', 'integrations']), 'unavailable');
+  eq(errorFor(undefined, ['health_daily']), null);
 });
 
 test('unitOf gives no unit for formats with more than one (sleep, imperial height)', () => {

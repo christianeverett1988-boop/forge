@@ -4,7 +4,7 @@
 // body_measures, which only Cloud Functions write.
 import { state, units as getUnits } from '../state.js';
 import { esc, $, $$, sheet, toast, formatDay, todayKey } from '../ui.js';
-import { serverErrorText } from '../ui/errors.js';
+import { serverErrorText, errorFor } from '../ui/errors.js';
 import { fieldStatus } from '../health/status.js';
 import { reviewBodyMeasure, bulkNotMe, putMany, readAll, newRecord } from '../db.js';
 import { formatWeight, weightToDisplay, weightFromInput, weightUnit } from '../units.js';
@@ -43,10 +43,11 @@ export function renderWithings(el, sub) {
   const years = backfillYears(bf);
   const csvCount = state.weights.filter((x) => x.source === 'withings_csv').length;
 
+  const readErr = errorFor(state.serverErrors, ['body_measures', 'integrations']);
   el.innerHTML = `
     <section class="stack">
       <h1>Withings</h1>
-      ${state.serverError ? `<div class="notice warn">${esc(serverErrorText(state.serverError, 'Withings'))}</div>` : ''}
+      ${readErr ? `<div class="notice warn">${esc(serverErrorText(readErr, 'Withings'))}</div>` : ''}
 
       ${!connected ? `
       <div class="card stack">

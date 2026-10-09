@@ -4,6 +4,7 @@
 
 Merge after 0.14.5 (food logging). **Cloud Functions changed** (one line, the history-import year windows): deploy with `firebase deploy --only functions` when convenient. Nothing breaks before you do. No `firestore.rules` or `config.js` changes.
 
+- **Server-error notice is per collection:** the Withings screen warns only when `body_measures` or `integrations` can't be read, and Apple Health only for `health_daily` or `integrations`. A failure in one no longer shows on the other. The chart's "N sets" scale line is lighter so it doesn't read as part of the weight axis.
 - **Body metric charts:**
   - axis numbers are round (146, 148, 150… or 26.5, 27.0…) with the unit above them;
   - the training-set bars have a scale ("36 sets" at their top line);

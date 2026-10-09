@@ -1,5 +1,13 @@
 // Plain-words text for a failed read of server-written data (Withings, Apple Health). Pure.
-// state.serverError holds the Firestore error code, e.g. "permission-denied" or "firestore/unavailable".
+// state.serverErrors maps each server-written collection to its Firestore error code, e.g. "permission-denied"
+// or "firestore/unavailable".
+
+/** The first error among the collections a screen depends on, or null (other collections' failures don't count). */
+export function errorFor(errors, cols) {
+  const e = errors || {};
+  for (const c of cols) if (e[c]) return e[c];
+  return null;
+}
 
 /** What to tell you when Forge can't read `what` ("Withings", "Apple Health"). */
 export function serverErrorText(code, what) {

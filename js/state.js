@@ -19,7 +19,7 @@ export const state = {
   body_measures: [], // server-written (Withings)
   health_daily: [], // server-written (Apple Health, W2)
   integrations: {}, // server-written status: { withings: {...} }
-  serverError: null,
+  serverErrors: {}, // Firestore error code per server-written collection, e.g. { health_daily: 'permission-denied' }
   sync: typeof navigator === 'undefined' || navigator.onLine ? 'synced' : 'offline',
 
   set(patch) {
@@ -31,7 +31,7 @@ export const state = {
     this.set({
       user, loaded: notLoaded(), loadError: null, profile: null, settings: null,
       locations: [], weights: [], workouts: [], cardio: [], programs: [], exercises: [],
-      body_measures: [], health_daily: [], integrations: {}, serverError: null,
+      body_measures: [], health_daily: [], integrations: {}, serverErrors: {},
     });
   },
 };
