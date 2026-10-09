@@ -86,6 +86,7 @@ export function createAggregator({ since }) {
     if (!Number.isFinite(v)) return;
     if (field === 'spo2_avg_pct' && v <= 1) v *= 100;
     if (field === 'active_kcal' && /kj/i.test(a.unit || '')) v /= 4.184;
+    if (field === 'wrist_temp_c' && /degF|°F/i.test(a.unit || '')) v = ((v - 32) * 5) / 9; // an export from a phone set to °F
     records++;
     if (how === 'mean') {
       const m = ((means[field] ||= {})[day] ||= [0, 0]);

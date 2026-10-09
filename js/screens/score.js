@@ -7,6 +7,8 @@ import { currentScore } from '../health/today.js';
 import { ringSvg, animateScoreRings, scoreColor, round } from '../health/ui.js';
 import { PILLARS } from '../health/score.js';
 
+const DOC_URL = 'https://github.com/christianeverett1988-boop/forge/blob/main/docs/forge-score.md';
+
 let open = null; // which pillar's details are showing
 
 const pct = (w) => `${Math.round(w * 100)}%`;
@@ -27,7 +29,7 @@ function detail(p) {
   return `<div class="card stack" data-detail>
     <div class="row between center"><p class="label" style="margin:0">${esc(p.label)} · ${p.score == null ? '—' : round(p.score)}</p><span class="small muted">${pct(p.effective)} of your score</span></div>
     <ul class="comp-list">${rows}</ul>
-    <p class="small muted">The numbers behind each part are on the right. How each one turns into 0–100 is in <code>docs/forge-score.md</code>.</p></div>`;
+    <p class="small muted">Each part is scored 0–100 against a target (or against your own usual). The line under each name shows the real number it was worked out from. The full list of targets is in <a class="link" href="${DOC_URL}" target="_blank" rel="noopener">How the Forge Score works</a>.</p></div>`;
 }
 
 export function renderScore(el) {
@@ -52,11 +54,11 @@ export function renderScore(el) {
       </div>
       <p class="small muted" style="text-align:center">Last 14 days</p>
     </div>` : `
-    <div class="card stack">
-      <p class="big-title">Your score starts soon</p>
-      <p class="muted">Forge scores five things: your body, recovery, sleep, training and (soon) food. It needs a little data first.</p>
+    <div class="card stack" data-no-score>
+      <p class="big-title">${s.trackedCount > 0 ? `Based on ${s.trackedCount} of 5 parts so far` : 'Your score starts soon'}</p>
+      <p class="muted">Forge scores five things: your body, recovery, sleep, training and (soon) food. It shows a number once at least ${s.minPillars} of them have data, so a score is never built from just one or two.</p>
       <ul class="reasons"><li>Log your weight a few times, or connect your Withings scale.</li><li>Finish a couple of workouts.</li>${apple ? '' : '<li>Add Apple Health for recovery and sleep.</li>'}</ul>
-      ${apple ? '' : '<a class="btn bigbtn" href="#/apple">Set up Apple Health</a>'}
+      ${apple ? '' : '<a class="btn bigbtn" href="#/apple">Add Apple Health for Recovery and Sleep</a>'}
     </div>`;
 
   const movers = s.movers.length ? `
@@ -76,7 +78,8 @@ export function renderScore(el) {
       ${movers}
       <div class="pillar-grid">${s.pillars.map(tile).join('')}</div>
       <div data-detail-slot>${open ? detail(s.pillars.find((p) => p.key === open)) : ''}</div>
-      ${s.notTracked.includes('nutrition') ? '<p class="small muted"><b>Nutrition: not tracked yet.</b> Its 15% is shared among the other four until food logging arrives, so nothing is counted against you.</p>' : ''}
+      ${hasData ? `<p class="small muted tcenter" style="text-align:center" data-based-on>Based on ${s.trackedCount} of 5 parts</p>` : ''}
+      ${s.notTracked.includes('nutrition') ? `<p class="small muted"><b>Nutrition: not tracked yet.</b> Its 15% is shared among the ${s.trackedCount} part${s.trackedCount === 1 ? '' : 's'} with data until food logging arrives, so nothing is counted against you.</p>` : ''}
       <details class="card">
         <summary>How is this worked out?</summary>
         <p class="small muted" style="margin-top:8px">Each day gets a score from 0 to 100, and you see the average of the last 7. Weights: Body 25%, Recovery 20%, Sleep 15%, Training 25%, Nutrition 15%. If a part has no data, its weight is shared out, never scored as zero. Your score is only ever compared with your own past weeks.</p>

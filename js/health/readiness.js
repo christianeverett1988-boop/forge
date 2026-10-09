@@ -24,7 +24,7 @@ export function loadFromFatigue(fatigue) {
 const fmtH = (min) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min`;
 
 // Plain-words explanation for each signal. dir: 'bad' | 'good' | 'ok'
-function words(key, x, base, z) {
+function words(key, x, base, z, units) {
   const bad = z < -0.5;
   const good = z > 0.5;
   const dir = bad ? 'bad' : good ? 'good' : 'ok';
@@ -41,8 +41,10 @@ function words(key, x, base, z) {
       const d = Math.round(x - base);
       return { dir, text: bad ? `You slept ${fmtH(x)}, about ${fmtH(Math.abs(d))} under your usual` : good ? `You slept ${fmtH(x)}, more than usual` : `You slept ${fmtH(x)}, about your usual` };
     }
-    case 'temp':
-      return { dir, text: bad ? `Wrist temperature is ${Math.abs(x).toFixed(1)}° off your normal` : 'Wrist temperature is normal for you' };
+    case 'temp': { // a difference in °C is ×1.8 in °F (no +32)
+      const off = units === 'metric' ? `${Math.abs(x).toFixed(1)} °C` : `${(Math.abs(x) * 1.8).toFixed(1)} °F`;
+      return { dir, text: bad ? `Wrist temperature is ${off} off your normal` : 'Wrist temperature is normal for you' };
+    }
     default:
       return { dir, text: bad ? 'Breathing rate is higher than your usual' : good ? 'Breathing rate is lower than your usual' : 'Breathing rate is normal for you' };
   }
@@ -52,8 +54,11 @@ function words(key, x, base, z) {
  * rows: health_daily docs. today: 'YYYY-MM-DD'. load: 0..1 (loadFromFatigue). Returns
  *   { status: 'none'|'building'|'waiting'|'ok', level?, composite?, reason?, parts?, baselineDays, needed, lastDay? }
  *   'building' = fewer than 14 days of history; 'waiting' = no data from today or yesterday yet.
+ *   An 'ok' result also has fromDay (the newest day of HRV / resting HR it used) and stale: true when that
+ *   isn't today, i.e. this morning's data hasn't arrived and the verdict is still yesterday's.
+ *   units: 'imperial' | 'metric' (only changes how the wrist-temperature sentence is written).
  */
-export function readiness({ rows, today, load = 0 }) {
+export function readiness({ rows, today, load = 0, units = 'imperial' }) {
   const days = indexDays(rows);
   const baselineDays = coreDayCount(days, shiftDay(today, -BASELINE_DAYS), shiftDay(today, -1));
   const base = { baselineDays, needed: NEEDED_DAYS };
@@ -99,7 +104,7 @@ export function readiness({ rows, today, load = 0 }) {
     const s = zScore(x, hist, SD_FLOOR[key]);
     const z = clamp(sign * s.z, -3, 3);
     const raw = key === 'temp' ? c.value : x;
-    parts.push({ key, z, weight: WEIGHTS[key], value: c.value, baseline: s.mean, ...words(key, raw, s.mean, z) });
+    parts.push({ key, z, weight: WEIGHTS[key], value: c.value, baseline: s.mean, ...words(key, raw, s.mean, z, units) });
   }
   if (!parts.some((p) => p.key === 'hrv' || p.key === 'rhr')) return { status: 'waiting', lastDay, ...base };
 
@@ -123,5 +128,6 @@ export function readiness({ rows, today, load = 0 }) {
   }
   const items = [...parts];
   if (load > 0) items.push({ key: 'load', z: -penalty, weight: 0, dir: load >= 0.5 ? 'bad' : 'ok', text: load >= 0.5 ? 'Yesterday’s training was heavy' : 'Yesterday’s training was light', value: load });
-  return { status: 'ok', level, composite, reason, parts: items, load, lastDay, ...base };
+  const fromDay = [cur.hrv, cur.rhr].filter(Boolean).map((c) => c.day).sort().pop();
+  return { status: 'ok', level, composite, reason, parts: items, load, lastDay, fromDay, stale: fromDay < today, ...base };
 }

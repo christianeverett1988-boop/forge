@@ -8,7 +8,8 @@ Sources: where a number comes from a published guideline it says so. **Forge def
 
 - Each day gets a score from 0 to 100. The app shows the **average of the last 7 days**.
 - Five pillars, each the weighted mean of its components. Pillar weights (shown in the app): **Body 25%, Recovery 20%, Sleep 15%, Training 25%, Nutrition 15%**.
-- A component without enough data is left out, and so is a pillar with no components. The remaining weights are scaled up to add to 100% (never scored as zero). **Nutrition** is "not tracked yet" until food logging (Checkpoint C), so for now its 15% is shared among the other four (Body 29.4%, Recovery 23.5%, Sleep 17.6%, Training 29.4% when all four are present).
+- A component without enough data is left out, and so is a pillar with no components. The remaining weights are scaled up to add to 100% (never scored as zero). **Nutrition** is "not tracked yet" until food logging (Checkpoint C), so for now its 15% is shared among the pillars that have data (Body 29.4%, Recovery 23.5%, Sleep 17.6%, Training 29.4% when all four are present).
+- **No overall score from fewer than 3 pillars.** Body + Training alone (no Watch data) isn't a picture of you, so Forge shows "Based on 2 of 5 parts" and an invitation to add Apple Health instead of a number.
 - **What moved it** compares each component's average over the last 7 days with the 7 days before, weights the change by how much that component counts in the whole score, and shows the top 3.
 
 Notation: `x → y` points, e.g. `[0, 0] [10, 100]`.
@@ -30,10 +31,12 @@ Uses `health_daily` (Apple Health). "Baseline" = the 28 days that end 7 days bef
 
 | Component | Input | Points | Source |
 |---|---|---|---|
-| **HRV** | z-score of the 7-day mean of ln(SDNN) vs baseline | z: `[-2,0] [0,100]` (z ≥ 0 is 100) | Brief B.9; ln(SDNN) is the common practice for HRV trends |
-| **Resting heart rate** | z-score of the 7-day mean vs baseline, sign flipped (higher is worse) | z: `[-2,0] [0,100]` | Brief B.9 |
+| **HRV** | z-score of the 7-day mean of ln(SDNN) vs baseline | z: `[-2,0] [0,75] [1,100]` (at your usual = 75, so there is room to improve; +1 SD or better is 100) | Brief B.9; ln(SDNN) is the common practice for HRV trends. The 75 at z = 0 is a Forge default |
+| **Resting heart rate** | z-score of the 7-day mean vs baseline, sign flipped (higher is worse) | z: `[-2,0] [0,75] [1,100]` | Brief B.9 |
 | **Wrist temperature** | 7-day mean of \|delta\| in °C (the delta is from your own baseline) | `[0.5,100] [1,0]` | Forge default (brief B.9) |
-| **Breathing rate** | z-score of the 7-day mean vs baseline, sign flipped | z: `[-2,0] [0,100]` | Brief B.9 |
+| **Breathing rate** | z-score of the 7-day mean vs baseline, sign flipped | z: `[-2,0] [0,75] [1,100]` | Brief B.9 |
+
+**Same definitions for the Shortcut and the export.** Overnight signals (HRV, resting heart rate, breathing rate, wrist temperature, SpO₂) use only readings that **end before 11:00 am**, so a normal day's HRV is the night's, not a daytime mean. The export import applies that rule, and the Shortcut filters the same way. Daily totals (steps, active energy, exercise minutes) are Health's own de-duplicated per-day totals: the export picks the one source with the most for each day, and the Shortcut uses *Group By Day*. The morning run sends yesterday's finished totals as `steps_yesterday`, `active_kcal_yesterday` and `exercise_min_yesterday`; Forge stores them on the day before. The evening run sends only today's totals, so it can't overwrite the overnight signals.
 
 ## Sleep (15%)
 
@@ -64,6 +67,7 @@ Not tracked yet. It lights up with food logging: days logged ÷ 7, calories with
 
 Computed each morning from `health_daily`. It needs **14 days** of overnight data (HRV, resting heart rate or sleep) in the 28 days before today; the Apple Health export import provides them on day one. Until then Today shows how many days it has.
 
+0. **Only this morning's data steers the day.** If HRV and resting heart rate aren't from today yet, Today shows yesterday's verdict marked "waiting for this morning's data", and the workout generator ignores it.
 1. For each signal take today's value (or yesterday's if today's hasn't arrived) and z-score it against the previous 28 days: **HRV** (ln SDNN, higher is better), **resting heart rate** (lower is better), **sleep duration** (more is better), **|wrist temperature delta|** (closer to your normal is better), **breathing rate** (lower is better). Each z is flipped so positive always means better, then limited to ±3. A signal needs 8+ baseline values.
 2. Signal weights (Forge default): HRV 0.35, resting HR 0.25, sleep 0.20, temperature 0.10, breathing 0.10. Missing signals are left out and the rest re-weighted. HRV or resting HR must be present.
 3. **Training load:** the mean of your three most-fatigued muscles right now (`fatigueAt` in `js/workouts/recovery.js`, in hard-set units), divided by 6 and limited to 0–1, times **0.5**, is subtracted. Heavy training yesterday costs up to half a standard deviation.

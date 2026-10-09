@@ -7,6 +7,8 @@ import { shiftDay, indexDays, mean, sd, clamp, GET, windowValues, tempDelta, zSc
 import { addDays, daysBetween, dayKey } from '../weight/smoothing.js';
 import { e1rm } from '../workouts/progression.js';
 
+export const MIN_PILLARS = 3; // no overall score until this many pillars have data (Body + Training alone isn't a picture of you)
+
 export const PILLARS = {
   body: { label: 'Body', weight: 0.25 },
   recovery: { label: 'Recovery', weight: 0.2 },
@@ -43,7 +45,7 @@ export const MAP = {
   fmiMale: [[1.5, 40], [3, 100], [6, 100], [9, 50], [13, 0]], // x: fat mass index kg/m²
   fmiFemale: [[3, 40], [5, 100], [9, 100], [13, 50], [17, 0]],
   // Recovery (x: z-score, positive = better than your baseline)
-  recoveryZ: [[-2, 0], [0, 100]],
+  recoveryZ: [[-2, 0], [0, 75], [1, 100]], // at your usual = 75; room to improve up to +1 SD
   tempDelta: [[0.5, 100], [1, 0]], // x: |wrist temperature delta| °C
   // Sleep
   sleepDuration: [[240, 0], [360, 55], [420, 100]], // x: minutes asleep (7-day mean)
@@ -300,12 +302,12 @@ export function forgeScore({ rows = [], series = [], measures = [], workouts = [
   const mine = daily.slice(7);
   const prev = daily.slice(0, 7);
   const avg = (xs) => { const v = xs.filter((x) => x != null); return v.length ? mean(v) : null; };
-  const score = avg(mine.map((d) => d.score));
 
   const meanComp = (set, p, k) => avg(set.map((d) => d.comps[p] && d.comps[p][k] && d.comps[p][k].value));
   const latestComp = (p, k) => { for (let i = mine.length - 1; i >= 0; i--) { const c = mine[i].comps[p] && mine[i].comps[p][k]; if (c) return c; } return null; };
   const tracked = Object.keys(PILLARS).filter((p) => avg(mine.map((d) => d.pillars[p])) != null);
   const wsum = tracked.reduce((a, p) => a + PILLARS[p].weight, 0);
+  const score = tracked.length >= MIN_PILLARS ? avg(mine.map((d) => d.score)) : null;
   const pillars = Object.entries(PILLARS).map(([key, def]) => {
     const isTracked = tracked.includes(key);
     return {
@@ -327,5 +329,5 @@ export function forgeScore({ rows = [], series = [], measures = [], workouts = [
     }
   }
   movers.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
-  return { score, days: daily.map((d) => ({ day: d.day, score: d.score })), pillars, movers: movers.filter((m) => Math.abs(m.delta) >= 1).slice(0, 3), notTracked: Object.keys(PILLARS).filter((p) => !tracked.includes(p)) };
+  return { score, trackedCount: tracked.length, minPillars: MIN_PILLARS, days: daily.map((d) => ({ day: d.day, score: tracked.length >= MIN_PILLARS ? d.score : null })), pillars, movers: movers.filter((m) => Math.abs(m.delta) >= 1).slice(0, 3), notTracked: Object.keys(PILLARS).filter((p) => !tracked.includes(p)) };
 }

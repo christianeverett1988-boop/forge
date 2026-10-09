@@ -60,6 +60,24 @@ test('readiness: one off signal is amber', () => {
   assert(r.parts.find((p) => p.key === 'hrv').dir === 'bad');
 });
 
+test('readiness: before this morning’s data arrives it is still yesterday’s verdict, flagged stale (and not used for the workout)', () => {
+  const rows = history(30, null); // last row is yesterday
+  const r = readiness({ rows, today: TODAY });
+  eq(r.status, 'ok');
+  eq(r.stale, true);
+  eq(r.fromDay, shiftDay(TODAY, -1));
+  const fresh = readiness({ rows: history(30), today: TODAY });
+  eq(fresh.stale, false);
+  eq(fresh.fromDay, TODAY);
+});
+
+test('readiness: the wrist-temperature sentence is in °F for imperial users (0.6 °C = 1.1 °F) and °C for metric', () => {
+  const rows = history(30, { wrist_temp_delta_c: 0.6 });
+  const text = (units) => readiness({ rows, today: TODAY, units }).parts.find((p) => p.key === 'temp').text;
+  assert(/1\.1 °F/.test(text('imperial')), text('imperial'));
+  assert(/0\.6 °C/.test(text('metric')), text('metric'));
+});
+
 test('readiness: wrist temperature 1 °C off your normal forces at least amber, in either direction', () => {
   for (const t of [1.1, -1.1]) eq(readiness({ rows: history(30, { wrist_temp_delta_c: t }), today: TODAY }).level === 'green', false);
 });
@@ -140,7 +158,7 @@ test('piecewise: interpolates, clamps at both ends, ignores non-numbers', () => 
 });
 
 test('mappings: every documented anchor (docs/forge-score.md)', () => {
-  eq(piecewise(MAP.recoveryZ, 0), 100); eq(piecewise(MAP.recoveryZ, 1.5), 100); eq(piecewise(MAP.recoveryZ, -2), 0); eq(piecewise(MAP.recoveryZ, -1), 50);
+  eq(piecewise(MAP.recoveryZ, 0), 75); eq(piecewise(MAP.recoveryZ, 1), 100); eq(piecewise(MAP.recoveryZ, 1.5), 100); eq(piecewise(MAP.recoveryZ, -2), 0); eq(piecewise(MAP.recoveryZ, -1), 37.5);
   eq(piecewise(MAP.tempDelta, 0.5), 100); eq(piecewise(MAP.tempDelta, 1), 0); near(piecewise(MAP.tempDelta, 0.75), 50, 1e-9);
   eq(piecewise(MAP.sleepDuration, 420), 100); eq(piecewise(MAP.sleepDuration, 600), 100); eq(piecewise(MAP.sleepDuration, 240), 0); eq(piecewise(MAP.sleepDuration, 360), 55);
   eq(piecewise(MAP.sleepRegularity, 30), 100); eq(piecewise(MAP.sleepRegularity, 90), 0);
@@ -244,6 +262,26 @@ test('forgeScore: "what moved it" lists the top 3 component changes vs the week 
   for (let i = 1; i < r.movers.length; i++) assert(Math.abs(r.movers[i - 1].impact) >= Math.abs(r.movers[i].impact));
 });
 
+test('forgeScore: with no Apple Health data only Body + Training are tracked, so there is no overall score', () => {
+  const a = account();
+  const r = forgeScore({ ...a, rows: [] });
+  eq(r.score, null);
+  eq(r.trackedCount, 2);
+  assert(r.days.every((d) => d.score == null));
+  assert(forgeScore(a).score != null, 'with Apple Health it is back');
+});
+
+test('forgeScore: a Red-readiness week cannot score in the 90s, and costs real points against a normal week', () => {
+  const a = account();
+  const red = forgeScore({ ...a, rows: a.rows.map((r) => (r.id > shiftDay(TODAY, -7) ? { ...r, hrv_sdnn_ms: 34, rhr_bpm: 62, sleep: { ...r.sleep, asleep_min: 300 } } : r)) });
+  assert(red.score < 88, `red week ${red.score}`);
+  assert(forgeScore(a).score - red.score > 6, `normal ${forgeScore(a).score} vs red ${red.score}`);
+  const rec = red.pillars.find((p) => p.key === 'recovery').score;
+  assert(rec < 50, `recovery in a red week ${rec}`);
+  const normal = forgeScore(a).pillars.find((p) => p.key === 'recovery').score;
+  assert(normal > 60 && normal < 90, `recovery at your usual ${normal}`);
+});
+
 test('forgeScore: no data at all gives no score (not a zero), and nothing throws', () => {
   const r = forgeScore({ today: TODAY });
   eq(r.score, null);
@@ -289,6 +327,15 @@ test('export: daily summaries — overnight HRV mean, one source for steps, stag
   eq(JSON.stringify([d.sleep.asleep_min, d.sleep.core_min, d.sleep.deep_min, d.sleep.rem_min, d.sleep.awake_min]), JSON.stringify([270, 150, 60, 90, 10]));
   eq(d.sleep.in_bed_start, '2026-10-09T03:00:00.000Z');
   eq(d.sleep.in_bed_end, '2026-10-09T07:40:00.000Z');
+});
+
+test('export: wrist temperature recorded in °F (unit="degF") is converted to °C before averaging; °C is left alone', () => {
+  const t = (v, unit) => `<Record type="${T}AppleSleepingWristTemperature" sourceName="Test Watch" unit="${unit}" startDate="2026-10-09 03:00:00 -0400" endDate="2026-10-09 03:01:00 -0400" value="${v}"/>`;
+  const run = (xmlText) => { const g = createAggregator({ since: '2026-10-01' }); g.feed(xmlText); return g.finish(); };
+  const f = run(`<HealthData>${t(96.8, 'degF')}${t(98.6, 'degF')}</HealthData>`);
+  near(f[0].wrist_temp_c, 36.5, 0.01); // mean of 36.0 and 37.0
+  const c = run(`<HealthData>${t(36.4, 'degC')}</HealthData>`);
+  near(c[0].wrist_temp_c, 36.4, 1e-9);
 });
 
 test('export: an evening sleep segment belongs to tomorrow’s wake-up; wrist temperature gets a delta from the previous nights', () => {

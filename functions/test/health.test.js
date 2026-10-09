@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { fakeDb } from './fake-db.js';
 import {
   hashToken, newToken, looksLikeToken, parsePayload, BadPayload, sleepFromSegments, mergeDay,
-  handleIngest, importDays, createToken, revokeToken, wipeApple, MAX_BODY_BYTES,
+  handleIngest, importDays, createToken, revokeToken, wipeApple, deleteAppleData, MAX_BODY_BYTES, RATE_PER_HOUR, RATE_PER_DAY,
 } from '../src/health.js';
 import { disconnect } from '../src/maintenance.js';
 import { setSink } from '../src/log.js';
@@ -86,21 +86,118 @@ test('ingest: 401 for missing, malformed, wrong and other users’ tokens; nothi
   assert.equal(db.stats.writes, before);
 });
 
-test('ingest: 405 for GET, 413 over 256 KB (checked after auth, before parsing), 400 for bad payloads', async () => {
+test('ingest: 405 for GET, 413 over 256 KB (before any lookup), 400 for a bad day or body', async () => {
   const db = fakeDb();
   const { token } = await createToken({ db, uid: UID, now });
   assert.equal((await handleIngest({ method: 'GET', headers: {}, bodyBytes: 0, body: null }, { db, now })).status, 405);
+  const reads = db.stats.reads;
   assert.equal((await post(db, token, DAY, { bodyBytes: MAX_BODY_BYTES + 1 })).status, 413);
+  assert.equal((await post(db, 'nonsense', DAY, { bodyBytes: MAX_BODY_BYTES + 1 })).status, 413, 'even without a valid token');
+  assert.equal(db.stats.reads, reads, '413 does no database work');
   assert.equal((await post(db, token, DAY, { bodyBytes: MAX_BODY_BYTES })).status, 200);
   assert.equal((await post(db, token, null)).status, 400);
   assert.equal((await post(db, token, { day: 'yesterday', steps: 5 })).status, 400);
-  assert.equal((await post(db, token, { day: '2026-10-10', hrv_sdnn_ms: 9999 })).status, 400);
   assert.equal((await post(db, token, { day: '2026-10-10' })).status, 400);
   assert.equal((await post(db, token, { day: '2030-01-01', steps: 5 })).status, 400);
   assert.equal((await post(db, token, { day: '2026-02-31', steps: 5 })).status, 400);
-  const bad = await post(db, token, { day: '2026-10-10', rhr_bpm: { x: 1 } });
-  assert.equal(bad.status, 400);
-  assert.deepEqual(bad.body, { error: 'bad_field', field: 'rhr_bpm' }, 'names the field, never the value');
+});
+
+test('ingest: a field that can’t be read is dropped on its own; the rest is saved and the names are reported', async () => {
+  const db = fakeDb();
+  const { token } = await createToken({ db, uid: UID, now });
+  const r = await post(db, token, { day: '2026-10-10', rhr_bpm: { x: 1 }, hrv_sdnn_ms: 9999, steps: 4000, resp_rate: 14 });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.rejected, ['hrv_sdnn_ms', 'rhr_bpm']);
+  assert.deepEqual(r.body.fields, ['resp_rate', 'steps']);
+  const doc = db.dump(P.health(UID, '2026-10-10'));
+  assert.equal(doc.steps, 4000);
+  assert.ok(!('rhr_bpm' in doc) && !('hrv_sdnn_ms' in doc));
+  assert.deepEqual(db.dump(P.apple(UID)).rejected_last, ['hrv_sdnn_ms', 'rhr_bpm'], 'field names only');
+  // Nothing readable at all is still a 400 (and never echoes a value).
+  const none = await post(db, token, { day: '2026-10-10', rhr_bpm: 'abc' });
+  assert.deepEqual(none, { status: 400, body: { error: 'unreadable' } });
+});
+
+test('ingest: Fahrenheit, thousands separators, decimal commas', () => {
+  const [{ fields: f }] = parsePayload({ day: '2026-10-10', wrist_temp_c: '97.3', steps: '8,532', rhr_bpm: '52,5', active_kcal: '1,234.5' }, { now: NOW });
+  assert.equal(f.wrist_temp_c, 36.28, '97.3 °F → 36.28 °C');
+  assert.equal(f.steps, 8532);
+  assert.equal(f.rhr_bpm, 52.5);
+  assert.equal(f.active_kcal, 1235);
+  const [{ fields: g }] = parsePayload({ day: '2026-10-10', wrist_temp_c: [96.8, 97.7, 36.5], hrv_sdnn_ms: ['48,5', '52,5'] }, { now: NOW });
+  assert.equal(g.wrist_temp_c, 36.33, 'samples in °F and °C are each converted');
+  assert.equal(g.hrv_sdnn_ms, 50.5);
+  const [{ fields: h }] = parsePayload({ day: '2026-10-10', wrist_temp_c: 36.4, wrist_temp_delta_c: 0.4 }, { now: NOW });
+  assert.equal(h.wrist_temp_c, 36.4, '°C is left alone');
+});
+
+test('ingest: one bad sleep line is skipped; the rest of sleep and every other field survive', () => {
+  const rejected = [];
+  const [{ fields }] = parsePayload({
+    day: '2026-10-10', hrv_sdnn_ms: 50, steps: 100,
+    sleep_text: 'Core,2026-10-10T01:00:00Z,2026-10-10T03:00:00Z\nDeep,not a date,2026-10-10T04:00:00Z\nREM,2026-10-10T03:00:00Z,2026-10-10T04:00:00Z',
+  }, { now: NOW, rejected });
+  assert.deepEqual(rejected, ['sleep_text']);
+  assert.equal(fields.hrv_sdnn_ms, 50);
+  assert.equal(fields.sleep.asleep_min, 180);
+  assert.ok(!('deep_min' in fields.sleep));
+  // A sleep value that isn’t usable at all drops only the sleep field.
+  const rej2 = [];
+  const [{ fields: g }] = parsePayload({ day: '2026-10-10', steps: 100, sleep: 'lots' }, { now: NOW, rejected: rej2 });
+  assert.deepEqual(rej2, ['sleep']);
+  assert.equal(g.steps, 100);
+  assert.ok(!('sleep' in g));
+  // A bad workout line is skipped too.
+  const [{ fields: w }] = parsePayload({ day: '2026-10-10', workouts_text: 'Running,2026-10-10T07:00:00Z,45,420,150\nYoga,nope,xx' }, { now: NOW });
+  assert.equal(w.workouts.length, 1);
+});
+
+test('import: a day with an unreadable value no longer fails the whole chunk', async () => {
+  const db = fakeDb();
+  const r = await importDays({ db, uid: UID, now, data: { days: [{ day: '2026-10-01', wrist_temp_c: 'warm', steps: 5 }, { day: '2026-10-02', hrv_sdnn_ms: 40 }] } });
+  assert.equal(r.days, 2);
+  assert.equal(db.dump(P.health(UID, '2026-10-01')).steps, 5);
+});
+
+test('ingest: *_yesterday totals land on the day before; a morning post then an evening post keeps the overnight HRV', async () => {
+  const db = fakeDb();
+  const { token } = await createToken({ db, uid: UID, now });
+  const morning = await post(db, token, { day: '2026-10-10', hrv_sdnn_ms: 52, rhr_bpm: 55, steps: 300, steps_yesterday: 9100, exercise_min_yesterday: 31 });
+  assert.equal(morning.status, 200);
+  assert.equal(db.dump(P.health(UID, '2026-10-09')).steps, 9100);
+  assert.equal(db.dump(P.health(UID, '2026-10-09')).exercise_min, 31);
+  assert.equal(db.dump(P.health(UID, '2026-10-10')).steps, 300);
+  await post(db, token, { day: '2026-10-10', steps: 7400, active_kcal: 520, steps_yesterday: 9100 });
+  const d = db.dump(P.health(UID, '2026-10-10'));
+  assert.equal(d.hrv_sdnn_ms, 52, 'the evening run leaves overnight signals alone');
+  assert.equal(d.rhr_bpm, 55);
+  assert.equal(d.steps, 7400);
+  assert.equal(d.active_kcal, 520);
+});
+
+test('ingest: over 30 posts an hour → 429 (nothing written); the window resets; 200 a day is the other cap', async () => {
+  const lines = [];
+  setSink((l) => lines.push(l));
+  try {
+    const db = fakeDb();
+    const { token } = await createToken({ db, uid: UID, now });
+    for (let i = 0; i < RATE_PER_HOUR; i++) assert.equal((await post(db, token, { ...DAY, steps: 100 + i })).status, 200);
+    const writes = db.stats.writes;
+    const r = await post(db, token, { ...DAY, steps: 5 });
+    assert.deepEqual(r, { status: 429, body: { error: 'slow_down' } });
+    assert.equal(db.stats.writes, writes, 'a refused post writes nothing');
+    assert.ok(lines.some((l) => JSON.parse(l).status === 429));
+    // an hour later it works again
+    const later = (b) => handleIngest({ method: 'POST', headers: { authorization: `Bearer ${token}` }, bodyBytes: 10, body: b }, { db, now: () => NOW + 3600001 });
+    assert.equal((await later({ ...DAY, steps: 1 })).status, 200);
+    assert.ok(db.dump(P.shortcutTok(hashToken(token))).last_used_at);
+    // the daily cap
+    const tok = db.dump(P.shortcutTok(hashToken(token)));
+    db.put(P.shortcutTok(hashToken(token)), { ...tok, day_n: RATE_PER_DAY, day_start: NOW + 3600001, hour_n: 0, hour_start: NOW + 3600001 });
+    assert.equal((await later({ ...DAY, steps: 2 })).status, 429);
+  } finally {
+    setSink((l) => console.log(l));
+  }
 });
 
 test('ingest logs and errors carry no health values or tokens', async () => {
@@ -126,7 +223,7 @@ test('late and duplicate posts merge by day: newer non-empty fields win, others 
   await post(db, token, { day: '2026-10-09', steps: 3000, rhr_bpm: 54, sleep: { asleep_min: 400, deep_min: 60 } });
   const w = db.stats.writes;
   await post(db, token, { day: '2026-10-09', steps: 3000, rhr_bpm: 54, sleep: { asleep_min: 400, deep_min: 60 } });
-  assert.equal(db.stats.writes, w + 1, 'only the status doc is touched by an exact duplicate');
+  assert.equal(db.stats.writes, w + 2, 'only the status doc and the token’s rate counter are touched by an exact duplicate');
   await post(db, token, { day: '2026-10-09', steps: 9100, hrv_sdnn_ms: 48, sleep: { rem_min: 90 }, rhr_bpm: '' });
   const d = db.dump(P.health(UID, '2026-10-09'));
   assert.equal(d.steps, 9100);
@@ -236,11 +333,23 @@ test('importDays: export days merge with Shortcut days (newer non-empty wins), s
   await assert.rejects(importDays({ db, uid: UID, now, data: { days: Array.from({ length: 121 }, () => ({ day: '2026-10-01', steps: 1 })) } }), BadPayload);
 });
 
-test('delete everything: disconnect(deleteData) also removes the Shortcut token, its hash map and the Apple status', async () => {
+test('Withings disconnect with deleteData leaves Apple Health days, the Shortcut token and its status alone', async () => {
   const db = fakeDb();
   const { token } = await createToken({ db, uid: UID, now });
   await post(db, token, DAY);
   await disconnect({ db, api: {}, uid: UID, webhookUrl: 'x', deleteData: true, now });
+  assert.ok(db.dump(P.health(UID, '2026-10-10')));
+  assert.ok(db.dump(P.shortcut(UID)));
+  assert.ok(db.dump(P.shortcutTok(hashToken(token))));
+  assert.ok(db.dump(P.apple(UID)));
+  assert.equal((await post(db, token, DAY)).status, 200);
+});
+
+test('delete everything: disconnect(deleteData + deleteApple) also removes days, the Shortcut token, its hash map and the Apple status', async () => {
+  const db = fakeDb();
+  const { token } = await createToken({ db, uid: UID, now });
+  await post(db, token, DAY);
+  await disconnect({ db, api: {}, uid: UID, webhookUrl: 'x', deleteData: true, deleteApple: true, now });
   assert.equal(db.dump(P.health(UID, '2026-10-10')), undefined);
   assert.equal(db.dump(P.shortcut(UID)), undefined);
   assert.equal(db.dump(P.shortcutTok(hashToken(token))), undefined);

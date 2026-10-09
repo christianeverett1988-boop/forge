@@ -352,7 +352,7 @@ test('disconnect: revokes, deletes tokens and mapping; deleteData also removes s
   assert.equal(db.dump(P.wuser(WUSER)), undefined);
   assert.equal(db.dump(P.body(UID, 'w_1')), undefined);
   assert.equal(db.dump(P.weight(UID, 'w_1')), undefined);
-  assert.equal(db.dump(`${P.healthCol(UID)}/2026-10-09`), undefined);
+  assert.ok(db.dump(`${P.healthCol(UID)}/2026-10-09`), 'Apple Health days are not Withings data');
   assert.ok(db.dump(P.weight(UID, 'manual1')), 'your own weigh-ins stay (delete-everything removes them itself)');
   assert.equal(db.dump(P.status(UID)), undefined);
 });

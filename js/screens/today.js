@@ -73,10 +73,12 @@ function readinessCard() {
   const over = readinessOverridden();
   const bars = r.parts.filter((p) => p.key !== 'load').map((p) => `<span class="${p.dir === 'bad' ? 'bad' : p.dir === 'good' ? 'ok' : 'meh'}" title="${esc(p.text)}"><i></i></span>`).join('');
   return `<div class="card ready-card ${r.level}" data-readiness>
-    <div class="ready-head"><span class="ready-pill">${LEVEL_WORD[r.level]}</span><button class="link small" data-ready-why aria-expanded="false">Why?</button></div>
+    <div class="ready-head"><span class="ready-pill">${LEVEL_WORD[r.level]}</span><button class="link small ready-why-btn" data-ready-why aria-expanded="false">Why?</button></div>
+    ${r.stale ? '<p class="ready-stale" data-ready-stale>Based on yesterday · waiting for this morning’s data. Today’s workout isn’t changed yet.</p>' : ''}
     <p class="ready-why">${esc(r.reason)}</p>
     <p class="ready-do">${over && r.level !== 'green' ? 'You chose to train as planned today.' : LEVEL_DO[r.level]}</p>
-    ${r.level === 'red' && !over ? '<button class="btn ghost bigbtn" data-ready-override>Train as planned anyway</button>' : ''}
+    ${r.level === 'red' && !over && !r.stale ? '<button class="btn ghost bigbtn" data-ready-override>Train as planned anyway</button>' : ''}
+    ${over && r.level !== 'green' ? '<button class="btn ghost bigbtn" data-ready-again>Use Readiness again</button>' : ''}
     <div class="ready-bars" aria-hidden="true">${bars}</div>
     <ul class="ready-parts" data-ready-parts hidden>${r.parts.map((p) => `<li class="${p.dir === 'bad' ? 'bad' : p.dir === 'good' ? 'good' : ''}">${esc(p.text)}</li>`).join('')}</ul>
   </div>`;
@@ -196,6 +198,11 @@ export function renderToday(el) {
   if (override) override.onclick = () => {
     overrideReadiness(true);
     renderToday(el); // the plan and the card both redraw as "train as planned"
+  };
+  const again = $('[data-ready-again]', el);
+  if (again) again.onclick = () => {
+    overrideReadiness(false);
+    renderToday(el);
   };
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);
