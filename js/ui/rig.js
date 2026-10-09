@@ -70,11 +70,13 @@ export const sine = (u) => 0.5 - 0.5 * Math.cos(Math.PI * clamp(u, 0, 1));
  * tempo: { ecc, pause, con, top } — lowering, pause at the bottom, lifting, pause at the top.
  */
 export function repPhases(tempo, first) {
-  const { ecc, pause, con, top } = tempo;
+  const { ecc, pause, con, top, lin } = tempo;
   // In a squat the hardest point is the bottom; in a curl or pull-up it is the top (progress 1 either way).
-  return first === 'down'
+  const phases = first === 'down'
     ? [{ from: 0, to: 1, d: ecc }, { hold: 1, d: pause }, { from: 1, to: 0, d: con }, { hold: 0, d: top }]
     : [{ from: 0, to: 1, d: con }, { hold: 1, d: top }, { from: 1, to: 0, d: ecc }, { hold: 0, d: pause }];
+  // tempo.lin: steady speed instead of the sine ease, for cycles that loop (pedals, strides, a rope).
+  return lin ? phases.map((p) => ({ ...p, lin: true })) : phases;
 }
 export const repLength = (phases) => phases.reduce((s, p) => s + p.d, 0);
 
@@ -90,7 +92,7 @@ export function progressAt(phases, t, lag = 0) {
       if (p.hold != null) return p.hold;
       const tau = x / p.d;
       const u = lag >= 0 ? (tau - lag) / (1 - lag) : tau / (1 + lag);
-      return p.from + (p.to - p.from) * sine(u);
+      return p.from + (p.to - p.from) * (p.lin ? clamp(u, 0, 1) : sine(u));
     }
     x -= p.d;
   }
@@ -153,7 +155,8 @@ function rotAbout(p, o, k, deg) {
  *          line by `deg` (90 = onto the far side, near arm up). Hand targets with `world: true` are given
  *          after the roll.
  */
-export function solve(tpl, P) {
+export function solve(tpl, P0) {
+  const P = tpl.drive ? tpl.drive(P0) : P0; // cardio and boxing templates turn their cycle angle `ph` into joint targets
   const r = tpl.rig;
   const j = {};
   const air = P.air || 0;
@@ -266,7 +269,7 @@ export function solve(tpl, P) {
       const f = { ...(r.feet || {}), ...(r['feet' + S] || {}) };
       const heel = P['heel' + S] ?? P.heel ?? f.heel ?? 0;
       let ankle;
-      let footA = f.angle ?? 90; // 90 = flat, pointing forward; smaller = toes pointing down
+      let footA = P['fa' + S] ?? P.fa ?? f.angle ?? 90; // 90 = flat, pointing forward; smaller = toes pointing down
       if (r.root === 'plank' && r.pivot.joint === 'ankle') {
         ankle = [P['fx' + S] ?? r.pivot.at[0], (P['fy' + S] ?? r.pivot.at[1]) + air, side * (f.z ?? 0.1)];
       } else if (r.root === 'plank') {
@@ -308,6 +311,7 @@ export function solve(tpl, P) {
       j[k] = rotAbout(j[k], DIRS.includes(k) ? [0, 0, 0] : rollOrigin, rollAxis, r.roll.deg);
     }
   }
+  if (tpl.drive) j.P = P; // the driven numbers, for the machine props (tpl.prims)
   if (P.sl != null) j.sl = P.sl; // leg-press sled: where its plate sits along the rail (metres)
   return j;
 }
@@ -394,6 +398,7 @@ export function propParts(tpl) {
     if (g === 'sled') out.push('sled');
     if (g === 'kneepads') out.push('padN', 'padF');
     if (g === 'cuff') out.push('cuffcable', 'cuff', 'pulley');
+    if (g === 'cardio') out.push('cardioB', 'cardioF');
   }
   return out;
 }
@@ -450,6 +455,19 @@ export function ankleCuff(tpl, j) {
   return { centre, a: add(centre, mul(across, 0.06)), b: sub(centre, mul(across, 0.06)), pulley: tpl.cuff.pulley };
 }
 
+/**
+ * Machine and bag shapes for one frame (v0.14.4): tpl.prims(j) → { back, front }, lists of
+ *   { k: 'line', a, b, w, c } (round ends) | { k: 'curve', pts, w, c } | { k: 'circle', c, r, fill, stroke } | { k: 'poly', pts, fill, stroke }
+ * in world metres. `back` is drawn behind the body, `front` over it.
+ */
+export function cardioProps(tpl, j) {
+  return tpl.prims ? tpl.prims(j) : { back: [], front: [] };
+}
+/** Every world point of a prim, for framing and for the tests. */
+export function primPoints(p) {
+  return p.k === 'line' ? [p.a, p.b] : p.k === 'circle' ? [add(p.c, [p.r, 0, 0]), add(p.c, [-p.r, 0, 0]), add(p.c, [0, p.r, 0]), add(p.c, [0, -p.r, 0])] : p.pts;
+}
+
 /** World point whose depth decides where each part sits in the draw order, plus a small tie-break. */
 function anchors(tpl, j) {
   const a = {};
@@ -496,6 +514,7 @@ function anchors(tpl, j) {
       a[name] = [[x, y, { F: 0.37, M: 0, N: -0.37 }[name[2]]], 0];
     } else if (/^dip[NF]$/.test(name)) a[name] = [[0, (tpl.dipY ?? 1.15), name === 'dipN' ? -0.26 : 0.26], 0];
     else if (/^ring[NF]$/.test(name)) a[name] = [j['grip' + name.slice(-1)], 0.005];
+    else if (name === 'cardioB' || name === 'cardioF') a[name] = [[0, 0, name === 'cardioB' ? 3 : -3], 0]; // machine and bag: behind the body, or in front of it
     else if (name === 'sled') a.sled = [sledPlate(tpl, j).centre, 0];
     else if (/^pad[NF]$/.test(name)) a[name] = [kneePad(tpl, j, name[3]).centre, -0.02];
     else if (name === 'cuff') a.cuff = [ankleCuff(tpl, j).centre, -0.03];
@@ -555,6 +574,7 @@ export function frameBox(tpl, project, phases, n = 16) {
     if (parts.includes('sled')) for (const q of [...sledPlate(tpl, j).back, ...sledPlate(tpl, j).face]) take(q);
     for (const S of ['N', 'F']) if (parts.includes('pad' + S)) { take(kneePad(tpl, j, S).a); take(kneePad(tpl, j, S).b); }
     if (parts.includes('cuff')) take(tpl.cuff.pulley);
+    if (parts.includes('cardioB')) { const cp = cardioProps(tpl, j); for (const q of [...cp.back, ...cp.front]) for (const pt of primPoints(q)) take(pt); }
     if (parts.includes('pbM')) take([tpl.rig.hands.x, tpl.rig.hands.y + 0.05, 0]);
     if (parts.includes('goblet')) take([j.gripN[0], j.gripN[1] - 0.25, 0]);
     for (const S of ['N', 'F']) if (parts.includes('kb' + S)) take(add(j['grip' + S], mul(bellDir(tpl, j, S), 0.2)));
