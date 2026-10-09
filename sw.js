@@ -19,6 +19,7 @@ const SHELL = [
   './css/health.css',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-192-maskable.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './js/app.js',

@@ -52,7 +52,7 @@
 .pillar span { display: flex; flex-direction: column; min-width: 0; }
 .pillar span strong { font-size: 16px; }
 .pillar span small { color: var(--muted); font-size: 13px; }
-.pillar[aria-expanded="true"] { border-color: var(--accent); }
+.pillar[aria-expanded="true"] { background: var(--surface-2); }
 .mover { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; min-height: 56px; }
 .mover .arrow { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 20px; background: var(--surface-2); }
 .mover .arrow.up { color: var(--good); }
@@ -96,4 +96,4 @@
 .ready-stale { font-size: 14px; color: var(--muted); }
 .copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
 .copy-chip code { word-break: break-all; text-align: left; }
-.copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }

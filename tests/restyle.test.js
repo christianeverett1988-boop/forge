@@ -47,6 +47,15 @@ test('segmented thumb: position and width follow the chosen segment', () => {
   eq(segThumb(0, 0).n, 1, 'never divides by zero');
 });
 
+test('swipe-back parallax: parent starts 30% left and settles at 0 as the screen leaves', async () => {
+  const { parallaxOffset } = await import('../js/ui/gesture.js');
+  eq(parallaxOffset(0, 390), -30);
+  eq(parallaxOffset(390, 390), 0);
+  eq(parallaxOffset(195, 390), -15);
+  eq(parallaxOffset(9999, 390), 0, 'clamped');
+  eq(parallaxOffset(10, 0), 0, 'no width, no movement');
+});
+
 test('pull to refresh: resistance, threshold and cap', () => {
   eq(pullState(-20).offset, 0);
   eq(pullState(0).ready, false);

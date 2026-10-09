@@ -113,8 +113,9 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
   background: var(--glass-float); color: var(--text); font-weight: 600; font-size: 15px;
   -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .4), inset 0 0 0 .5px var(--hairline);
-  padding: 12px 18px; border-radius: 999px; max-width: calc(100% - 32px); text-align: center;
+  padding: 12px 18px; border-radius: var(--r-pill); max-width: calc(100% - 32px); text-align: center; display: flex; align-items: center; justify-content: center; gap: var(--s-2);
 }
+.toast .ic { width: 18px; height: 18px; color: var(--accent-text); }
 .toast.show { opacity: 1; translate: -50% 0; }
 
 /* ---------- Bottom sheet: grabber, glass header, drag to dismiss ---------- */
@@ -171,7 +172,9 @@ main.swiping {
   position: relative; z-index: 1; min-height: 100dvh; background: var(--bg);
   box-shadow: -12px 0 32px rgba(0, 0, 0, .5); will-change: transform;
 }
-.swipe-under { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--surface-2); }
+.swipe-under { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--bg); overflow: hidden; }
+.snap-wrap { position: absolute; inset: 0; transform: translateX(-30%); will-change: transform; overflow: hidden; }
+main.snap { position: relative; pointer-events: none; }
 .swipe-under i { position: absolute; inset: 0; background: black; opacity: .5; }
 
 /* ---------- Pull to refresh ---------- */

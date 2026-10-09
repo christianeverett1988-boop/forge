@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 — A new look: near-black, calm and premium (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy. (This is Part B of issue #18, the visual restyle.)
+
+- **One look, one place.** All colours, corner sizes, spacing and shadows now come from a single file (`css/tokens.css`). A test fails if a stray colour code shows up anywhere else.
+- **Light mode.** If your phone is set to Light, Forge follows it (Today, Settings and everything else). Dark is still the default look. Text stays readable in both.
+- **Softer cards, less clutter.** Cards have no outlines, big rounded corners and a hint of light on top. Section titles are plain sentence case instead of ALL CAPS. Lists look like iPhone Settings: rows with thin dividers and arrows.
+- **Less lime.** Normal buttons are white pills. Lime is kept for the one main action on a screen (Start, Done set, Save), the active tab, progress, rings and records. Chips are quiet grey pills that tint when chosen, and the segmented controls (Units, Guided/List…) have a grey thumb that slides.
+- **Real switches in Settings.** Sound effects and Haptic tick are iPhone switches, so they tick when you flip them.
+- **No more emoji as icons.** Every icon is now drawn in the same clean style (tools, location pin, delete, warnings, flame, trophy, menu, pause, close, arrows). A test keeps emoji out of the screens.
+- **Big numbers get the spotlight.** The weight trend, daily calories, the Forge Score and the Readiness card have larger numbers with a green-lime gradient and a soft glow. Everything else stays black, white and grey.
+- **Friendly empty screens.** Weight, History, Body, Awards, the exercise search and Locations each show an icon, a line, a short hint and one button when there is nothing yet.
+- **Toasts and pull to refresh.** Toasts are frosted capsules with an optional icon. Pull down at the top of Today, Progress or Body to refresh (it also asks Withings for new weigh-ins when connected).
+- **Swipe back shows the screen behind.** Swiping from the left edge now reveals the previous screen sliding in behind, like iOS.
+- **Home-screen icon** now has a proper 192 size for Android (maskable).
+
 ## 0.5.2 — Feels like an iPhone app: shell, navigation and motion (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy. (This is Part A of issue #18. The full visual restyle is Part B, later.)

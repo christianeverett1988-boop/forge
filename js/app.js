@@ -9,6 +9,8 @@ import { loadPhotoIndex } from './ui/photos.js';
 import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
 import { hapticTabs, hapticSegments } from './ui/haptic.js';
 import { enhanceSegs } from './ui/controls.js';
+import { attachPull, detachPull } from './ui/pull.js';
+import { call } from './functions.js';
 import { attachSwipeBack } from './ui/swipeback.js';
 import { skeletonHTML } from './ui/skeleton.js';
 import { tabOf, routeDepth, transitionKind, backTarget, backLabel, TITLE_FOR, createScrollMemory } from './nav.js';
@@ -194,6 +196,7 @@ async function render() {
     else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()), backLabel: backLabel(routeParts()) });
     hapticTabs(nav, onTab);
     enhanceSegs(main);
+    syncPull(route);
     hapticSegments(main);
     animateCounters(main);
     // A brand-new account sees the how-to tour once, on Today, right after onboarding.
@@ -201,6 +204,7 @@ async function render() {
   } catch (e) {
     console.error(e);
     hideNavBar();
+    detachPull();
     main.innerHTML = `<section class="card"><h1>Something broke</h1><p class="muted">${esc(e.message)}</p></section>`;
   }
 }
@@ -234,8 +238,31 @@ subscribe((patch) => {
   render();
 });
 
+// ---------- pull to refresh (Today, Progress, Body) ----------
+const PULL_ROUTES = new Set(['today', 'weight', 'history', 'awards', 'score', 'body']);
+let pullRoute = null;
+async function refreshData() {
+  const w = state.integrations && state.integrations.withings;
+  // Re-read the cache always; ask Withings for new weigh-ins only where that button already exists (Settings → Withings).
+  if (w && w.connected && !w.needs_reconnect && navigator.onLine) {
+    try { await call('withingsSyncNow', {}, { timeout: 130000 }); } catch (e) { toast(e.message); }
+  }
+  resetCounters();
+  await render();
+}
+function syncPull(route) {
+  if (!PULL_ROUTES.has(route)) {
+    detachPull();
+    pullRoute = null;
+  } else if (pullRoute !== route) {
+    attachPull(refreshData);
+    pullRoute = route;
+  }
+}
+
 // ---------- screen changes ----------
 let prevParts = routeParts();
+let snapshot = null; // { route, html, scroll } of the parent screen, for the swipe-back parallax
 let swipePop = null; // set while an edge swipe is finishing: the screen already slid away, so don't animate again
 
 function afterRoute(parts) {
@@ -258,6 +285,8 @@ window.addEventListener('hashchange', async () => {
     return;
   }
   const kind = transitionKind(from, to);
+  // Keep the screen we are leaving (one level) so a swipe back can show it sliding in behind.
+  if (kind === 'push') snapshot = { route: from.join('/'), html: main.innerHTML, scroll: window.scrollY };
   viewTransition(async () => {
     await render();
     afterRoute(to);
@@ -288,6 +317,7 @@ nav.addEventListener('click', (e) => {
 attachSwipeBack({
   el: main,
   canSwipe: () => routeDepth(routeParts()) > 0 && !FULLSCREEN.has(currentRoute()),
+  getSnapshot: () => (snapshot && `#/${snapshot.route}` === backTarget(routeParts()) ? snapshot : null),
   onPop: ({ crossfade = false } = {}) => new Promise((resolve) => {
     // Reduced motion: nothing slid away, so let the normal route change crossfade.
     if (!crossfade) swipePop = resolve;

@@ -2,19 +2,24 @@
 // finger over a dim scrim that lightens as it slides; let go past 40% of the width (or flick right) and it pops,
 // otherwise it springs back. Reduced motion: no drag at all (like the sheets); a swipe past the threshold just
 // pops, with the router's crossfade.
-import { shouldPop, velocityOf, scrimOpacity } from './gesture.js';
+import { shouldPop, velocityOf, scrimOpacity, parallaxOffset } from './gesture.js';
 import { reducedMotion, EASE, DUR } from './motion.js';
 
 const EDGE = 20;
 
-// What shows behind the sliding screen: a surface-coloured layer with a dim scrim on it. (The parent screen isn't
-// drawn until the route changes, because screens render from live data when they are entered, so a true
-// snapshot of it isn't available mid-drag.)
-function makeUnderlay() {
+// What shows behind the sliding screen: a snapshot of the parent screen (its markup, kept by the router when you pushed
+// into this one) with a dim scrim on it. With no snapshot it's a plain surface layer under the scrim.
+function makeUnderlay(snap) {
   const u = document.createElement('div');
   u.className = 'swipe-under';
   u.setAttribute('aria-hidden', 'true');
-  u.innerHTML = '<i></i>';
+  // The parent screen as it was when you left it (one level kept by the router), sliding in from -30% like iOS.
+  u.innerHTML = (snap ? '<div class="snap-wrap"><main class="snap" inert></main></div>' : '') + '<i></i>';
+  if (snap) {
+    const m = u.querySelector('main.snap');
+    m.innerHTML = snap.html;
+    m.style.transform = `translateY(${-(snap.scroll || 0)}px)`;
+  }
   document.body.prepend(u);
   return u;
 }
@@ -26,7 +31,7 @@ function makeUnderlay() {
  *  onPop     ({ crossfade }) => Promise|void, called after the slide-out finishes (crossfade: true under reduced
  *            motion, where nothing slid, so navigate with the normal transition)
  */
-export function attachSwipeBack({ el, canSwipe, onPop }) {
+export function attachSwipeBack({ el, canSwipe, onPop, getSnapshot = () => null }) {
   let startX = 0;
   let startY = 0;
   let dx = 0;
@@ -42,7 +47,10 @@ export function attachSwipeBack({ el, canSwipe, onPop }) {
   };
 
   const setScrim = (x) => {
-    if (under) under.firstElementChild.style.opacity = scrimOpacity(x, window.innerWidth);
+    if (!under) return;
+    under.querySelector('i').style.opacity = scrimOpacity(x, window.innerWidth);
+    const wrap = under.querySelector('.snap-wrap');
+    if (wrap) wrap.style.transform = `translateX(${parallaxOffset(x, window.innerWidth)}%)`;
   };
 
   document.addEventListener('touchstart', (e) => {
@@ -71,7 +79,7 @@ export function attachSwipeBack({ el, canSwipe, onPop }) {
     if (reducedMotion()) return; // no drag: only the release counts
     e.preventDefault(); // we own the gesture now: stop the page scrolling
     if (!under) {
-      under = makeUnderlay();
+      under = makeUnderlay(getSnapshot());
       el.classList.add('swiping');
     }
     setScrim(Math.max(0, dx));
@@ -93,7 +101,9 @@ export function attachSwipeBack({ el, canSwipe, onPop }) {
     el.style.transition = `transform ${DUR.med}ms ${EASE.spring}`;
     el.style.transform = pop ? `translateX(${width}px)` : 'translateX(0)';
     if (under) {
-      under.firstElementChild.style.transition = `opacity ${DUR.med}ms ${EASE.spring}`;
+      under.querySelector('i').style.transition = `opacity ${DUR.med}ms ${EASE.spring}`;
+      const wrap = under.querySelector('.snap-wrap');
+      if (wrap) wrap.style.transition = `transform ${DUR.med}ms ${EASE.spring}`;
       setScrim(pop ? width : 0);
     }
     const clear = () => {

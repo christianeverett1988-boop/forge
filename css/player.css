@@ -26,7 +26,7 @@ body.playing .navbar { display: none; }
 }
 @keyframes shine { to { transform: translateX(100%); } }
 
-.pl-count { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.pl-count { font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; letter-spacing: .04em; }
 .tag.ss { background: var(--ember-tint); color: var(--ember); }
 .tag.wu { background: var(--warn-tint); color: var(--rec-amber); }
@@ -92,7 +92,7 @@ body.playing .navbar { display: none; }
 
 /* Full-screen rest */
 .player.rest { justify-content: flex-start; }
-.rest-label { text-align: center; font: 900 15px var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+.rest-label { text-align: center; font: 900 15px var(--font); letter-spacing: .14em; color: var(--muted); margin-top: 10px; }
 .rest-ring { position: relative; width: min(300px, 78vw); aspect-ratio: 1; margin: 6px auto; display: grid; place-items: center; }
 .rest-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .rest-ring .ring-fg { stroke: var(--ember); stroke-width: 5; }
@@ -183,7 +183,7 @@ body.playing .navbar { display: none; }
 /* ---------- muscle map (js/ui/bodymap.js) ---------- */
 .bm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: end; }
 .bm-side { margin: 0; text-align: center; }
-.bm-side figcaption { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.bm-side figcaption { font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-top: 2px; }
 .bodymap { width: 100%; height: auto; display: block; max-height: 340px; }
 .bodymap .bm-b { fill: var(--surface-2); }
 .bodymap .bm-m { fill: var(--surface-3); stroke: var(--on-bright); stroke-width: 2; transition: fill var(--t-med) var(--ease-out); }
@@ -251,7 +251,7 @@ body.playing .navbar { display: none; }
 .pv-thumb .bm-mini .bodymap { max-height: 48px; width: auto; }
 .pv-txt { display: flex; flex-direction: column; min-width: 0; }
 .pv-txt b { overflow: hidden; text-overflow: ellipsis; }
-.pv-tag { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: 0.04em; }
+.pv-tag { font-size: 11px; font-weight: 800; color: var(--accent-text); letter-spacing: 0.04em; }
 .pv-more { font-size: 20px; line-height: 1; }
 
 /* ---------- Awards (Progress → Awards) and summary XP ---------- */
@@ -274,7 +274,7 @@ body.playing .navbar { display: none; }
 .aw-badges li b { font-size: 13px; line-height: 1.2; }
 .aw-badges li small { font-size: 11px; line-height: 1.25; }
 .aw-badges li:not(.on) b { color: var(--muted); }
-.aw-tier { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.aw-tier { font-size: 10px; font-weight: 800; letter-spacing: .06em; color: var(--muted); }
 .aw-filter { display: flex; gap: 6px; }
 .sum-badges { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 6px 0 4px; }
 .sum-badge { display: grid; justify-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--gold); text-align: center; max-width: 92px; }
@@ -303,4 +303,4 @@ body.playing .navbar { display: none; }
 /* A starting weight Forge picked (empty bar, lightest or today's dumbbell): dimmer until you change it. */
 .pl-sugg { display: none; }
 .pl-hero-w.suggested b { color: color-mix(in srgb, var(--volt) 55%, var(--muted)); }
-.pl-hero-w.suggested .pl-sugg { display: inline; align-self: center; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 3px 7px; }
+.pl-hero-w.suggested .pl-sugg { display: inline; align-self: center; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 3px 7px; }
