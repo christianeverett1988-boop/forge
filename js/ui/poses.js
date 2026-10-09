@@ -65,6 +65,13 @@ export const EXERCISE_TEMPLATES = {
   bb_back_squat: 'squat_barbell',
   pullup: 'pullup',
   db_curl: 'curl_dumbbell',
+  // Around the house. Props follow the exercise's load, so backpack moves show empty hands. Table and
+  // doorframe rows (pull-bar rig), towel pull-aparts (bar handle), prone moves, slider fly and triceps
+  // extensions have no template that fits without a wrong prop, so they stay on the muscle map.
+  backpack_bent_row: 'row_bent', backpack_one_arm_row: 'row_one_arm', backpack_reverse_fly: 'rear_delt_fly',
+  backpack_curl: 'curl_dumbbell', backpack_lateral_raise: 'lateral_raise', backpack_shrug: 'shrug',
+  backpack_suitcase_carry: 'carry', chair_dip: 'bench_dip', backpack_goblet_squat: 'squat_goblet',
+  backpack_rdl: 'rdl', stair_step_up: 'step_up',
   ...LIBRARY_MAP,
 };
 

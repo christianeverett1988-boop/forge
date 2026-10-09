@@ -91,7 +91,7 @@ function openCustomForm() {
         <label class="field"><span>Name</span><input name="name" maxlength="50" placeholder="e.g. Landmine press"></label>
         <label class="field"><span>Movement</span><select name="pattern">${Object.entries(PATTERN_LABELS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label>
         <label class="field"><span>Load type</span><select name="load">
-          ${[['dumbbell', 'Dumbbell'], ['barbell', 'Barbell'], ['kettlebell', 'Kettlebell'], ['machine', 'Machine'], ['cable', 'Cable'], ['band', 'Band'], ['bodyweight', 'Bodyweight'], ['other', 'Other']].map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
+          ${[['dumbbell', 'Dumbbell'], ['barbell', 'Barbell'], ['kettlebell', 'Kettlebell'], ['machine', 'Machine'], ['cable', 'Cable'], ['band', 'Band'], ['backpack', 'Backpack'], ['bodyweight', 'Bodyweight'], ['other', 'Other']].map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
         </select></label>
         <div class="row gap">
           <label class="field grow"><span>Rep range low</span><input name="lo" type="number" inputmode="numeric" value="8"></label>

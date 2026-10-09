@@ -110,7 +110,7 @@ export function nextTarget(ex, history, { inventory = {}, unit = 'lb', role = 's
   const last = hist[0];
   const loads = availableLoads(ex, inventory, unit);
   // Timed work (holds, carries, rounds) progresses by time, even when it uses a weight.
-  const loaded = !ex.timed && !['bodyweight', 'other', 'band'].includes(ex.load);
+  const loaded = !ex.timed && !['bodyweight', 'other', 'band', 'backpack'].includes(ex.load);
 
   if (deload) {
     const dSets = Math.max(1, Math.ceil(Math.max(sets, last ? last.sets.length : 0) / 2));
@@ -279,7 +279,7 @@ export function detectPRs(ex, sessionSets, history) {
   const prevSets = history.flatMap((h) => h.sets || []);
   if (!prevSets.length || !sessionSets.length) return [];
   const prs = [];
-  const loaded = !['bodyweight', 'other', 'band'].includes(ex.load);
+  const loaded = !['bodyweight', 'other', 'band', 'backpack'].includes(ex.load);
   if (ex.timed) {
     const best = Math.max(...prevSets.map((s) => s.reps || 0));
     const now = Math.max(...sessionSets.map((s) => s.reps || 0));

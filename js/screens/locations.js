@@ -116,6 +116,7 @@ function renderEditor(el, loc) {
       ${EQUIPMENT_GROUPS.map((g) => `
         <fieldset class="card">
           <legend class="label">${esc(g.group)}</legend>
+          ${g.hint ? `<p class="small muted">${esc(g.hint)}</p>` : ''}
           <div class="chips">
             ${g.items.map(([k, label]) => `
               <label class="chip"><input type="checkbox" value="${k}" ${have.has(k) ? 'checked' : ''}><span>${esc(label)}</span></label>`).join('')}
@@ -194,13 +195,15 @@ const show = (kg) => Math.round(toUnit(kg, unitName()) * 10) / 10;
 function inventoryHTML(loc) {
   const inv = loc.weight_inventory || {};
   const u = unitName();
+  const owned = INVENTORY.filter(([, , equip]) => loc.equipment.includes(equip) || (equip === 'dumbbells' && loc.equipment.includes('adjustable_dumbbells')));
+  if (!owned.length) return '';
   return `
     <fieldset class="card">
       <legend class="label">Weights you own here</legend>
       <p class="small muted">Workouts only suggest weights from this list. Leave a list empty to assume a full gym rack (5 ${u} steps).</p>
-      ${INVENTORY.map(([key, label, equip]) => `
+      ${owned.map(([key, label]) => `
         <div class="inv" data-inv="${key}">
-          <p><b>${label}</b>${!loc.equipment.includes(equip) && !(equip === 'dumbbells' && loc.equipment.includes('adjustable_dumbbells')) ? ' <small class="muted">(turned off below)</small>' : ''}</p>
+          <p><b>${label}</b></p>
           <div class="chips">
             ${(inv[key] || []).slice().sort((a, b) => a - b).map((kg) => `<button class="chip-btn" data-rm="${key}:${kg}" aria-label="Remove ${show(kg)} ${u}">${show(kg)} ${u} ${icon('close', { size: 14 })}</button>`).join('') || '<span class="muted small">Full rack assumed</span>'}
           </div>

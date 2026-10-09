@@ -60,10 +60,32 @@ function defaultChainStep(chainLength, experience) {
 }
 
 const ROLE_LOAD_PREF = {
-  main: { barbell: 30, dumbbell: 26, smith: 16, machine: 16, kettlebell: 16, bodyweight: 14, cable: 10, band: 4, other: 0 },
-  secondary: { dumbbell: 26, barbell: 22, machine: 20, cable: 18, kettlebell: 16, bodyweight: 14, smith: 12, band: 6, other: 0 },
-  accessory: { cable: 22, dumbbell: 22, machine: 20, bodyweight: 16, band: 12, kettlebell: 12, barbell: 8, smith: 6, other: 4 },
+  main: { barbell: 30, dumbbell: 26, smith: 16, machine: 16, kettlebell: 16, bodyweight: 14, cable: 10, backpack: 9, band: 4, other: 0 },
+  secondary: { dumbbell: 26, barbell: 22, machine: 20, cable: 18, kettlebell: 16, bodyweight: 14, smith: 12, backpack: 10, band: 6, other: 0 },
+  accessory: { cable: 22, dumbbell: 22, machine: 20, bodyweight: 16, backpack: 14, band: 12, kettlebell: 12, barbell: 8, smith: 6, other: 4 },
 };
+
+/** When a slot has no candidate, these patterns are tried (in order) before the slot is dropped. */
+export const PATTERN_FALLBACKS = {
+  vertical_pull: ['horizontal_pull', 'rear_delt'],
+  horizontal_pull: ['rear_delt'],
+  lateral_raise: ['vertical_push'],
+  biceps: ['horizontal_pull'],
+  shrug: ['rear_delt'],
+  carry: ['rear_delt'],
+  chest_fly: ['horizontal_push'],
+};
+
+/** The fallback patterns for a slot, in order, without repeats or patterns the slot already tried. */
+export function fallbackPatterns(slot) {
+  const out = [];
+  for (const p of slot.patterns) {
+    for (const f of PATTERN_FALLBACKS[p] || []) {
+      if (!slot.patterns.includes(f) && !out.includes(f)) out.push(f);
+    }
+  }
+  return out;
+}
 
 /**
  * Scores every candidate for a slot and returns the best, or null.
@@ -224,6 +246,10 @@ export function generateWorkout(opts) {
   let injuryDropped = false;
   for (const slot of day.slots) {
     let ex = pickExercise(slot, exercises, ctx);
+    if (!ex && !slot.userPicked) {
+      const fb = fallbackPatterns(slot);
+      if (fb.length) ex = pickExercise({ ...slot, patterns: fb, ids: [] }, exercises, ctx);
+    }
     const swapTo = ex && forced[ex.id] ? exercises.find((e) => e.id === forced[ex.id]) : null;
     if (swapTo && !ctx.used.has(swapTo.id) && canDo(swapTo, available)) ex = swapTo;
     if (!ex) {
@@ -256,7 +282,7 @@ export function generateWorkout(opts) {
     items.push({ exercise_id: ex.id, role: slot.role, target, warmups: items.length < 2 ? wu : wu.slice(-1), superset: null, warning });
   }
 
-  if (items.length < 3 && !injuryDropped) {
+  if (items.length < 4 && !injuryDropped) {
     notes.push('This location doesn’t have much for today’s focus. Try a different day, or add equipment in Settings → Locations.');
   }
 

@@ -145,7 +145,7 @@ const rirLabel = (r) => (r == null ? 'RIR' : r >= 4 ? '4+' : String(r));
 function exerciseCard(it, i, u) {
   const ex = exerciseById(it.exercise_id) || { name: it.exercise_id, load: 'other', reps: [8, 12], equip: [[]] };
   const prev = previousSets(it.exercise_id);
-  const bw = ['bodyweight', 'band', 'other'].includes(ex.load);
+  const bw = ['bodyweight', 'band', 'other', 'backpack'].includes(ex.load);
   const timed = !!ex.timed;
   let workIdx = 0;
   const rows = it.sets.map((s, j) => {

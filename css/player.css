@@ -201,7 +201,7 @@ body.playing .navbar { display: none; }
 @media (prefers-reduced-motion: reduce) { .bodymap .bm-on { animation: none; } }
 .bm-mini { grid-template-columns: 1fr; }
 .plan-list li.with-map { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: center; }
-.plan-list li.with-map .bm-mini .bodymap { max-height: 58px; width: auto; margin: 0 auto; }
+.plan-list li.with-map .bm-mini .bodymap { height: 58px; max-height: 58px; width: auto; margin: 0 auto; }
 .plan-list li div.bm { display: grid; }
 
 /* ---------- How-To sheet and demo photos ---------- */
@@ -234,7 +234,7 @@ body.playing .navbar { display: none; }
 .pv-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
 .pv-chips .pill { font-size: 13px; padding: 4px 10px; background: var(--surface-2); color: var(--text); }
 .pv-sum { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; margin: 10px 0; }
-.pv-sum .bm-mini .bodymap { max-height: 72px; width: auto; margin: 0 auto; }
+.pv-sum .bm-mini .bodymap { height: 72px; max-height: 72px; width: auto; margin: 0 auto; }
 .pv-sum p { margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .pv-sum div.bm { display: grid; }
 .pv-warm { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
@@ -248,7 +248,7 @@ body.playing .navbar { display: none; }
 .pv-thumb svg.figure { width: 100%; height: 100%; }
 .pv-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .pv-thumb .bm { display: grid; }
-.pv-thumb .bm-mini .bodymap { max-height: 48px; width: auto; }
+.pv-thumb .bm-mini .bodymap { height: 48px; max-height: 48px; width: auto; }
 .pv-txt { display: flex; flex-direction: column; min-width: 0; }
 .pv-txt b { overflow: hidden; text-overflow: ellipsis; }
 .pv-tag { font-size: 11px; font-weight: 800; color: var(--accent-text); letter-spacing: 0.04em; }

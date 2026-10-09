@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0 — Train anywhere (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **A hotel room or living room now gets a full workout.** Before, a Travel Pull day gave 2 of 6 moves and Upper gave 3 of 7. Now every day fills (138 of 138 slots across all day types, up from 104).
+- **New "Around the house" list in Settings → Locations:** bath towel, sturdy table, sturdy chair or step, a backpack you can load with books or bottles, and stairs. Tick what you have. Benches and plyo boxes count as a chair, dumbbells and kettlebells count as a backpack.
+- **The Travel preset is now "Travel / hotel room"** with a towel, a chair and a backpack. Home gets the whole house list. Locations you already saved are not changed; tick the new items yourself.
+- **24 new moves:** table rows (three steps, easy to hard), backpack rows, curls, lateral raises, reverse flies, shrugs, goblet squats and Romanian deadlifts, a backpack suitcase carry, towel pulldown and curl holds, a sliding floor pulldown, towel pull-aparts and slider flies, reverse snow angels, chair dips, table triceps extensions, stair step-ups, and two moves that need nothing at all (doorframe row, wall triceps extension). Table moves tell you to test the table first. They show the figure silhouette instead of a photo.
+- **Bench dips now need a chair or bench.** Before, they said no equipment.
+- **No more empty slots:** if a slot has nothing to pick, Forge tries a close cousin first (for example a pulldown slot can become a row, a chest fly can become a push-up). The "This location doesn’t have much" note now only shows when a session has fewer than 4 moves.
+- Backpack moves work like bodyweight ones: reps first, weight optional.
+
 ## 0.8.0 — Weekly progress photos (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
