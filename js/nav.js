@@ -61,7 +61,7 @@ export function backLabel(parts) {
 }
 
 /** Large-title screens that should not show the title of their own sub-page (Progress shows one header). */
-export const TITLE_FOR = { program: 'Program', weight: 'Progress', trends: 'Progress', score: 'Progress', weekly: 'Progress' };
+export const TITLE_FOR = {weight: 'Progress', trends: 'Progress', score: 'Progress', weekly: 'Progress' };
 
 /** Per-tab scroll memory: tab roots restore where you left them; detail screens always start at the top. */
 export function createScrollMemory() {

@@ -83,12 +83,13 @@ const shone = new Set();
 
 function summaryText(c) {
   const s = c.summary;
-  const parts = [`${s.weeksHit} of ${s.weeks} weeks fully hit`];
+  const parts = s.weeksHit ? [`${s.weeksHit} of ${s.weeks} weeks fully hit`] : [];
   if (s.changeKg != null) {
     const v = weightToDisplay(Math.abs(s.changeKg), getUnits());
     parts.push(Math.abs(s.changeKg) < 0.05 ? 'weight about the same' : `weight ${s.changeKg < 0 ? 'down' : 'up'} ${trim(v)} ${weightUnit(getUnits())}`);
   }
-  parts.push(`${s.workouts} ${s.workouts === 1 ? 'workout' : 'workouts'}`, `${s.prs} ${s.prs === 1 ? 'PR' : 'PRs'}`);
+  if (s.workouts) parts.push(`${s.workouts} ${s.workouts === 1 ? 'workout' : 'workouts'}`);
+  if (s.prs) parts.push(`${s.prs} ${s.prs === 1 ? 'PR' : 'PRs'}`);
   return parts.join(' · ');
 }
 
@@ -100,7 +101,7 @@ export function completionCards() {
     shone.add(c.badge.id);
     return `<div class="card ms-badge pg-done" data-program-done="${esc(c.badge.id)}" role="status">
       <span class="ms-badge-art">${badgeSVG(c.badge.id, { shine: first, size: 56, label: c.badge.name })}</span>
-      <span class="ms-badge-text"><small class="label">${esc(c.def.name)} finished</small><b>${esc(c.badge.name)}</b><small class="ms-xp">+${FINISH_XP} XP</small><small class="muted">${esc(summaryText(c))}</small></span>
+      <span class="ms-badge-text"><small class="label">Program finished</small><b>${esc(c.badge.name)}</b><small class="ms-xp">+${FINISH_XP} XP</small>${summaryText(c) ? `<small class="muted">${esc(summaryText(c))}</small>` : ''}</span>
       <span class="ms-badge-links"><a class="link" href="#/awards" data-done-awards>See awards</a><button type="button" class="ms-badge-x" data-done-dismiss aria-label="Dismiss">${icon('close', { size: 18 })}</button></span>
     </div>`;
   }).join('');
