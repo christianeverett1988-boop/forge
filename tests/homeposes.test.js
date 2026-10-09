@@ -6,6 +6,7 @@ import { BODY, solve, dist, repPhases, repLength, paramsAt, camera, frameBox, pr
 import { TEMPLATES, EXERCISE_TEMPLATES } from '../js/ui/poses.js';
 import { HOME, HOME_MAP } from '../js/ui/poses-home.js';
 import { KB_MAP } from '../js/ui/poses-kb.js';
+import { GYM_MAP } from '../js/ui/poses-gym.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
 import { registerSheet, closeAllSheets, openSheetCount } from '../js/ui/sheets.js';
 
@@ -37,8 +38,8 @@ test('home figures: every move in the brief exists in the library and has a temp
   for (const id of Object.keys(HOME_MAP)) assert(BRIEF.includes(id), `${id} is in the brief`);
 });
 
-test('home figures: what we leave out stays out (machines, cardio kit, boxing, kettlebell ballistics, muscle-up)', () => {
-  for (const id of ['machine_leg_press', 'bike_steady', 'rower_intervals', 'jump_rope', 'heavy_bag_rounds', 'shadowboxing', 'kb_turkish_getup', 'muscleup']) {
+test('home figures: what we leave out stays out (cardio kit, boxing, kettlebell ballistics, muscle-up)', () => {
+  for (const id of ['bike_steady', 'rower_intervals', 'jump_rope', 'heavy_bag_rounds', 'shadowboxing', 'kb_turkish_getup', 'muscleup']) {
     assert(!EXERCISE_TEMPLATES[id], `${id} has no template yet`);
   }
 });
@@ -163,8 +164,9 @@ test('home figures: the rig keeps its bone lengths in the new poses', () => {
 test('home figures: the exercise library coverage went up and the rest is still honest', () => {
   const unmapped = EXERCISES.filter((e) => !EXERCISE_TEMPLATES[e.id]);
   const kb = Object.keys(KB_MAP); // v0.12.2 added these (tests/kbposes.test.js)
-  eq(unmapped.length, 72 - BRIEF.length - kb.length, 'was 72 without a figure; both briefs are covered');
-  for (const e of unmapped) assert(!BRIEF.includes(e.id) && !kb.includes(e.id), e.id);
+  const gym = Object.keys(GYM_MAP); // v0.14.2 added these (tests/gymposes.test.js)
+  eq(unmapped.length, 72 - BRIEF.length - kb.length - gym.length, 'was 72 without a figure; all three briefs are covered');
+  for (const e of unmapped) assert(!BRIEF.includes(e.id) && !kb.includes(e.id) && !gym.includes(e.id), e.id);
 });
 
 // ---------- sheets close when the route changes ----------

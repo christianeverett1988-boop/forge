@@ -7,7 +7,7 @@
 // sleeps while the workout is paused or resting. The view box is fitted to the whole rep at mount.
 // Pure code and data: offline, no downloads. Templates: js/ui/poses.js. Skeleton and camera: js/ui/rig.js.
 import { TEMPLATES, EXERCISE_TEMPLATES } from './poses.js';
-import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, bellDir, BELL_OFFSET, drawOrder, frameBox } from './rig.js';
+import { BODY, BODY_PARTS, sledPlate, kneePad, ankleCuff, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, bellDir, BELL_OFFSET, drawOrder, frameBox } from './rig.js';
 const add3 = (p, d, k) => [p[0] + d[0] * k, p[1] + d[1] * k, p[2] + d[2] * k];
 import { onFrame, reducedMotion } from './motion.js';
 
@@ -332,6 +332,21 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
       g._line = el('line', { stroke: name === 'strapF' ? '#a9b3c2' : '#d7dee9', 'stroke-width': 0.034 * s, 'stroke-linecap': 'round', opacity: name === 'strapF' ? 0.7 : 1 }, g);
     } else if (name === 'loop') {
       g._line = el('line', { stroke: '#e0663f', 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
+    } else if (name === 'sled') {
+      // The carriage plate the feet press: a dark back face under a lighter front face.
+      g._back = el('path', { fill: '#1f252c', stroke: C.outline, 'stroke-width': 0.8, 'stroke-linejoin': 'round' }, g);
+      g._face = el('path', { fill: '#4a525d', stroke: C.steelDark, 'stroke-width': 1, 'stroke-linejoin': 'round' }, g);
+    } else if (/^pad[NF]$/.test(name)) {
+      g._edge = el('line', { stroke: C.outline, 'stroke-width': 0.1 * s, 'stroke-linecap': 'round' }, g);
+      g._pad = el('line', { stroke: name === 'padN' ? '#a8453d' : '#7a322d', 'stroke-width': 0.075 * s, 'stroke-linecap': 'round' }, g);
+    } else if (name === 'cuff') {
+      g._edge = el('line', { stroke: C.outline, 'stroke-width': 0.068 * s, 'stroke-linecap': 'round' }, g);
+      g._line = el('line', { stroke: '#e0663f', 'stroke-width': 0.052 * s, 'stroke-linecap': 'round' }, g);
+    } else if (name === 'cuffcable') {
+      g._line = el('line', { stroke: '#c3cad3', 'stroke-width': 0.012 * s, 'stroke-linecap': 'round' }, g);
+    } else if (name === 'pulley') {
+      el('circle', { r: 0.055 * s, fill: '#2a3038', stroke: C.steel, 'stroke-width': 1.6 }, g);
+      el('circle', { r: 0.016 * s, fill: C.steel }, g);
     } else if (name === 'ball') {
       g._b = el('circle', { r: 0.11 * s, fill: '#3b3128', stroke: '#6b5a48', 'stroke-width': 1.2 }, g);
     } else if (name === 'wheel') {
@@ -407,6 +422,9 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
         // Two jambs with the doorway between them; the top runs off the demo box.
         const w = e.w ?? 0.86;
         for (const z of [-w / 2, w / 2]) post(e.x, 0, 2.1, z, 0.07);
+      } else if (e.type === 'slab') {
+        // Any block: a top edge a → b (x, y), width w across z, thickness t down from the top, optional z shift.
+        slab(e.a, e.b, e.w ?? 0.5, e.t ?? 0.1, e.col || ['#3d4550', '#262c34', '#2e353e'], e.z || 0);
       } else if (e.type === 'floorpad') {
         slab([e.x0, 0.02], [e.x1, 0.02], 0.6, 0.02, ['#262c33', '#1b1f24', '#20252b']);
       }
@@ -503,6 +521,26 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
         g['ring' + S]._ring.setAttribute('cx', f1(P0[0]));
         g['ring' + S]._ring.setAttribute('cy', f1(P0[1]));
       }
+    }
+    if (g.sled) {
+      const pl = sledPlate(tpl, j);
+      const path = (q) => `M${q.map((p) => project(p).slice(0, 2).map(f1).join(',')).join('L')}Z`;
+      g.sled._back.setAttribute('d', path(pl.back));
+      g.sled._face.setAttribute('d', path(pl.face));
+    }
+    for (const S of ['N', 'F']) {
+      if (!g['pad' + S]) continue;
+      const pd = kneePad(tpl, j, S);
+      line(g['pad' + S]._edge, pd.a, pd.b);
+      line(g['pad' + S]._pad, pd.a, pd.b);
+    }
+    if (g.cuff) {
+      const cf = ankleCuff(tpl, j);
+      line(g.cuff._edge, cf.a, cf.b);
+      line(g.cuff._line, cf.a, cf.b);
+      line(g.cuffcable._line, cf.centre, cf.pulley);
+      const P0 = project(cf.pulley);
+      g.pulley.setAttribute('transform', `translate(${f1(P0[0])},${f1(P0[1])})`);
     }
     if (g.towel) line(g.towel._line, j.gripN, j.gripF);
     if (g.loop) line(g.loop._line, ...loopEnds(tpl, j));

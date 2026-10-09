@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.2 — YMCA machine demo figures + goal-path date range year (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Demo figures for six gym and YMCA machine moves** (new `js/ui/poses-gym.js`, added to the offline shell): **Leg Press**, **Single-Leg Leg Press**, **Calf Press on Leg Press** (side view, 45° sled), **Hip Adductor** machine (front view, so the knees moving together is what you see), and **Cable Hip Abduction** / **Adduction** (front view: ankle cuff, cable to the low pulley).
+  - **Left without a figure for now: Hip Abductor Machine (`machine_hip_abductor`).** In a headless-Chrome render of the front view, the far leg drew wrong: the near thigh swung out but the far thigh stayed upright, and the far pad slid away from its knee. The solved joints are mirrored, so the fault is in how the camera projects or draws the far leg, not in the pose. It stays unmapped until that is fixed.
+  - Leg press: the body lies back on the seat and back pad; the sled plate stands square to the rails and the feet are placed from the plate position, so they stay flat on it in every frame. Single-leg: the working foot presses while the other foot rests on the floor under its knee. Calf press: legs almost straight, the front of the foot pushes the plate and the heel lifts away.
+  - Hip adductor machine: a seat and back pad with a pad inside each knee; the pads move with the knees and never touch them.
+  - Cable: the cuff sits at the ankle and the cable runs from the cuff to the pulley on a tower. Abduction pulls out against a cable from the far side; adduction sweeps in across the standing leg, in front of it, from the working leg's own side.
+  - New prop kinds in `rig.js` / `figure.js`: the leg-press sled, knee pads, and ankle cuff with cable and pulley, plus a generic `slab` block for machine frames. `rig.feet.raw` skips the foot-angle clamp for feet on a tilted plate (existing templates are unchanged).
+  - Not yet seen on a real screen: these were built and checked as joint positions (plate contact, pad distances, floor, blocks), not as rendered pixels. Worth a look at iPhone size.
+- **Goal path date range shows the year on both dates.** With a goal more than a year away Body said "Likely between Oct 12 and Oct 9, 2028", which read as backwards. It now shows the year on both dates whenever either one is outside this year ("between Oct 12, 2027 and Oct 9, 2028"). When the middle estimate is more than 12 months away, Body adds "That's more than a year at your current pace." The coach's goal answer (`fmtDay` in `js/coach/answers.js`) had the same problem and uses the same rule.
+- New tests in `tests/gymposes.test.js` and `tests/goalpath-dates.test.js`; the home-figures coverage test counts the new ids.
+
 ## 0.14.1 — Honest Readiness bars + smoothed Trends sparklines (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

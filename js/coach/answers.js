@@ -12,7 +12,8 @@ import { SHOW_MUSCLES, MUSCLE_LABELS, FRESH_PCT, freshCount } from '../workouts/
 export { MEDICAL };
 export const DISCLAIMER = 'General fitness information, not medical advice.';
 
-const fmtDay = (key, today) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(key.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {}) });
+// `also` is the other end of a range: the year shows on both ends whenever either is outside this year.
+const fmtDay = (key, today, also = key) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(key.slice(0, 4) !== today.slice(0, 4) || also.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {}) });
 const mass = (kg, u, digits = 1) => `${Math.abs(weightToDisplay(kg, u)).toFixed(digits)} ${weightUnit(u)}`;
 const signed = (v, digits, unit) => { const d = fmtDelta(v, { digits, unit }); return d ? d.text : null; };
 const massDelta = (kg, u) => signed(weightToDisplay(kg, u), 1, weightUnit(u));
@@ -56,7 +57,7 @@ export function goalAnswer(d, today = '') {
   if (p.status === 'away') return { ...base, headline: 'Your trend is moving away from your goal.', lines: [`Trend ${mass(p.current, u)}; ${away}`, `Moving ${pace} the other way.`, 'Check your food and training, or change your goal in Profile if it no longer fits.'] };
   if (p.status === 'far') return { ...base, headline: 'At this pace the goal is more than 5 years away.', lines: [`Trend ${mass(p.current, u)}; ${away}`, `Pace ${pace}.`, cap] };
   const lines = [`Trend ${mass(p.current, u)}; ${away}`];
-  lines.push(p.lateDay ? `Likely between ${fmtDay(p.earlyDay, today)} and ${fmtDay(p.lateDay, today)}.` : `Could be as early as ${fmtDay(p.earlyDay, today)}, or later.`);
+  lines.push(p.lateDay ? `Likely between ${fmtDay(p.earlyDay, today, p.lateDay)} and ${fmtDay(p.lateDay, today, p.earlyDay)}.` : `Could be as early as ${fmtDay(p.earlyDay, today)}, or later.`);
   lines.push(p.overCap ? `Pace ${pace} is faster than the safe ${mass(p.capKgPerWeek, u)}. Slow down to keep muscle.` : `Pace ${pace}. ${cap}`);
   lines.push(p.overCap ? 'A slower pace pushes the date out but protects muscle.' : 'A faster pace within the safe limit moves the date earlier. Steadier weigh-ins narrow the range.');
   return { ...base, headline: `On pace for ${fmtDay(p.etaDay, today)}.`, lines };
