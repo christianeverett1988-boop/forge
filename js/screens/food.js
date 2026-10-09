@@ -22,11 +22,21 @@ function itemLine(it) {
   return bits.join(' · ');
 }
 
+function entryLine(e) {
+  const n = e.servings;
+  const bits = [`${Math.round(e.kcal * n)} kcal`];
+  if (e.protein_g) bits.push(`${Math.round(e.protein_g * n)} g protein`);
+  bits.push(`${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`);
+  return bits.join(' · ');
+}
+
+const stepBtns = (out = '') => `<button type="button" class="icon-btn" data-minus aria-label="Fewer servings">${icon('minus')}</button><output data-serv aria-live="polite">${out}</output><button type="button" class="icon-btn" data-plus aria-label="More servings">${icon('plus')}</button>`;
+
 function meter(label, value, target, unit, { big = false } = {}) {
   const p = progress(value, target);
   const pct = p ? Math.min(100, Math.max(0, p.pct)) : 0;
   const over = p && p.pct > 110;
-  return `<div class="meter-row ${big ? 'big' : ''}">
+  return `<div class="meter-row ${big ? 'meter-row--big' : ''}">
     <div class="row between"><span class="label">${label}</span>
       <span class="${big ? 'meter-val' : 'small'}"><b>${unit === 'kcal' ? Math.round(value).toLocaleString() : grams(value)}</b>${target ? ` <span class="muted">of ${unit === 'kcal' ? target.toLocaleString() + ' kcal' : grams(target)}</span>` : ''}</span></div>
     <div class="meter ${over ? 'over' : ''}" role="img" aria-label="${esc(label)}: ${p ? `${p.pct}% of your target` : 'no target'}"><i style="width:${pct}%"></i></div>
@@ -63,20 +73,22 @@ export function renderFood(el) {
       </div>
       <button class="btn bigbtn" data-log-food>${icon('plus')}Log food</button>
       ${anything ? '' : emptyState({ icon: 'food', title: isToday ? 'Nothing logged yet today' : 'Nothing logged this day', text: 'Tap Log food. If you don’t know the numbers, “Quick add” takes just calories.' })}
-      ${groups.map((g) => {
+      ${anything || !yGroups.some((y) => y.entries.length) ? '' : '<button class="btn ghost" data-copy-day>Copy yesterday</button>'}
+      ${anything ? groups.map((g) => {
         const canCopy = !g.entries.length && yGroups.find((y) => y.meal === g.meal).entries.length;
         return `<div class="food-meal" data-meal="${g.meal}">
           <div class="row between center food-meal-head">
             <h2>${g.label}</h2>
             <span class="row gap center"><span class="small muted">${g.entries.length ? `${g.totals.kcal.toLocaleString()} kcal` : ''}</span>
-              ${canCopy ? `<button class="btn ghost small-btn" data-copy="${g.meal}">Copy yesterday</button>` : ''}</span>
+              ${canCopy ? `<button class="btn ghost small-btn" data-copy="${g.meal}">Copy yesterday</button>` : ''}
+              <button class="btn ghost small-btn" data-add-meal="${g.meal}" aria-label="Add to ${g.label.toLowerCase()}">Add</button></span>
           </div>
           ${g.entries.length ? `<ul class="list">${g.entries.map((e) => `
             <li class="tap" data-entry="${esc(e.id)}"><div><b>${esc(e.name)}</b>
-              <small class="muted">${fmtNum(e.servings)} × ${esc(itemLine(e))}</small></div>
+              <small class="muted">${entryLine(e)}</small></div>
               <b>${Math.round(e.kcal * e.servings).toLocaleString()}</b></li>`).join('')}</ul>` : ''}
         </div>`;
-      }).join('')}
+      }).join('') : ''}
       <div class="group"><button class="g-row" data-my-foods><span class="g-ic">${icon('list')}</span><span class="g-text"><span>My foods</span><small>${state.foods.length ? `${state.foods.length} saved` : 'Save the things you eat often'}</small></span><span class="chev" aria-hidden="true">${icon('chev')}</span></button></div>
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
@@ -90,6 +102,13 @@ export function renderFood(el) {
   };
   $('[data-log-food]', el).onclick = () => openLogFood({ day });
   $('[data-my-foods]', el).onclick = () => openMyFoods();
+  $$('[data-add-meal]', el).forEach((b) => { b.onclick = () => openLogFood({ day, meal: b.dataset.addMeal }); });
+  const copyDay = $('[data-copy-day]', el);
+  if (copyDay) copyDay.onclick = () => {
+    let n = 0;
+    for (const m of MEALS) for (const f of copyMealFields(state.food_logs, yesterday, day, m)) { put('food_logs', newRecord(f)); n++; }
+    toast(`Copied ${n} ${n === 1 ? 'item' : 'items'} from yesterday`);
+  };
   $$('[data-copy]', el).forEach((b) => {
     b.onclick = () => {
       const fields = copyMealFields(state.food_logs, yesterday, day, b.dataset.copy);
@@ -106,9 +125,10 @@ export function renderFood(el) {
 }
 
 /** The Log food sheet. Tap 1 opens it (caller), tap 2 picks a food, tap 3 adds it. */
-export function openLogFood({ day = todayKey() } = {}) {
+export function openLogFood({ day = todayKey(), meal } = {}) {
   const now = new Date();
   const flow = createFlow({ foods: state.foods, logs: state.food_logs, hour: now.getHours() + now.getMinutes() / 60, day });
+  if (meal) flow.setMeal(meal);
   sheet('Log food', (body, close) => {
     body.innerHTML = `
       <div class="stack food-log">
@@ -126,7 +146,7 @@ export function openLogFood({ day = todayKey() } = {}) {
         </form>
         <div class="food-dock" data-dock hidden>
           <div class="row between center"><b data-sel-name></b>
-            <span class="stepper"><button type="button" class="icon-btn" data-minus aria-label="Fewer servings">−</button><output data-serv aria-live="polite">1</output><button type="button" class="icon-btn" data-plus aria-label="More servings">+</button></span></div>
+            <span class="stepper">${stepBtns('1')}</span></div>
           <p class="small muted" data-sel-line></p>
           <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
           <button class="btn" data-add></button>
@@ -154,7 +174,7 @@ export function openLogFood({ day = todayKey() } = {}) {
       results.innerHTML = items.length ? items.map((it, i) => `
         <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-i="${i}" role="button" tabindex="0">
           <div><b>${esc(it.name)}</b><small class="muted">${esc(itemLine(it))}</small></div>
-          <span class="muted">${it.kind === 'mine' ? 'My food' : ''}</span></li>`).join('')
+          <span class="muted">${it.kind === 'recent' ? 'Recent' : ''}</span></li>`).join('')
         : `<li class="food-none"><div><b>${flow.f.query ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${flow.f.query ? 'Try Quick add, or save it in My foods.' : 'Use Quick add, or save foods in My foods. Search of a big food database comes next.'}</small></div></li>`;
     };
     const pick = (li) => {
@@ -205,7 +225,7 @@ function openEditEntry(e) {
       <div class="stack">
         <p class="small muted" data-line></p>
         <div class="row between center"><b>Servings</b>
-          <span class="stepper"><button type="button" class="icon-btn" data-minus aria-label="Fewer servings">−</button><output data-serv aria-live="polite"></output><button type="button" class="icon-btn" data-plus aria-label="More servings">+</button></span></div>
+          <span class="stepper">${stepBtns()}</span></div>
         <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
         <button class="btn" data-save>Save</button>
         <button class="btn danger-ghost" data-del>Delete this entry</button>

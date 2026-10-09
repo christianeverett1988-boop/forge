@@ -1,6 +1,8 @@
 /* Food logging (v0.11.0): totals meters, meals, the Log food sheet. Colours come from tokens only. */
 .meter-row { display: flex; flex-direction: column; gap: var(--s-2); }
-.meter-row.big .meter { height: 12px; }
+.meter-row--big .meter { height: 12px; }
+.meter-row--big:first-child .row { align-items: flex-end; }
+.meter-row--big:first-child .meter-val b { font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .meter-val { font-size: 17px; font-variant-numeric: tabular-nums; }
 .meter { height: 8px; border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
 .meter i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--accent); }
@@ -21,7 +23,7 @@
 /* Servings stepper and meal chips: 44px+ targets for one-handed use. */
 .stepper { display: inline-flex; align-items: center; gap: var(--s-2); }
 .stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-.stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; background: var(--surface-3); color: var(--text-1); border: 0; }
+.stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-3); color: var(--text-1); border: 0; }
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
 .chip-btn { min-height: 44px; padding: 0 var(--s-1); border: 0; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .chip-btn.on { background: var(--accent-tint); color: var(--text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 55%, transparent); }
