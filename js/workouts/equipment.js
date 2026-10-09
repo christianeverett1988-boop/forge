@@ -104,8 +104,8 @@ export const LOCATION_PRESETS = [
 ];
 
 /** The friendly line under each preset (onboarding and the Locations picker share it). */
-export function presetDescription(preset) {
-  if (preset.key === 'home') return 'Dumbbells (5 and 30 lb), kettlebells, band, jump rope, ab wheel, push-up handles, Peloton. Edit any time in Settings → Locations.';
+export function presetDescription(preset, { inLocations = false } = {}) {
+  if (preset.key === 'home') return 'Dumbbells (5 and 30 lb), kettlebells, band, jump rope, ab wheel, push-up handles, Peloton.' + (inLocations ? '' : ' Edit any time in Settings → Locations.');
   if (preset.key === 'ymca') return `Standard gym setup (${preset.equipment.length} items). Turn off anything your branch doesn’t have.`;
   return 'Bodyweight only';
 }

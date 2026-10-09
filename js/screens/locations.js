@@ -13,11 +13,15 @@ const INVENTORY = [
 ];
 
 let editingId = null;
+let pending = null; // record just created, until the Firestore snapshot delivers it into state
 
 export function renderLocations(el) {
-  const loc = editingId && state.locations.find((l) => l.id === editingId);
+  const inState = editingId && state.locations.find((l) => l.id === editingId);
+  if (inState) pending = null;
+  const loc = inState || (pending && pending.id === editingId ? pending : null);
   if (loc) return renderEditor(el, loc);
   editingId = null;
+  pending = null;
 
   el.innerHTML = `
     <section class="stack">
@@ -45,9 +49,14 @@ export function renderLocations(el) {
   );
   $('[data-add]', el).onclick = () =>
     sheet('Add a location', (body, close) => {
-      const openEditor = (rec) => {
+      let creating = false; // a quick double-tap must not make two locations
+      const openEditor = (fields) => {
+        if (creating) return;
+        creating = true;
+        const rec = put('locations', newRecord(fields));
         close();
         editingId = rec.id;
+        pending = rec;
         renderLocations(el);
       };
       const rows = presetPickerRows(state.locations);
@@ -56,7 +65,7 @@ export function renderLocations(el) {
           ${rows.map(({ preset, addAnother }) => `
             <button class="pick" type="button" data-preset="${esc(preset.key)}">
               <b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
-              <small>${esc(presetDescription(preset))}</small>
+              <small>${esc(presetDescription(preset, { inLocations: true }))}</small>
             </button>`).join('')}
           <button class="pick" type="button" data-custom>
             <b>Custom (start empty)</b>
@@ -66,7 +75,7 @@ export function renderLocations(el) {
       $$('[data-preset]', body).forEach((b) =>
         b.addEventListener('click', () => {
           const { preset } = rows.find((r) => r.preset.key === b.dataset.preset);
-          openEditor(put('locations', newRecord(locationFromPreset(preset, state.locations.length === 0))));
+          openEditor(locationFromPreset(preset, state.locations.length === 0));
         })
       );
       $('[data-custom]', body).onclick = () => {
@@ -81,7 +90,7 @@ export function renderLocations(el) {
           e.preventDefault();
           const name = form.name.value.trim();
           if (!name) return;
-          openEditor(put('locations', newRecord({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 })));
+          openEditor({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 });
         });
       };
     });

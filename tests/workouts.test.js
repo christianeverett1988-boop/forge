@@ -468,6 +468,15 @@ test('preset copy matches onboarding wording', () => {
   eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'travel')), 'Bodyweight only');
 });
 
+test('Home copy drops the "Edit any time" line inside Settings → Locations only', () => {
+  const home = LOCATION_PRESETS.find((l) => l.key === 'home');
+  assert(presetDescription(home).endsWith('Edit any time in Settings → Locations.'));
+  const inPicker = presetDescription(home, { inLocations: true });
+  assert(!inPicker.includes('Settings'));
+  assert(inPicker.endsWith('Peloton.'));
+  eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca'), { inLocations: true }), presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca')));
+});
+
 test('preview edits: Switch at a bare location still fills every slot it can', () => {
   const none = { equipment: [], weight_inventory: {} };
   const base = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: none, profile, exercises: EXERCISES, unit: 'lb' });
