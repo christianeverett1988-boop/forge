@@ -48,6 +48,17 @@ export function backTarget(parts) {
   return `#/${parent}`;
 }
 
+const LABELS = {
+  today: 'Today', train: 'Train', body: 'Body', weight: 'Progress', settings: 'Settings',
+  withings: 'Withings', session: 'Workout',
+};
+/** Title of the screen "Back" goes to, e.g. "Settings" (iOS shows the parent's title on the back button). */
+export function backLabel(parts) {
+  const target = backTarget(parts);
+  if (!target) return null;
+  return LABELS[target.replace(/^#\/?/, '')] || 'Back';
+}
+
 /** Large-title screens that should not show the title of their own sub-page (Progress shows one header). */
 export const TITLE_FOR = { weight: 'Progress', history: 'Progress', awards: 'Progress', score: 'Progress' };
 

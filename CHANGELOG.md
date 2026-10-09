@@ -11,6 +11,7 @@ No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; n
 - **Screen changes feel native.** Detail screens slide in from the right over the old one (which slides back and dims); going back reverses it; switching tabs crossfades. Each tab remembers its scroll position. Phones without the animation API get a quick fade instead.
 - **Sheets you can drag.** Sheets have a grabber and frosted header, follow your finger, close with a flick or a long pull, and slide away smoothly with the backdrop fading along.
 - **Motion polish.** One set of timings and spring curves everywhere; everything tappable dips slightly when pressed. Weight trend, calories, Forge Score and other numbers count up once per visit (tabular figures, so they don't jitter). Tabs, segmented controls and records give the haptic tick when Settings → Haptic tick is on. Reduced Motion turns all of this into plain fades.
+- Review fixes: the collapsed top bar now truly blurs what scrolls under it; the back button shows the parent's title ("‹ Settings") and the duplicate in-page back links are gone; the Locations editor drives the top bar (its name, "‹ Locations" back to the list); swipe-back keeps the tab bar visible, moves a full-height screen over a dim scrim that lightens as you drag, and with Reduced Motion simply goes back with a crossfade.
 - Manifest now has an `id` and the maskable icon for 192 and 512.
 
 ## 0.5.1 — Add a location from a preset (2026-10-09)

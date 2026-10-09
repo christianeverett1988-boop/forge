@@ -32,6 +32,13 @@ export function rubberBand(offset, limit = 80) {
 /** 0..1 for how far a sheet has been dragged down, for fading the backdrop. */
 export const dragProgress = (offset, size) => (size > 0 ? Math.min(1, Math.max(0, offset / size)) : 0);
 
+/** Edge swipe-back: how dark the dim scrim behind the sliding screen is. Full strength at rest, gone once it has slid across. */
+export function scrimOpacity(dx, width, max = 0.5) {
+  if (!(width > 0)) return max;
+  const progress = Math.min(1, Math.max(0, dx / width));
+  return +(max * (1 - progress)).toFixed(3);
+}
+
 /** Edge swipe-back: go back when dragged past 40% of the width or flicked right. */
 export function shouldPop({ dx, velocity, width }) {
   if (dx <= 0) return false;

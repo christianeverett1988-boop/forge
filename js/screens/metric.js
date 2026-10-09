@@ -69,7 +69,6 @@ export function renderMetric(el, key) {
 
   el.innerHTML = `
     <section class="stack">
-      <a class="link small" href="#/body">‹ Body</a>
       <div class="row between center"><h1>${esc(def.label)}</h1><button class="btn ghost small" data-explain>What is this?</button></div>
       ${last ? `
       <div class="card stack">

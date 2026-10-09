@@ -2,8 +2,8 @@
 // count-up formatting, and a CSS guard so form fields can't drop below 16px (iOS zooms into smaller ones).
 import { readFileSync, readdirSync } from 'node:fs';
 import { test, eq, assert } from './harness.js';
-import { routeDepth, transitionKind, backTarget, tabOf, createScrollMemory } from '../js/nav.js';
-import { shouldDismiss, rubberBand, dragProgress, velocityOf, shouldPop } from '../js/ui/gesture.js';
+import { routeDepth, transitionKind, backTarget, backLabel, tabOf, createScrollMemory } from '../js/nav.js';
+import { shouldDismiss, rubberBand, dragProgress, velocityOf, shouldPop, scrimOpacity } from '../js/ui/gesture.js';
 import { parseCountText, formatCount } from '../js/ui/motion.js';
 
 const p = (hash) => hash.replace(/^#\/?/, '').split('/');
@@ -89,6 +89,26 @@ test('edge swipe-back: past 40% of the width or a quick flick right pops', () =>
   eq(shouldPop({ dx: 100, velocity: 0.1, width: 390 }), false);
   eq(shouldPop({ dx: 60, velocity: 0.8, width: 390 }), true);
   eq(shouldPop({ dx: -50, velocity: 0.9, width: 390 }), false, 'leftwards never pops');
+});
+
+test('swipe-back scrim: full dim at the edge, lighter as you drag, gone at the far side', () => {
+  eq(scrimOpacity(0, 390), 0.5);
+  eq(scrimOpacity(195, 390), 0.25);
+  eq(scrimOpacity(390, 390), 0);
+  eq(scrimOpacity(-40, 390), 0.5, 'dragging left clamps');
+  eq(scrimOpacity(900, 390), 0, 'overshoot clamps');
+  eq(scrimOpacity(10, 0), 0.5, 'no width yet');
+});
+
+test('backLabel names the parent screen like iOS', () => {
+  eq(backLabel(p('#/locations')), 'Settings');
+  eq(backLabel(p('#/withings')), 'Settings');
+  eq(backLabel(p('#/withings/check')), 'Withings');
+  eq(backLabel(p('#/timer')), 'Train');
+  eq(backLabel(p('#/library')), 'Train');
+  eq(backLabel(p('#/metric/weight')), 'Body');
+  eq(backLabel(p('#/apple')), 'Settings');
+  eq(backLabel(p('#/today')), null);
 });
 
 test('count-up formatting keeps decimals, grouping, prefix and unit', () => {

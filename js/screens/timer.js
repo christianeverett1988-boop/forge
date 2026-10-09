@@ -53,7 +53,6 @@ export function stopIntervalTimer() {
 export function renderTimer(el) {
   el.innerHTML = `
     <section class="stack timer-screen">
-      <a href="#/train" class="link">‹ Train</a>
       <h1>Interval timer</h1>
       <div class="seg wrap" role="radiogroup" aria-label="Preset">
         ${Object.entries(PRESETS).map(([k, p]) => `<label><input type="radio" name="preset" value="${k}" ${cfg.key === k ? 'checked' : ''} ${run ? 'disabled' : ''}><span>${esc(p.name)}</span></label>`).join('')}

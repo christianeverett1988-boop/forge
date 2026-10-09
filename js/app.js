@@ -6,11 +6,11 @@ import { APP_NAME } from '../config.js';
 import { stopRest, restRemaining } from './timer.js';
 import { viewTransition, animateCounters, resetCounters, reducedMotion } from './ui/motion.js';
 import { loadPhotoIndex } from './ui/photos.js';
-import { navBar, hideNavBar } from './ui/navbar.js';
+import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
 import { hapticTabs, hapticSegments } from './ui/haptic.js';
 import { attachSwipeBack } from './ui/swipeback.js';
 import { skeletonHTML } from './ui/skeleton.js';
-import { tabOf, routeDepth, transitionKind, backTarget, TITLE_FOR, createScrollMemory } from './nav.js';
+import { tabOf, routeDepth, transitionKind, backTarget, backLabel, TITLE_FOR, createScrollMemory } from './nav.js';
 
 const main = document.getElementById('main');
 const nav = document.getElementById('nav');
@@ -176,6 +176,7 @@ async function render() {
   if (lastRoute === 'session' && route !== 'session') import('./screens/session.js').then((m) => m.leaveSession());
   if (lastRoute === 'play' && route !== 'play') import('./screens/player.js').then((m) => m.leavePlayer());
   if (lastRoute === 'summary' && route !== 'summary') import('./ui/fx.js').then((m) => m.clearParticles());
+  if (lastRoute !== route) screenNav(null); // sub-view nav (e.g. a Locations editor) never outlives its screen
   lastRoute = route;
   const tab = tabOf(route);
   nav.hidden = FULLSCREEN.has(route);
@@ -189,7 +190,7 @@ async function render() {
     await routes[route](...routeParts().slice(1));
     markSeen(true);
     if (FULLSCREEN.has(route)) hideNavBar();
-    else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()) });
+    else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()), backLabel: backLabel(routeParts()) });
     hapticTabs(nav, onTab);
     hapticSegments(main);
     animateCounters(main);
@@ -285,8 +286,10 @@ nav.addEventListener('click', (e) => {
 attachSwipeBack({
   el: main,
   canSwipe: () => routeDepth(routeParts()) > 0 && !FULLSCREEN.has(currentRoute()),
-  onPop: () => new Promise((resolve) => {
-    swipePop = resolve;
+  onPop: ({ crossfade = false } = {}) => new Promise((resolve) => {
+    // Reduced motion: nothing slid away, so let the normal route change crossfade.
+    if (!crossfade) swipePop = resolve;
+    else resolve();
     location.hash = backTarget(routeParts());
   }),
 });

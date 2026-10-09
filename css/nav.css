@@ -22,16 +22,20 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
   height: calc(var(--safe-top) + 44px); padding: var(--safe-top) 8px 0;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   pointer-events: none;
+  /* The blur lives on the .navbar itself, not a child: .navbar has a view-transition-name, which makes it a
+     backdrop root, so a child's backdrop-filter would only see the (empty) inside of the bar. */
+  background: rgba(10, 10, 11, 0);
+  -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%);
+  box-shadow: 0 .5px 0 rgba(255, 255, 255, 0);
+  transition: background var(--t-med) var(--ease-out), backdrop-filter var(--t-med) var(--ease-out),
+    -webkit-backdrop-filter var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out);
 }
 .navbar[hidden] { display: none; }
-.navbar::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none;
+.navbar.collapsed {
   background: rgba(10, 10, 11, .66);
   -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 .5px 0 rgba(255, 255, 255, .14);
-  transition: opacity var(--t-med) var(--ease-out);
 }
-.navbar.collapsed::before { opacity: 1; }
 .nb-back {
   pointer-events: auto; justify-self: start;
   display: inline-flex; align-items: center; gap: 2px; min-height: 44px; min-width: 44px; padding: 0 10px 0 4px;
@@ -159,3 +163,13 @@ dialog.sheet.dragging::backdrop { transition: none; }
   .toast { translate: -50% 0; }
   .offline-banner { animation: none; }
 }
+
+/* ---------- Edge swipe-back: the sliding screen is a full-height layer, nothing may widen the page ---------- */
+html, body { overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+main.swiping {
+  position: relative; z-index: 1; min-height: 100dvh; background: var(--bg);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, .5); will-change: transform;
+}
+.swipe-under { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--surface-2, #1e2126); }
+.swipe-under i { position: absolute; inset: 0; background: #000; opacity: .5; }
