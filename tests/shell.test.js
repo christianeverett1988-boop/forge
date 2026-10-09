@@ -49,6 +49,10 @@ test('back target: roots have none; detail screens go to their parent', () => {
   eq(backLabel(p('#/awards')), 'Progress');
   eq(backTarget(p('#/trends')), null);
   eq(backTarget(p('#/weekly')), null);
+  eq(backTarget(p('#/photos')), '#/body');
+  eq(backTarget(p('#/photos/take')), '#/body');
+  eq(tabOf('photos'), 'body');
+  eq(routeDepth(['photos']), 1);
 });
 
 test('scroll memory: each tab root keeps its own position; detail screens always start at the top', () => {
@@ -115,6 +119,7 @@ test('backLabel names the parent screen like iOS', () => {
   eq(backLabel(p('#/library')), 'Train');
   eq(backLabel(p('#/metric/weight')), 'Body');
   eq(backLabel(p('#/apple')), 'Settings');
+  eq(backLabel(p('#/photos')), 'Body');
   eq(backLabel(p('#/today')), null);
 });
 

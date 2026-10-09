@@ -10,6 +10,7 @@ import { VERSION } from '../version.js';
 import { unlockAudio, coach, sfx, beep } from '../ui/sound.js';
 import { hapticSupport } from '../ui/haptic.js';
 import { icon } from '../ui/icons.js';
+import { photoSettingsHtml, bindPhotoSettings } from '../photos/settings.js';
 
 function withingsLine() {
   const w = state.integrations && state.integrations.withings;
@@ -95,6 +96,8 @@ export function renderSettings(el) {
         <button class="g-row" data-tour-again><span class="g-ic">${icon('help')}</span><span class="g-text"><span>Show the how-to tour again</span></span></button>
       </div>
 
+      ${photoSettingsHtml()}
+
       <p class="sec-title">Account</p>
       <div class="group">
         <div class="g-row static"><span class="g-text"><span>${esc(state.user.email)}</span></span></div>
@@ -172,6 +175,7 @@ export function renderSettings(el) {
     await signOut();
   };
 
+  bindPhotoSettings(el);
   $('[data-delete]', el).onclick = () => openDeleteEverything();
   $('[data-tour-again]', el).onclick = () => import('../tour/tour.js').then((m) => m.startTour({ replay: true }));
 }
@@ -203,11 +207,13 @@ function openDeleteEverything() {
       btn.disabled = true;
       btn.textContent = 'Deleting…';
       let accountGone = false;
+      const uid = state.user.uid;
       try {
         await reauth(form.password.value);
         await deleteAllUserData();
         await deleteAccount();
         accountGone = true;
+        await import('../photos/store.js').then((m) => m.dropPhotoDb(uid)); // progress photos on this phone go too
         await clearLocalCache();
       } catch (ex) {
         if (accountGone) {
