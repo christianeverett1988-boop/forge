@@ -10,7 +10,7 @@ export const TAB_FOR = {
   history: 'weight', awards: 'weight', score: 'weight',
   locations: 'settings', report: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
   metric: 'body', photos: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
-  coach: 'today',
+  coach: 'today', program: 'today',
 };
 export const tabOf = (route) => TAB_FOR[route] || route;
 
@@ -61,7 +61,7 @@ export function backLabel(parts) {
 }
 
 /** Large-title screens that should not show the title of their own sub-page (Progress shows one header). */
-export const TITLE_FOR = { weight: 'Progress', trends: 'Progress', score: 'Progress', weekly: 'Progress' };
+export const TITLE_FOR = { program: 'Program', weight: 'Progress', trends: 'Progress', score: 'Progress', weekly: 'Progress' };
 
 /** Per-tab scroll memory: tab roots restore where you left them; detail screens always start at the top. */
 export function createScrollMemory() {

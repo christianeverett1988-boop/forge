@@ -95,6 +95,7 @@ const routes = {
   apple: () => import('./screens/apple.js').then((m) => m.renderApple(main)),
   score: () => import('./screens/score.js').then((m) => m.renderScore(main)),
   trends: () => import('./screens/trends.js').then((m) => m.renderTrends(main)),
+  program: () => import('./screens/program.js').then((m) => m.renderProgram(main)),
   report: () => import('./screens/report.js').then((m) => m.renderReport(main)),
   weekly: () => import('./screens/weekly.js').then((m) => m.renderWeekly(main)),
   coach: () => import('./screens/coach.js').then((m) => m.renderCoach(main)),
@@ -239,9 +240,16 @@ function seedMissions() {
   if (!state.settings.missions_started) import('./missions/store.js').then((m) => m.ensureStarted());
 }
 
+// A body program whose last week is over becomes history (once), judged on fully loaded data.
+function settlePrograms() {
+  if (!allLoaded() || !state.settings || !state.settings.body_program) return;
+  import('./body-programs/store.js').then((m) => m.settleProgram());
+}
+
 subscribe((patch) => {
   seedAwards();
   seedMissions();
+  settlePrograms();
   const keys = Object.keys(patch);
   // Withings finished a history import while weight.csv rows are in Forge: drop the duplicate csv copies.
   if (('weights' in patch || 'integrations' in patch) && allLoaded()) import('./withings/dedupe.js').then((m) => m.dedupeCsv());

@@ -8,6 +8,7 @@ import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
 import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { missionWeekHtml } from '../missions/ui.js';
+import { programsAwardsHtml } from '../body-programs/ui.js';
 
 const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
 
@@ -43,6 +44,8 @@ export function renderAwards(el) {
       </div>
 
       ${missionWeekHtml()}
+
+      ${programsAwardsHtml()}
 
       <div class="card aw-streak">
         <div class="row between center">

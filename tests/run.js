@@ -25,6 +25,7 @@ import './coach.test.js';
 import './missions.test.js';
 import './longterm.test.js';
 import './report.test.js';
+import './bodyprograms.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

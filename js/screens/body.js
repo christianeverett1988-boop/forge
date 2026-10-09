@@ -12,6 +12,7 @@ import { MUSCLE_LABELS, muscleStats, SHOW_MUSCLES as SHOW, freshCount } from '..
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
 import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
 import { icon, emptyState } from '../ui/icons.js';
+import { programsCard, bindProgramsCard } from '../body-programs/ui.js';
 
 const ago = (iso) => {
   if (!iso) return 'Not trained yet';
@@ -77,6 +78,7 @@ export function renderBody(el) {
       </div>
       ${insightCards()}
       ${compositionCard()}
+      ${programsCard()}
       <div data-photos-slot></div>
       ${goalPathCard()}
       ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
@@ -95,6 +97,7 @@ export function renderBody(el) {
     </section>`;
 
   bindInsightCards(el, dismissInsight);
+  bindProgramsCard(el);
   import('../photos/cards.js').then((m) => m.mountBodyPhotosCard($('[data-photos-slot]', el)));
   const open = (region) => {
     const [side, slug] = region.split(':');
