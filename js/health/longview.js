@@ -4,6 +4,7 @@ import { smoothFull } from './trends.js';
 import { sparkSvg } from './cards.js';
 import { fmtMetric } from '../withings/body.js';
 import { RANGES, WEEKS_MIN } from './longterm.js';
+import { FLOORS } from './longevity.js';
 
 export const EMPTY_LONGEVITY = 'Longevity cards appear when your watch or scale sends VO₂max, resting heart rate, HRV or body composition.';
 
@@ -39,6 +40,23 @@ export function changeLine(c, f) {
   if (n.change == null || Number(f(Math.abs(n.change), false).replace(/,/g, '')) === 0) return 'About the same over the last 90 days.';
   const tail = n.direction === 'flat' ? 'about the same' : n.tone === 'good' ? 'a real improvement' : n.tone === 'bad' ? 'worth keeping an eye on' : '';
   return `${n.change > 0 ? 'Up' : 'Down'} ${f(Math.abs(n.change))} in 90 days${tail ? `, ${tail}` : ''}`;
+}
+
+/**
+ * The Longevity metrics whose 90-day change is clearest, as [{ key, title, line }] (at most n): each card's own
+ * sentence with units. "Clear" = the change in multiples of that metric's noise floor, so bpm and ml/kg/min compare fairly.
+ */
+export function clearestChanges(cards, units, n = 3) {
+  return cards
+    .filter((c) => c.ninety.enough && c.ninety.change != null)
+    .map((c) => ({ c, size: Math.abs(c.ninety.change) / (FLOORS[c.key] || 1) }))
+    .sort((a, b) => b.size - a.size)
+    .slice(0, n)
+    .map(({ c }) => ({
+      key: c.key,
+      title: c.title,
+      line: changeLine(c, (v, unit = true) => fmtMetric(c.key, v, units, { kind: FMT_KIND[c.key], unit })),
+    }));
 }
 
 /** One Longevity card. */

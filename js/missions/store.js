@@ -10,7 +10,7 @@ import { streak } from '../workouts/awards.js';
 import {
   DEFAULTS, indexDays, missionsFor, missionXP, weekDots, allDone, dayXP, localDay, shiftDay, MISSION_XP, ALL_DONE_XP,
 } from './core.js';
-import { missionBadges, newMissionBadges } from './badges.js';
+import { missionBadges, newMissionBadges, currentStreak } from './badges.js';
 
 const XP_BADGE = 100;
 export const today = () => localDay(Date.now());
@@ -57,6 +57,11 @@ export function todayMissions() {
 /** Rolling week for the Awards screen. */
 export function weekProgress() {
   return weekDots(today(), liveIndex(), { targets: targets() }, startedDay());
+}
+
+/** What Coach needs: today's missions, the rolling week, and the weigh-in streak in days. */
+export function missionsSummary() {
+  return { started: !!startedDay(), today: todayMissions(), week: weekProgress(), streak: currentStreak([...liveIndex().weigh], today()) };
 }
 
 /** Mission badges (streaks, body composition), keeping any already saved in awards_seen. */

@@ -22,6 +22,16 @@ advice: the screen carries the usual disclaimer, and the Recovered answer repeat
 | 6 | What's my Forge Score made of? | `forgeScore` (`score.js`) | Needs an overall score (3+ pillars). Lines: each tracked pillar's value, the biggest mover vs the week before, pillars not tracked yet. |
 | 7 | Am I getting stronger? | `liftChanges` (`lifts.js`) from `buildIndex` + `e1rm`, `stalledMainLifts` (`plan.js`) | Main lifts (done as `role: main` in the last 16 weeks). Estimated 1RM (Epley) is the best in each 4-week block: now = last 28 days, compared with the block 4 weeks earlier and the block 12 weeks earlier. Deload sessions are left out. Hidden until a lift has two blocks. Action when a main lift is stalled: **Start a deload week** (`startDeload`, behind a confirm sheet). |
 
+## Missions, programs and long-term health (v0.14.3)
+
+| # | Question | Source | Rule |
+|---|----------|--------|------|
+| 8 | How are my missions going? | `missionsSummary` (`missions/store.js`): `missionsFor`, `weekDots`, `currentStreak` | Only after `missions_started`. Today's done/total and what is left, days complete in the last 7, weigh-in streak, mission XP this week. |
+| 9 | How's my program going? / Which program should I start? | `programStatus` (`body-programs/core.js`), `recommendedId` | Running: week N of M, this week's goals in the `#/program` words (the cut's pace goal carries the safe pace), weeks fully hit. Not running: the recommended program with a one-line why; hidden when a cut is blocked by the safety checks. |
+| 10 | How's my long-term health? | `longTerm`, `longevityCards`, `clearestChanges` (`longview.js`) | Only when a Longevity card has data. The 90-day Score sentence and up to three metrics with the clearest change (multiples of the metric's noise floor). |
+
+At most 8 chips show. If more apply, a running program and started missions go first, then the list order, and the last ones drop off. These answers have no action button: the action system runs functions and has no link type.
+
 ## Accept or reject
 
 Actions never run on their own. Each shows "Coach suggests: ..." with **Do it** and **Not now**. Deload also asks

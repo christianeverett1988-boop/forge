@@ -43,6 +43,13 @@ export function recommendedId(goal) {
   return p || 'maintain4';
 }
 
+/** One plain line on why recommendedId(goal) fits that goal. */
+export function recommendedWhy(goal) {
+  if (goal === 'lose') return 'your goal is to lose weight, and it keeps the pace safe';
+  if (goal === 'recomp' || goal === 'muscle') return 'your goal is to build strength while your weight holds steady';
+  return 'it helps you hold the weight you have';
+}
+
 // ---------- dates ----------
 const dayNum = (key) => {
   const [y, m, d] = key.split('-').map(Number);

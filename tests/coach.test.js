@@ -80,7 +80,7 @@ test('coach: with enough data every question answers with a headline, 2–4 line
     assert(a.lines.length >= 2 && a.lines.length <= 4, `${f.name} has ${a.lines.length} lines`);
     assert(a.why && a.why.length > 10, `${f.name} why`);
   }
-  eq(availableQuestions(d, TODAY).length, QUESTIONS.length, 'all seven chips show');
+  eq(availableQuestions(d, TODAY).length, QUESTIONS.length - 3, 'all seven chips show (missions, program and long term need their own data)');
 });
 
 // ---------- too little data: null, so the chip is hidden ----------

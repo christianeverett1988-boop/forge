@@ -24,6 +24,7 @@ import './restyle.test.js';
 import './trends.test.js';
 import './photos.test.js';
 import './coach.test.js';
+import './coach-v0143.test.js';
 import './missions.test.js';
 import './longterm.test.js';
 import './report.test.js';
