@@ -3,7 +3,7 @@
 import { state, units as getUnits } from '../state.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
 import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
-import { EQUIPMENT_GROUPS } from '../workouts/equipment.js';
+import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRows } from '../workouts/equipment.js';
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
 
@@ -13,11 +13,15 @@ const INVENTORY = [
 ];
 
 let editingId = null;
+let pending = null; // record just created, until the Firestore snapshot delivers it into state
 
 export function renderLocations(el) {
-  const loc = editingId && state.locations.find((l) => l.id === editingId);
+  const inState = editingId && state.locations.find((l) => l.id === editingId);
+  if (inState) pending = null;
+  const loc = inState || (pending && pending.id === editingId ? pending : null);
   if (loc) return renderEditor(el, loc);
   editingId = null;
+  pending = null;
 
   el.innerHTML = `
     <section class="stack">
@@ -44,22 +48,51 @@ export function renderLocations(el) {
     })
   );
   $('[data-add]', el).onclick = () =>
-    sheet('New location', (body, close) => {
-      body.innerHTML = `
-        <form class="stack" novalidate>
-          <label class="field"><span>Name</span><input name="name" placeholder="e.g. LA Fitness" maxlength="40"></label>
-          <button class="btn" type="submit">Create</button>
-        </form>`;
-      const form = $('form', body);
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = form.name.value.trim();
-        if (!name) return;
-        const rec = put('locations', newRecord({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 }));
+    sheet('Add a location', (body, close) => {
+      let creating = false; // a quick double-tap must not make two locations
+      const openEditor = (fields) => {
+        if (creating) return;
+        creating = true;
+        const rec = put('locations', newRecord(fields));
         close();
         editingId = rec.id;
+        pending = rec;
         renderLocations(el);
-      });
+      };
+      const rows = presetPickerRows(state.locations);
+      body.innerHTML = `
+        <div class="choices">
+          ${rows.map(({ preset, addAnother }) => `
+            <button class="pick" type="button" data-preset="${esc(preset.key)}">
+              <b>${esc(preset.name)}${addAnother ? ' <span class="pill">Add another</span>' : ''}</b>
+              <small>${esc(presetDescription(preset, { inLocations: true }))}</small>
+            </button>`).join('')}
+          <button class="pick" type="button" data-custom>
+            <b>Custom (start empty)</b>
+            <small>Name it and pick your own equipment.</small>
+          </button>
+        </div>`;
+      $$('[data-preset]', body).forEach((b) =>
+        b.addEventListener('click', () => {
+          const { preset } = rows.find((r) => r.preset.key === b.dataset.preset);
+          openEditor(locationFromPreset(preset, state.locations.length === 0));
+        })
+      );
+      $('[data-custom]', body).onclick = () => {
+        body.innerHTML = `
+          <form class="stack" novalidate>
+            <label class="field"><span>Name</span><input name="name" placeholder="e.g. LA Fitness" maxlength="40"></label>
+            <button class="btn" type="submit">Create</button>
+          </form>`;
+        const form = $('form', body);
+        form.name.focus();
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const name = form.name.value.trim();
+          if (!name) return;
+          openEditor({ name, preset: 'custom', equipment: [], weight_inventory: {}, is_default: state.locations.length === 0 });
+        });
+      };
     });
 }
 

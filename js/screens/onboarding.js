@@ -7,7 +7,7 @@ import {
   GOALS, ACTIVITY_LEVELS, computeTargets, FLOOR_SOURCE, MAX_LOSS_PCT, MAX_LOSS_PCT_OVERRIDE,
 } from '../nutrition/targets.js';
 import { weightToDisplay, weightFromInput, weightUnit, feetInchesToCm, cmToFeetInches, formatWeight } from '../units.js';
-import { LOCATION_PRESETS } from '../workouts/equipment.js';
+import { LOCATION_PRESETS, presetDescription, locationFromPreset } from '../workouts/equipment.js';
 import { currentWeightKg } from '../derived.js';
 
 let draft = null;
@@ -213,7 +213,7 @@ const stepLocations = {
       ${LOCATION_PRESETS.map((l) => `
         <label class="choice check">
           <input type="checkbox" name="loc" value="${l.key}" ${draft.locations.has(l.key) ? 'checked' : ''}>
-          <span>${esc(l.name)}<small>${l.key === 'home' ? 'Dumbbells (5 and 30 lb), kettlebells, band, jump rope, ab wheel, push-up handles, Peloton. Edit any time in Settings → Locations.' : l.key === 'ymca' ? `Standard gym setup (${l.equipment.length} items). Turn off anything your branch doesn’t have.` : 'Bodyweight only'}</small></span>
+          <span>${esc(l.name)}<small>${esc(presetDescription(l))}</small></span>
         </label>`).join('')}
     </div>`,
   read(form) {
@@ -319,13 +319,7 @@ function finish() {
     let first = true;
     for (const preset of LOCATION_PRESETS) {
       if (!draft.locations.has(preset.key)) continue;
-      put('locations', newRecord({
-        name: preset.name,
-        preset: preset.key,
-        equipment: [...preset.equipment],
-        weight_inventory: { ...preset.weight_inventory },
-        is_default: first,
-      }));
+      put('locations', newRecord(locationFromPreset(preset, first)));
       first = false;
     }
     const now = new Date();

@@ -1,6 +1,6 @@
 import { test, eq, near, assert } from './harness.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
-import { expandEquipment, canDo, LOCATION_PRESETS, YMCA_PRESET } from '../js/workouts/equipment.js';
+import { expandEquipment, canDo, LOCATION_PRESETS, YMCA_PRESET, presetPickerRows, locationFromPreset, presetDescription } from '../js/workouts/equipment.js';
 import { fatigueAt, recoveryPct, effortFactor, SETS_TO_EXHAUST } from '../js/workouts/recovery.js';
 import { nextTarget, availableLoads, warmups, platesPerSide, e1rm, detectPRs, isStalled, predictedReps } from '../js/workouts/progression.js';
 import { generateWorkout, injuryTags, deloadInfo, pickDayType } from '../js/workouts/generator.js';
@@ -429,6 +429,52 @@ test('preview edits: Replace forces a pick, Switch steers away from the current 
   const changed = sw.exercises.filter((it) => !ids.includes(it.exercise_id)).length;
   assert(changed >= Math.ceil(ids.length / 2), `switch changed only ${changed} of ${ids.length}`);
   eq(sw.exercises.length, base.exercises.length, 'same shape of workout');
+});
+
+// ---------- Locations preset picker ----------
+test('picker: only Home owned -> Home says Add another, YMCA and Travel are plain', () => {
+  const rows = presetPickerRows([{ preset: 'home' }]);
+  eq(rows.map((r) => r.preset.key).join(), 'home,ymca,travel');
+  eq(rows.map((r) => r.addAnother).join(), 'true,false,false');
+});
+
+test('picker: no locations -> nothing marked; custom locations do not count', () => {
+  assert(presetPickerRows([]).every((r) => !r.addAnother));
+  assert(presetPickerRows([{ preset: 'custom' }]).every((r) => !r.addAnother));
+});
+
+test('picker: a second YMCA is still offered', () => {
+  assert(presetPickerRows([{ preset: 'ymca' }]).find((r) => r.preset.key === 'ymca').addAnother);
+});
+
+test('create from preset copies equipment and inventory', () => {
+  const ymca = LOCATION_PRESETS.find((l) => l.key === 'ymca');
+  const rec = locationFromPreset(ymca, false);
+  eq(rec.name, 'YMCA');
+  eq(rec.preset, 'ymca');
+  eq(rec.is_default, false);
+  eq(rec.equipment.length, 30);
+  rec.equipment.push('x');
+  eq(ymca.equipment.length, 30, 'preset untouched');
+  const home = locationFromPreset(HOME, true);
+  eq(home.is_default, true);
+  eq(JSON.stringify(home.weight_inventory), JSON.stringify(HOME.weight_inventory));
+  home.weight_inventory.dumbbells_kg.push(99);
+  eq(HOME.weight_inventory.dumbbells_kg.length, 2, 'inventory arrays are copies');
+});
+
+test('preset copy matches onboarding wording', () => {
+  assert(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca')).startsWith('Standard gym setup (30 items).'));
+  eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'travel')), 'Bodyweight only');
+});
+
+test('Home copy drops the "Edit any time" line inside Settings → Locations only', () => {
+  const home = LOCATION_PRESETS.find((l) => l.key === 'home');
+  assert(presetDescription(home).endsWith('Edit any time in Settings → Locations.'));
+  const inPicker = presetDescription(home, { inLocations: true });
+  assert(!inPicker.includes('Settings'));
+  assert(inPicker.endsWith('Peloton.'));
+  eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca'), { inLocations: true }), presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca')));
 });
 
 test('preview edits: Switch at a bare location still fills every slot it can', () => {
