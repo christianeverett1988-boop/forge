@@ -2,7 +2,7 @@
 // modules, and actions that only call existing functions. Synthetic data only.
 import { readFileSync, readdirSync } from 'node:fs';
 import { test, eq, assert } from './harness.js';
-import { weekAnswer, goalAnswer, weightAnswer, weightLabel, trainAnswer, recoveredAnswer, scoreAnswer, strongerAnswer, availableQuestions, QUESTIONS, MEDICAL as COACH_MEDICAL } from '../js/coach/answers.js';
+import { weekLabel, needsStarter, weekAnswer, goalAnswer, weightAnswer, weightLabel, trainAnswer, recoveredAnswer, scoreAnswer, strongerAnswer, availableQuestions, QUESTIONS, MEDICAL as COACH_MEDICAL } from '../js/coach/answers.js';
 import { runAction } from '../js/coach/actions.js';
 import { liftChanges } from '../js/coach/lifts.js';
 import { dailyWeights, smooth, trendChange } from '../js/weight/smoothing.js';
@@ -10,7 +10,7 @@ import { shiftDay } from '../js/health/metrics.js';
 import { buildSeries, allTrends } from '../js/health/trends.js';
 import { goalPath } from '../js/health/goalpath.js';
 import { weeklyReport, reportWeekFor } from '../js/health/weekly.js';
-import { readiness } from '../js/health/readiness.js';
+import { readiness, fmtH } from '../js/health/readiness.js';
 import { forgeScore } from '../js/health/score.js';
 import { fmtDelta } from '../js/health/delta.js';
 import { MEDICAL } from '../js/health/insights.js';
@@ -19,6 +19,7 @@ import { e1rm } from '../js/workouts/progression.js';
 import { fatigueAt, recoveryPct } from '../js/workouts/recovery.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
 import { backTarget } from '../js/nav.js';
+import { freshCount, SHOW_MUSCLES } from '../js/workouts/recovery.js';
 
 const TODAY = '2026-10-10'; // a Saturday
 const dayAt = (i) => shiftDay(TODAY, -i);
@@ -126,7 +127,7 @@ test('coach stronger: lifting with no history is hidden; one block of history is
   eq(strongerAnswer(build({ workouts: [] }), TODAY), null);
   eq(strongerAnswer(build({ workouts: [workout(5, 100, 5)] }), TODAY), null, 'nothing to compare with yet');
   const a = strongerAnswer(build({ workouts: [workout(5, 100, 5), workout(33, 90, 5)] }), TODAY);
-  assert(a && a.headline.includes('1 of 1'), a && a.headline);
+  eq(a.headline, 'Your main lift is up over 4 weeks.');
   eq(a.action, undefined, 'no stalled lift, no deload suggestion');
 });
 
@@ -217,7 +218,7 @@ test('coach numbers: goal answer matches the goal path', () => {
   assert(a.headline.includes(day(p.etaDay)), `${a.headline} vs ${p.etaDay}`);
   assert(a.lines[0].includes(Math.abs(p.current).toFixed(1)), a.lines[0]);
   assert(a.lines[0].includes(Math.abs(p.remaining).toFixed(1)), a.lines[0]);
-  assert(a.lines.some((l) => l.includes(Math.abs(p.capKgPerWeek).toFixed(2))), 'the safe pace');
+  assert(a.lines.some((l) => l.includes(Math.abs(p.capKgPerWeek).toFixed(1))), 'the safe pace');
 });
 
 test('coach numbers: weight answer matches the smoothing module', () => {
@@ -308,4 +309,85 @@ test('coach: no network and no new storage in the coach code', () => {
 
 test('coach: the screen is a detail screen under Today', () => {
   eq(backTarget(['coach']), '#/today');
+});
+
+// ---------- review round 1 ----------
+
+/** Same data as build(), with the latest reading set to kg against a given trend, in the given units. */
+const withLast = (kg, trend, units) => {
+  const w = weights(30).map((x) => ({ ...x }));
+  Object.assign(w[w.length - 1], { kg, trend });
+  return { ...build({ ws: w }), weights: w, units };
+};
+
+test('coach week: the chip label matches the data (last week, or this week while partial)', () => {
+  eq(weekLabel({ report: { partial: false } }), 'How did last week go?');
+  eq(weekLabel({ report: { partial: true } }), 'How is this week going?');
+  const d = build();
+  eq(availableQuestions(d, TODAY).find((q) => q.id === 'week').label, weekLabel(d));
+});
+
+test('coach train: names the muscles today trains (not the most recovered) and what amber does', () => {
+  const rec = Object.fromEntries(SHOW_MUSCLES.map((m) => [m, 100]));
+  rec.quads = 96; rec.glutes = 97;
+  const plan = { label: 'Lower', exercises: [{}, {}], est_minutes: 40, location: { name: 'Home gym' }, deload: false, readiness: 'amber' };
+  const a = trainAnswer({ ...build({ plan }), recovery: rec, planMuscles: ['quads', 'glutes', 'hamstrings'] }, TODAY);
+  const text = a.lines.join(' | ');
+  assert(text.includes('Today works quads, glutes and hamstrings (all 95%+ recovered)'), text);
+  assert(!text.includes('Most recovered'), text);
+  assert(text.includes('Readiness is amber, so each accessory has one set less.'), text);
+  rec.quads = 60;
+  const b = trainAnswer({ ...build({ plan }), recovery: rec, planMuscles: ['quads', 'glutes'] }, TODAY);
+  assert(b.lines.join(' | ').includes('the lowest is 60% recovered'), b.lines.join(' | '));
+});
+
+test('coach recovered: the fresh count is the Body tab count (one shared list)', () => {
+  const rec = Object.fromEntries(SHOW_MUSCLES.map((m) => [m, 100]));
+  rec.abductors = 100; // modelled, but not one of the groups the Body tab shows
+  eq(freshCount(rec), SHOW_MUSCLES.length);
+  const all = recoveredAnswer({ ...build({ rows: [] }), recovery: rec }, TODAY);
+  eq(all.headline, `${SHOW_MUSCLES.length} of ${SHOW_MUSCLES.length} muscle groups are fresh.`);
+  rec.chest = 10;
+  const some = recoveredAnswer({ ...build({ rows: [] }), recovery: rec }, TODAY);
+  eq(some.headline, `${freshCount(rec)} of ${SHOW_MUSCLES.length} muscle groups are fresh.`);
+});
+
+test('coach weight: the gap is the difference of the displayed numbers', () => {
+  for (const [kg, trend] of [[92.25, 91.85], [91.37, 92.03], [90.46, 90.04]]) {
+    const a = weightAnswer(withLast(kg, trend, 'imperial'), TODAY);
+    const m = /Scale ([\d.]+) lb, trend ([\d.]+) lb: ([\d.]+) lb (above|below)/.exec(a.lines[0]);
+    assert(m, a.lines[0]);
+    eq(Math.abs(Number(m[1]) - Number(m[2])).toFixed(1), m[3], a.lines[0]);
+  }
+});
+
+test('coach weight: uses the user’s units and only blames training when the scale is above the trend', () => {
+  const up = weightAnswer(withLast(91, 90, 'imperial'), TODAY).lines.join(' | ');
+  assert(up.includes('Hard sessions hold water') || up.includes('No workouts'), up);
+  assert(up.includes('2 lb or more') && !up.includes('kilo'), up);
+  const down = weightAnswer(withLast(89, 90, 'imperial'), TODAY).lines.join(' | ');
+  assert(down.includes('Some of today’s drop is likely water; the trend is what counts.'), down);
+  assert(!down.includes('Hard sessions') && !down.includes('No workouts'), down);
+  assert(weightAnswer(withLast(91, 90, 'metric'), TODAY).lines.join(' | ').includes('a kilo or more'));
+});
+
+test('coach screen: the starter card applies with no weigh-ins and no workouts, even though Train has a chip', () => {
+  const none = build({ ws: [], rows: [], workouts: [] });
+  eq(needsStarter(none), true);
+  assert(availableQuestions(none, TODAY).some((q) => q.id === 'train'), 'the Train chip is still offered');
+  eq(needsStarter(build()), false);
+  eq(needsStarter(build({ ws: [] })), false, 'workouts alone are enough');
+  eq(needsStarter(build({ workouts: [] })), false, 'weigh-ins alone are enough');
+});
+
+test('coach goal: the safe pace is shown with one decimal', () => {
+  const a = goalAnswer(build({ ws: weights(30, 0.2), goalKg: 60 }), TODAY);
+  assert(/safe (pace is up to )?\d+\.\d kg/.test(textOf(a)) && !/safe (pace is up to )?\d+\.\d\d/.test(textOf(a)), textOf(a));
+});
+
+test('readiness: sleep times read "1 h", "45 min" and "1 h 5 min"', () => {
+  eq(fmtH(60), '1 h');
+  eq(fmtH(45), '45 min');
+  eq(fmtH(65), '1 h 5 min');
+  eq(fmtH(119.6), '2 h');
 });

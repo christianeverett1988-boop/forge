@@ -2,7 +2,7 @@
 // No network, nothing stored: the conversation lives in this module until the app is closed.
 import { esc, $, $$, toast, confirmSheet, todayKey } from '../ui.js';
 import { icon } from '../ui/icons.js';
-import { availableQuestions, MEDICAL, DISCLAIMER } from '../coach/answers.js';
+import { availableQuestions, needsStarter, MEDICAL, DISCLAIMER } from '../coach/answers.js';
 import { runAction } from '../coach/actions.js';
 import { coachData } from '../coach/data.js';
 import { startDeload } from '../workouts/plan.js';
@@ -42,7 +42,8 @@ function turn(entry, i) {
 export function renderCoach(el) {
   const data = coachData();
   const qs = availableQuestions(data, todayKey());
-  const empty = !qs.length && !convo.length;
+  // No weigh-ins and no workouts yet: show the starter card, with any chips that exist (e.g. Train) below it.
+  const empty = needsStarter(data) && !convo.length;
 
   el.innerHTML = `
     <section class="stack coach">
@@ -53,7 +54,8 @@ export function renderCoach(el) {
           <p class="muted">Once there is something to look at, you can ask Coach how your week is going, whether you are on track, and what to train.</p>
           <div class="row gap"><button class="btn grow" data-log>${icon('scale')}Log weight</button><a class="btn ghost grow" href="#/train">${icon('dumbbell')}Start workout</a></div>
         </div>` : `
-        <p class="muted">Ask me about your numbers. Every answer comes from your own data, and I show you how I got it.</p>
+        <p class="muted">Ask me about your numbers. Every answer comes from your own data, and I show you how I got it.</p>`}
+      ${empty && !qs.length ? '' : `
         <div class="coach-thread" data-thread>${convo.map(turn).join('')}</div>
         <div class="coach-chips" role="list" aria-label="Questions you can ask">
           ${qs.map((q) => `<button class="coach-chip" role="listitem" data-ask="${esc(q.id)}"><span>${esc(q.label)}</span><span class="chev" aria-hidden="true">${icon('chev')}</span></button>`).join('')}

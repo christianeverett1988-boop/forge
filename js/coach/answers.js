@@ -7,10 +7,9 @@ import { fmtDelta } from '../health/delta.js';
 import { trendChange } from '../weight/smoothing.js';
 import { NOISE_FLOOR } from '../health/trends.js';
 import { MEDICAL } from '../health/insights.js';
-import { MUSCLES, MUSCLE_LABELS } from '../workouts/recovery.js';
+import { SHOW_MUSCLES, MUSCLE_LABELS, FRESH_PCT, freshCount } from '../workouts/recovery.js';
 
 export { MEDICAL };
-export const FRESH_PCT = 85; // a muscle group counts as fresh from here; the same line the Body tab uses
 export const DISCLAIMER = 'General fitness information, not medical advice.';
 
 const fmtDay = (key, today) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(key.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {}) });
@@ -18,9 +17,10 @@ const mass = (kg, u, digits = 1) => `${Math.abs(weightToDisplay(kg, u)).toFixed(
 const signed = (v, digits, unit) => { const d = fmtDelta(v, { digits, unit }); return d ? d.text : null; };
 const massDelta = (kg, u) => signed(weightToDisplay(kg, u), 1, weightUnit(u));
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-const fresh = (pct) => MUSCLES.map((m) => [m, pct[m]]).filter(([, v]) => Number.isFinite(v));
+const fresh = (pct) => SHOW_MUSCLES.map((m) => [m, pct[m]]).filter(([, v]) => Number.isFinite(v));
 
-// ---- 1. How am I doing this week? ----
+// ---- 1. How did last week go? (or how is this week going, while the report is partial) ----
+export const weekLabel = (d) => (d.report && d.report.partial ? 'How is this week going?' : 'How did last week go?');
 export function weekAnswer(d) {
   const r = d.report;
   if (!r || !r.hasData) return null;
@@ -46,7 +46,7 @@ export function goalAnswer(d, today = '') {
   if (!p || p.status === 'none' || p.status === 'nogoal') return null;
   const u = d.units;
   const pace = `${mass(p.slopePerWeek, u, 2)} a week`;
-  const cap = `Safe pace is up to ${mass(p.capKgPerWeek, u, 2)} a week.`;
+  const cap = `Safe pace is up to ${mass(p.capKgPerWeek, u)} a week.`;
   const base = { id: 'goal', why: 'A straight line through your last 4 weeks of smoothed weight, with an 80% range around the date.' };
   if (p.status === 'reached') {
     return { ...base, headline: 'You are at your goal weight.', lines: [`Trend ${mass(p.current, u)}, goal ${mass(d.goalKg, u)}.`, 'Change your goal in Profile if you want a new target.'] };
@@ -57,7 +57,7 @@ export function goalAnswer(d, today = '') {
   if (p.status === 'far') return { ...base, headline: 'At this pace the goal is more than 5 years away.', lines: [`Trend ${mass(p.current, u)}; ${away}`, `Pace ${pace}.`, cap] };
   const lines = [`Trend ${mass(p.current, u)}; ${away}`];
   lines.push(p.lateDay ? `Likely between ${fmtDay(p.earlyDay, today)} and ${fmtDay(p.lateDay, today)}.` : `Could be as early as ${fmtDay(p.earlyDay, today)}, or later.`);
-  lines.push(p.overCap ? `Pace ${pace} is faster than the safe ${mass(p.capKgPerWeek, u, 2)}. Slow down to keep muscle.` : `Pace ${pace}. ${cap}`);
+  lines.push(p.overCap ? `Pace ${pace} is faster than the safe ${mass(p.capKgPerWeek, u)}. Slow down to keep muscle.` : `Pace ${pace}. ${cap}`);
   lines.push(p.overCap ? 'A slower pace pushes the date out but protects muscle.' : 'A faster pace within the safe limit moves the date earlier. Steadier weigh-ins narrow the range.');
   return { ...base, headline: `On pace for ${fmtDay(p.etaDay, today)}.`, lines };
 }
@@ -81,10 +81,15 @@ export function weightAnswer(d) {
   const sd = d.goalPath && Number.isFinite(d.goalPath.sdKg) ? d.goalPath.sdKg : null;
   const steady = Math.abs(change) < NOISE_FLOOR.weight_kg;
   const swing = sd == null ? '' : Math.abs(gap) <= sd ? `, inside your usual swing of ${mass(sd, u)}` : `, bigger than your usual swing of ${mass(sd, u)}`;
-  const lines = [`Scale ${mass(last.kg, u)}, trend ${mass(last.trend, u)}: ${gap === 0 ? 'right on it' : `${mass(gap, u)} ${gap > 0 ? 'above' : 'below'}`}${swing}.`];
+  // The gap comes from the two numbers as shown, so the reader's subtraction matches.
+  const shown = (kg) => Number(weightToDisplay(kg, u).toFixed(1));
+  const shownGap = Math.round((shown(last.kg) - shown(last.trend)) * 10) / 10;
+  const gapText = shownGap === 0 ? 'right on it' : `${Math.abs(shownGap).toFixed(1)} ${weightUnit(u)} ${shownGap > 0 ? 'above' : 'below'}`;
+  const lines = [`Scale ${mass(last.kg, u)}, trend ${mass(last.trend, u)}: ${gapText}${swing}.`];
   const t = d.report && d.report.training;
-  if (t) lines.push(t.workouts ? `You trained ${plural(t.workouts, 'time')} in your report week. Hard sessions hold water for a day or two.` : 'No workouts in your report week, so training is not the reason.');
-  lines.push('Salt, carbs and water can move the scale by a kilo or more in a day.');
+  if (t && gap > 0) lines.push(t.workouts ? `You trained ${plural(t.workouts, 'time')} in your report week. Hard sessions hold water for a day or two.` : 'No workouts in your report week, so training is not the reason.');
+  else if (gap < 0) lines.push('Some of today’s drop is likely water; the trend is what counts.');
+  lines.push(`Salt, carbs and water can move the scale by ${u === 'metric' ? 'a kilo' : '2 lb'} or more in a day.`);
   const fat = (d.trends || []).find((x) => x.key === 'fat_mass_kg');
   const lean = (d.trends || []).find((x) => x.key === 'fat_free_mass_kg');
   if (fat && lean && fat.t28.enough && lean.t28.enough) {
@@ -104,10 +109,20 @@ export function trainAnswer(d) {
     return { id: 'train', headline: 'You have a workout in progress.', lines: ['Finish it first.', 'Then Coach can plan the next one.'], why: 'Only one workout can be open at a time.' };
   }
   const lines = [`${plural(plan.exercises.length, 'exercise')}, about ${plan.est_minutes} min, at ${plan.location.name}.`];
-  const top = fresh(d.recovery || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  if (top.length) lines.push(`Most recovered: ${top.map(([m, v]) => `${MUSCLE_LABELS[m]} ${v}%`).join(', ')}.`);
+  const rec = d.recovery || {};
+  const works = (d.planMuscles || []).filter((m) => Number.isFinite(rec[m]));
+  if (works.length) {
+    const low = Math.min(...works.map((m) => rec[m]));
+    const names = works.map((m) => MUSCLE_LABELS[m].toLowerCase());
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+    lines.push(`Today works ${list} (${low >= FRESH_PCT ? `all ${Math.floor(low / 5) * 5}%+ recovered` : `the lowest is ${low}% recovered`}).`);
+  }
   const r = d.readiness;
-  if (r && r.status === 'ok' && !r.stale) lines.push(`Readiness is ${r.level}${plan.readiness === 'red' ? ', so this is a lighter day' : ''}.`);
+  if (r && r.status === 'ok' && !r.stale) {
+    lines.push(plan.readiness === 'red' ? 'Readiness is red, so this is a lighter day.'
+      : plan.readiness === 'amber' ? 'Readiness is amber, so each accessory has one set less.'
+      : `Readiness is ${r.level}.`);
+  }
   if (plan.deload) lines.push('It is a deload week: lighter weights, fewer sets.');
   return {
     id: 'train', headline: `Today: ${plan.label}`, lines: lines.slice(0, 4),
@@ -122,7 +137,7 @@ export function recoveredAnswer(d) {
   const pct = fresh(d.recovery || {});
   const hasR = !!r && r.status === 'ok';
   if (!hasR && !d.hasTraining) return null;
-  const freshN = pct.filter(([, v]) => v >= FRESH_PCT).length;
+  const freshN = freshCount(d.recovery || {});
   const tired = pct.filter(([, v]) => v < FRESH_PCT).sort((a, b) => a[1] - b[1]).slice(0, 3);
   const lines = [];
   if (hasR) {
@@ -175,16 +190,20 @@ export function strongerAnswer(d) {
   const stalled = d.stalled || [];
   if (stalled.length) lines.push(`Stalled: ${stalled.map((s) => s.name).join(', ')}.`);
   const headline = have4.length
-    ? (up4 ? `${up4} of ${have4.length} main lifts are up over 4 weeks.` : 'No main lift is up over 4 weeks.')
+    ? (have4.length === 1 ? `Your main lift is ${up4 ? '' : 'not '}up over 4 weeks.`
+      : up4 ? `${up4} of ${have4.length} main lifts are up over 4 weeks.` : 'No main lift is up over 4 weeks.')
     : 'Here is how your main lifts have moved.';
   const out = { id: 'stronger', headline, lines: lines.slice(0, 4), why: 'Estimated 1-rep max (Epley): your best in the last 4 weeks against the best 4 and 12 weeks earlier. Deload weeks are left out.' };
   if (stalled.length) out.action = { id: 'deload', label: 'Start a deload week', ask: 'Start a deload week? Workouts get lighter for 7 days, then progress resumes.' };
   return out;
 }
 
+/** True when there are no weigh-ins and no workouts yet: the Coach screen shows its starter card. */
+export const needsStarter = (d) => !(d.weights && d.weights.length) && !d.hasTraining;
+
 /** Questions in display order. label is a string or (data) → string. */
 export const QUESTIONS = [
-  { id: 'week', label: 'How am I doing this week?', answer: weekAnswer },
+  { id: 'week', label: weekLabel, answer: weekAnswer },
   { id: 'goal', label: 'Am I on track for my goal?', answer: goalAnswer },
   { id: 'weight', label: weightLabel, answer: weightAnswer },
   { id: 'train', label: 'What should I train today?', answer: trainAnswer },

@@ -5,10 +5,11 @@
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
 
 - **New Coach screen.** Tap "Ask Coach" on Today (under your insight cards) or the "Ask Coach" row on Progress. You get a list of questions to tap; typing comes later with the AI coach.
-- **Seven questions, answered from your own numbers:** How am I doing this week? Am I on track for my goal? Why did my weight go up (or down)? What should I train today? Am I recovered? What's my Forge Score made of? Am I getting stronger?
+- **Seven questions, answered from your own numbers:** How did last week go? (or How is this week going? early in the week) Am I on track for my goal? Why did my weight go up (or down)? What should I train today? Am I recovered? What's my Forge Score made of? Am I getting stronger?
 - **Every answer** has a one-line headline, a few short lines with the real numbers, and a "Why" that says how it was worked out. A question only shows up when there is data behind it.
 - **Coach can suggest one thing**: start today's workout, make today lighter (turn Readiness back on), or start a deload week when a main lift has stalled. Nothing happens until you tap "Do it". "Not now" changes nothing, and the deload also asks you to confirm.
 - A brand-new account sees "Coach needs a few weigh-ins or a workout first" with Log weight and Start workout buttons.
+- The Today card shows the first question Coach can answer. "What should I train today?" names the muscles the workout trains, the muscle count matches the Body tab, the weight answer uses your units and fits the direction, and sleep times read "1 h 5 min".
 - Nothing leaves your phone and nothing new is saved; the chat is forgotten when you close the app. How each answer is worked out is in `docs/coach.md`.
 
 ## 0.9.0 — Train anywhere (2026-10-09)

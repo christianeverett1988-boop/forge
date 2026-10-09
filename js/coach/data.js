@@ -9,10 +9,21 @@ import { previewPlan } from '../screens/train.js'; // today's plan with any edit
 import { exerciseById } from '../workouts/library.js';
 import { liftChanges } from './lifts.js';
 
+/** The muscles today's plan trains as primary movers, in the order they first appear. */
+function planMuscles(plan) {
+  const out = [];
+  for (const it of (plan && plan.exercises) || []) {
+    const ex = exerciseById(it.exercise_id);
+    for (const m of (ex && ex.primary) || []) if (!out.includes(m)) out.push(m);
+  }
+  return out;
+}
+
 export function coachData() {
   const i = intel();
   const today = todayKey();
   const workouts = state.workouts || [];
+  const plan = previewPlan();
   const nameOf = (id) => (exerciseById(id) || { name: id }).name;
   return {
     today,
@@ -27,7 +38,8 @@ export function coachData() {
     readiness: currentReadiness(),
     readinessOverridden: readinessOverridden(),
     score: currentScore(),
-    plan: previewPlan(),
+    plan,
+    planMuscles: planMuscles(plan),
     recovery: currentRecovery(),
     activeWorkout: !!activeWorkout(),
     hasTraining: workouts.some((w) => !w.deleted && (w.status === 'done' || w.status === 'active')),

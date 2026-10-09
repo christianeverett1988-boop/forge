@@ -8,12 +8,10 @@ import { topInsights, dismissInsight, intel, currentGoalPath, currentEnergy, cur
 import { insightCardsHtml, bindInsightCards, goalPathHtml, bodyProfileHtml } from '../health/cards.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';
 import { exerciseById } from '../workouts/library.js';
-import { MUSCLE_LABELS, muscleStats } from '../workouts/recovery.js';
+import { MUSCLE_LABELS, muscleStats, SHOW_MUSCLES as SHOW, freshCount } from '../workouts/recovery.js';
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
 import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
 import { icon, emptyState } from '../ui/icons.js';
-
-const SHOW = ['chest', 'front_delts', 'side_delts', 'rear_delts', 'lats', 'upper_back', 'traps', 'biceps', 'triceps', 'forearms', 'abs', 'obliques', 'lower_back', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
 
 const ago = (iso) => {
   if (!iso) return 'Not trained yet';
@@ -66,7 +64,7 @@ export function goalPathCard() {
 
 export function renderBody(el) {
   const rec = currentRecovery();
-  const fresh = SHOW.filter((m) => rec[m] >= 85).length;
+  const fresh = freshCount(rec);
   const last = historyIndex().done[0];
   const days = last ? Math.floor((Date.now() - Date.parse(last.finished_at || last.started_at)) / 86400000) : null;
   const tired = [...SHOW].sort((a, b) => rec[a] - rec[b]).filter((m) => rec[m] < 85).slice(0, 4);
