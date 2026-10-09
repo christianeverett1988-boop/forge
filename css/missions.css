@@ -42,3 +42,36 @@
   .ms-pop { animation: ms-fade .25s linear both; }
   @keyframes ms-fade { from { opacity: 0; } }
 }
+
+/* ---------- Body programs (Body card, Today line, #/program) ---------- */
+.pg-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.pg-list li + li { border-top: .5px solid var(--separator); }
+.pg-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 0; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.pg-text { display: grid; gap: 2px; }
+.pg-text small { font-size: 13px; }
+.pg-rec { background: color-mix(in srgb, var(--ember) 22%, var(--surface-2)); color: var(--accent-text); font-weight: 700; margin-left: 6px; }
+.pg-line { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--tap, 48px); color: var(--text); text-decoration: none; }
+.pg-line-text { flex: 1; min-width: 0; font-size: 15px; }
+.pg-line .chev { flex: none; align-self: center; color: var(--text-3); display: inline-flex; }
+.pg-head { display: flex; flex-direction: row; align-items: center; gap: 16px; }
+.pg-ring { position: relative; width: 104px; height: 104px; flex: none; }
+.pg-ring svg { width: 100%; height: 100%; }
+.pg-ring-bg { fill: none; stroke: var(--surface-2); stroke-width: 9; }
+.pg-ring-fg { fill: none; stroke: var(--ember); stroke-width: 9; stroke-linecap: round; }
+.pg-ring-text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.pg-ring-text b { font: 800 19px var(--num, inherit); }
+.pg-head-text { display: grid; gap: 4px; }
+.pg-half, .pg-now { width: 24px; height: 24px; border-radius: 50%; box-sizing: border-box; }
+.pg-half { border: 2px solid var(--ember); background: color-mix(in srgb, var(--ember) 35%, transparent); }
+.pg-now { border: 2px solid var(--ember); }
+.pg-sub-now { color: var(--accent-text); font-weight: 700; }
+.pg-week.future { opacity: .6; }
+.pg-bar { position: relative; height: 10px; margin: 8px 0 2px; border-radius: 5px; background: var(--surface-2); }
+.pg-zone { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: color-mix(in srgb, var(--good) 45%, var(--surface-2)); }
+.pg-dot { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--text); border: 3px solid var(--bg); box-sizing: border-box; }
+.pg-end { color: var(--text-3); justify-self: center; font-size: 15px; }
+.pg-done .ms-badge-text small { font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) {
+  .pg-ring-fg { transition: stroke-dashoffset .6s var(--ease-out); }
+  .pg-dot { transition: left .4s var(--ease-out); }
+}

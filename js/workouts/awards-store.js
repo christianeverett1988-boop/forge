@@ -4,10 +4,16 @@ import { state } from '../state.js';
 import { patch } from '../db.js';
 import { awardsFor, workoutAwards, unseenBadges } from './awards.js';
 import { exerciseById } from './library.js';
-import { awardOpts } from '../missions/store.js';
+import { awardOpts as missionOpts } from '../missions/store.js';
+import { programBadgeList, programBonusXP } from '../body-programs/store.js';
 
 export const goalDays = () => (state.profile && state.profile.trainingDays) || 3;
 const seenNow = () => (state.settings && state.settings.awards_seen) || null;
+/** Missions and body programs: their extra badges, and their XP (missions' +100 per badge is not paid on program badges). */
+const awardOpts = () => {
+  const m = missionOpts();
+  return { extraBadges: [...m.extraBadges, ...programBadgeList()], bonusXP: m.bonusXP + programBonusXP() };
+};
 const opts = () => ({ seen: seenNow() || {}, exerciseById, ...awardOpts() });
 
 /** XP, level and badges for the current history. */

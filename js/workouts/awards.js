@@ -11,7 +11,7 @@ export const XP = {
   week: 100, // +100 for the workout that hits your weekly goal
   badge: 100, // +100 per badge
 };
-export const XP_RULES = '+10 per working set (up to 40), +25 per exercise with 2 or more working sets, +50 per PR (up to +200 a workout), +100 for the workout that hits your weekly goal, and +100 per badge. Daily missions add +20 each, and +30 more when you finish all of a day’s missions.';
+export const XP_RULES = '+10 per working set (up to 40), +25 per exercise with 2 or more working sets, +50 per PR (up to +200 a workout), +100 for the workout that hits your weekly goal, and +100 per badge. Daily missions add +20 each, and +30 more when you finish all of a day’s missions. Body programs add +50 for each week you hit every goal and +250 for finishing.';
 
 const workingSets = (it) => (it.sets || []).filter((s) => s.done && !s.warmup).length;
 /** A finished workout only counts (XP, training days, streaks, badges) if it has a working set. */

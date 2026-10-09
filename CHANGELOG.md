@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 — Body programs: cut kickoff, recomp, maintenance (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Programs card on Body:** three multi-week programs, each with one line and its length: **Cut kickoff** (4 weeks), **Recomp** (8) and **Maintenance** (4). The one that fits your goal says "Recommended". Starting one opens a plain-words confirm sheet; only one program runs at a time.
+- **Weekly goals** (weeks run from the day you start): weigh in 5 / 4 / 3 days, hit your planned training days, and a weight goal: a **safe pace** for the cut ("losing 0.5–1.5 lb a week", from your targets and never past the safety caps) or **steady** (within 0.25% / 0.3% a week). The cut adds an average-steps goal, hidden without Apple Health; Recomp adds 2 workouts a week with a PR or a step up.
+- **Today** gets a line under the missions card: "Cut kickoff · Week 2 of 4 · 2 of 3 goals so far". It opens the program screen (`#/program`) with a ring, a row per week (✓ or partly, the current week live), this week's goals with progress, a bar for your weight pace and a quiet **End program** link.
+- **Finishing:** a completion card shows once on Today with the badge, "+250 XP" and a short summary (weeks hit, weight change, workouts, PRs). New badges **Cut Kickoff**, **Recomp** and **Steady State**; **+250 XP** for finishing and **+50 XP** for each week you hit every goal, counted through the same bonus XP as missions and never retroactive. Awards shows "Programs: N finished". Ending a program early keeps the weeks you hit but gives no finish bonus or badge.
+- Stored in `settings/main`: `body_program` and `body_program_history`. Protein isn't a goal yet (food log, #33); `core.js` has the hook.
+- Docs in `docs/body-programs.md`. New tests cover week boundaries from the start day, each goal (including steps hidden without Apple Health), the pace band in both units, finishing and history, XP (no retroactive pay), one program at a time and ending early.
+
 ## 0.13.1 — Health summary for your doctor (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
