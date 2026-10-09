@@ -3,13 +3,15 @@ import { put, newRecord, softDelete, tombstone } from '../db.js';
 import { esc, $, $$, sheet, toast, todayKey, formatDay, confirmSheet } from '../ui.js';
 import { tick } from '../ui/haptic.js';
 import { weightToDisplay, weightFromInput, weightUnit, formatWeight } from '../units.js';
-import { trendChange, weeklyRate, projectGoalDate, dayKey } from '../weight/smoothing.js';
+import { trendChange, weeklyRate, dayKey } from '../weight/smoothing.js';
 import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
 import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { goalPathCard } from './body.js';
+import { currentGoalPath } from '../health/intel.js';
+import { goalProjection } from '../health/goalpath.js';
 
 const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', withings_csv: 'Withings (export)', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
@@ -65,7 +67,7 @@ export function renderWeight(el) {
   const u = getUnits();
   const series = weightSeries();
   const goalKg = state.profile && state.profile.targetWeightKg;
-  const projection = goalKg ? projectGoalDate(series, goalKg) : null; // the dotted line on the chart
+  const projection = goalKg ? goalProjection(currentGoalPath()) : null; // the dotted line: same date as the Goal path card
   const change7 = trendChange(series, 7);
   const rate = weeklyRate(series);
   const latest = series.length ? series[series.length - 1] : null;
@@ -106,7 +108,7 @@ export function renderWeight(el) {
       </div>` : `<div class="card">${emptyState({ icon: 'scale', title: 'No weigh-ins yet', text: 'Log your first weight and your trend starts here.', action: { attr: 'data-log-empty', label: 'Log weight' } })}</div>`}
 
       ${entries.length ? `
-      <h2>History</h2>
+      <h2>Weigh-ins</h2>
       <ul class="list">
         ${(showAll ? entries : entries.slice(0, HISTORY_LIMIT)).map((w) => `
           <li>

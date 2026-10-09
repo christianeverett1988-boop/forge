@@ -24,8 +24,32 @@ export function insightCardsHtml(cards) {
     </article>`).join('');
 }
 
+/** Today's compact form: dot + title + one line; tap to open Why / Try inline. */
+export function compactInsightsHtml(cards) {
+  return cards.map((c) => `
+    <article class="insight compact ${esc(c.tone || 'neutral')}" data-insight="${esc(c.id)}">
+      <button class="insight-head" data-insight-toggle aria-expanded="false">
+        <b class="insight-title">${esc(c.title)}</b>
+        <span class="insight-body">${esc(c.body)}</span>
+      </button>
+      <div class="insight-more" hidden>
+        <span class="insight-why"><b>Why:</b> ${esc(c.why)}</span>
+        <span class="insight-do"><b>Try:</b> ${esc(c.todo)}</span>
+        ${c.note ? `<small class="insight-note">${esc(c.note)}</small>` : ''}
+        <span class="row gap"><a class="btn ghost small grow" href="${esc(c.href)}">See details</a><button class="btn ghost small grow" data-dismiss="${esc(c.id)}">Hide for 7 days</button></span>
+      </div>
+    </article>`).join('');
+}
+
 /** Wire the dismiss buttons under root. dismiss(id) saves it; the screen redraws from the settings change. */
 export function bindInsightCards(root, dismiss, rerender) {
+  root.querySelectorAll('[data-insight-toggle]').forEach((b) => {
+    b.onclick = () => {
+      const more = b.parentElement.querySelector('.insight-more');
+      more.hidden = !more.hidden;
+      b.setAttribute('aria-expanded', String(!more.hidden));
+    };
+  });
   root.querySelectorAll('[data-dismiss]').forEach((b) => {
     b.onclick = () => { dismiss(b.dataset.dismiss); const card = b.closest('.insight'); if (card) card.remove(); if (rerender) rerender(); };
   });
@@ -126,16 +150,16 @@ export function bodyProfileHtml(bp, { sex, age }) {
       for (let col = 0; col < 4; col++) {
         const dots = [
           ...bp.trail.filter((t) => t.col === col && t.row === row).map((t) => `<i class="bp-trail" title="${esc(t.month)}"></i>`),
-          bp.col === col && bp.row === row ? '<i class="bp-now" aria-hidden="true"></i>' : '',
+          bp.col === col && bp.row === row ? '<i class="bp-now" aria-hidden="true"></i><span class="bp-you" aria-hidden="true">You</span>' : '',
         ].join('');
         cells.push(`<div class="bp-cell r${row} c${col}">${dots}</div>`);
       }
     }
-    inner = `<div class="bp-wrap"><span class="bp-y">Body fat (FMI) →</span>
-      <div class="bp-grid" role="img" aria-label="Lean mass ${FFMI_BANDS[bp.col]}, body fat ${FMI_BANDS[bp.row]}">${cells.join('')}</div></div>
-      <div class="bp-x"><span>Low</span><span>Lean mass (FFMI) →</span><span>High</span></div>
+    inner = `<div class="bp-wrap"><span class="bp-y">Fat →</span>
+      <div class="bp-grid" role="img" aria-label="You: lean mass ${FFMI_BANDS[bp.col]}, body fat ${FMI_BANDS[bp.row]}">${cells.join('')}</div>
+      <span></span><div class="bp-x"><span>Low</span><span>Lean mass →</span><span>High</span></div></div>
       <p><b>Lean mass: ${FFMI_BANDS[bp.col]}</b> (FFMI ${bp.ffmi.toFixed(1)}) · <b>Body fat: ${FMI_BANDS[bp.row]}</b> (FMI ${bp.fmi.toFixed(1)})</p>
-      <p class="small muted">The bright dot is now. Faint dots are earlier months. Ranges are approximate and not adjusted for age.</p>`;
+      <p class="small muted">The bright dot (You) is now. Faint dots are earlier months. Ranges are approximate and not adjusted for age.</p>`;
   }
   return `<div class="card stack" data-bodyprofile>
     <p class="label">Body Profile</p>${inner}

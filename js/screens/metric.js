@@ -79,6 +79,11 @@ export function renderMetric(el, key) {
   const avgNow = periodAverage(daily, from, addDays(end, 1));
   const avgPrev = range ? periodAverage(daily, prevFrom, from) : null;
   const delta = avgNow != null && avgPrev != null ? avgNow - avgPrev : null;
+  // "−4.0 lb", "+3 ms"; a change that rounds to nothing at the shown precision is "same".
+  const deltaText = (d) => {
+    const n = Number(fmt(Math.abs(d), { unit: false }).replace(/,/g, ''));
+    return n === 0 ? 'same' : `${d > 0 ? '+' : '−'}${fmt(Math.abs(d))}`;
+  };
   const showSets = def.overlay === 'sets' || $$('input[name=sets]:checked', el).length > 0;
   const bars = showSets ? weeklySets(state.workouts) : [];
   const fmtAxis = (v) => (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1));
@@ -96,14 +101,14 @@ export function renderMetric(el, key) {
         <div class="stats">
           <div><span>Latest</span><b data-count>${esc(fmt(last.v))}</b></div>
           <div><span>${range ? `${range}-day avg` : 'Average'}</span><b data-count>${avgNow == null ? '—' : esc(fmt(avgNow))}</b></div>
-          <div><span>${range ? `vs previous ${range} days` : 'vs previous'}</span><b>${delta == null ? '—' : `${delta > 0 ? '+' : ''}${esc(fmt(delta, { unit: false }))}`}</b></div>
+          <div><span>${range ? `vs previous ${range} days` : 'vs previous'}</span><b>${delta == null ? '—' : esc(deltaText(delta))}</b></div>
         </div>
         <div class="seg small" role="radiogroup" aria-label="Range">
           ${[[7, '7d'], [28, '28d'], [90, '90d'], [365, '1y'], [0, 'All']].map(([d, l]) => `<label><input type="radio" name="range" value="${d}" ${range === d ? 'checked' : ''}><span>${l}</span></label>`).join('')}
         </div>
         ${shown.length ? lineChartSVG(shown.map((p) => ({ day: p.day, v: disp(p.v) })), { prev, bars, fmt: fmtAxis, label: `${def.label} chart`, fromDay: from, toDay: end }) : '<p class="muted small">No readings in this range.</p>'}
         <p class="small muted legend"><span class="key dot"></span>readings <span class="key line"></span>7-day average ${prev.length ? '<span class="key dash"></span>previous period' : ''} ${bars.length ? '<span class="key bar"></span>training sets/week' : ''}</p>
-        ${def.overlay !== 'sets' ? `<label class="choice check small"><input type="checkbox" name="sets" ${showSets ? 'checked' : ''}><span>Show training sets per week</span></label>` : ''}
+        ${def.overlay !== 'sets' ? `<label class="g-row sw"><span class="g-text"><span>Show training sets per week</span></span><input type="checkbox" switch name="sets" ${showSets ? 'checked' : ''}></label>` : ''}
         ${trendLine ? `<p data-trend-line>${esc(trendLine)}</p>` : ''}
         <p class="small muted">Last reading ${def === apple ? new Date(last.at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : new Date(last.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · ${daily.length.toLocaleString()} days with readings</p>
       </div>` : `<div class="card">${emptyState({ icon: def === apple ? 'heart' : 'scale', title: `No ${esc(def.label.toLowerCase())} readings yet`, ...emptyText })}${def !== apple && choice.secondary ? `<a class="link" href="${choice.secondary.href}">${choice.secondary.label}</a>` : ''}</div>`}

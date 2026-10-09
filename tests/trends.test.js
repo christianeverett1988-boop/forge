@@ -9,7 +9,9 @@ import { shiftDay } from '../js/health/metrics.js';
 import { THRESHOLDS, waterRule, fatNoiseRule, hrvRule, rhrRule, tempRule, sleepRule, weighInRule, detectAnomalies } from '../js/health/anomalies.js';
 import { rankInsights, score, activeDismissals, dismissChange, buildInsights, MEDICAL } from '../js/health/insights.js';
 import { weekday, mondayOf, weekDays, shiftWeek, reportWeekFor, showReportCard, weeklyReport } from '../js/health/weekly.js';
-import { goalPath, energyBalance } from '../js/health/goalpath.js';
+import { goalPath, energyBalance, goalLine, goalProjection } from '../js/health/goalpath.js';
+import { fmtDelta } from '../js/health/delta.js';
+import { reportText } from '../js/health/weektext.js';
 import { bodyProfile, bandOf, cutsFor, indices } from '../js/health/bodyprofile.js';
 
 const TODAY = '2026-10-10'; // a Saturday
@@ -485,7 +487,7 @@ test('Body Profile: FFMI × FMI of the latest reading, with a trail of earlier m
   near(bp.ffmi, 64 / 3.24, 1e-9);
   near(bp.fmi, 16 / 3.24, 1e-9);
   eq(bp.col, 2); // FFMI 19.75: between 19 and 21
-  eq(bp.row, 1); // FMI 4.94: between 3.5 and 5.5
+  eq(bp.row, 1); // FMI 4.94: between 3 and 6
   eq(bp.trail.map((t) => t.month).join(), '2026-07,2026-08'); // not the current month
   eq(bp.day, '2026-10-08');
 });
@@ -497,6 +499,49 @@ test('Body Profile: derives the missing half, and asks for what it needs', () =>
   eq(bodyProfile({ measures: [doc('2026-10-08', { weight_kg: 80 })], heightM: 1.8, sex: 'male' }).status, 'needs-comp');
   eq(bodyProfile({ measures: [], heightM: 1.8, sex: 'female' }).status, 'needs-comp');
   const f = bodyProfile({ measures: [doc('2026-10-08', { weight_kg: 62, fat_mass_kg: 17 })], heightM: 1.65, sex: 'female' });
-  eq(f.col, 2); // FFMI 45/2.7225 = 16.5: above 15.5, below 17
-  eq(f.row, 1); // FMI 6.2: between 5 and 7.5
+  eq(f.col, 2); // FFMI 45/2.7225 = 16.5: above 16.5, below 18
+  eq(f.row, 1); // FMI 6.2: between 5 and 9
+});
+
+// ---------- delta formatter, goal sentence, share text ----------
+
+test('delta formatter: anything that rounds to nothing is "same"; never −0 or +0.0', () => {
+  eq(fmtDelta(-0.04, { digits: 1, unit: 'lb' }).text, 'same');
+  eq(fmtDelta(0.04, { digits: 1, unit: 'lb' }).text, 'same');
+  eq(fmtDelta(-0).text, 'same');
+  eq(fmtDelta(-0.4).text, 'same');
+  eq(fmtDelta(1).text, '+1');
+  eq(fmtDelta(-4, { digits: 1, unit: 'lb' }).text, '−4.0 lb');
+  eq(fmtDelta(3.2, { unit: 'ms' }).text, '+3 ms');
+  eq(fmtDelta(-0.4).sign, 0);
+  eq(fmtDelta(null), null);
+});
+
+test('Today’s goal sentence and the Goal path card use the same date; the chart line ends there too', () => {
+  const s = wline((k) => 90 - 0.1 * k);
+  const p = goalPath({ series: s, goalKg: 85, today: TODAY });
+  eq(goalLine(p, (d) => d), `On pace for your goal around ${p.etaDay}`);
+  eq(goalProjection(p).day, p.etaDay);
+  const flat = goalPath({ series: wline(() => 90), goalKg: 85, today: TODAY });
+  eq(goalLine(flat, (d) => d), ''); // no date anywhere
+  eq(goalProjection(flat), null);
+});
+
+test('share text: only what is on the card, then a "Shared from Forge" footer', () => {
+  const r = {
+    days: ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'],
+    score: { now: 72.4, delta: 3.2 }, training: { workouts: 3, planned: 4, prs: 1 }, weight: { change: -0.5 },
+    suggestion: { text: 'Aim for 4 workouts next week.' },
+    recovery: { hrv: { now: 61 }, rhr: { now: 49 }, sleep: { now: 400 } }, comp: { fat: { now: 15 } }, // other cards: must not leak
+  };
+  const text = reportText(r, 'metric');
+  const lines = text.split('\n');
+  assert(/^Forge weekly report · /.test(lines[0]), lines[0]);
+  assert(lines.includes('Forge Score 72 (+3)'), text);
+  assert(lines.includes('Workouts 3/4 · 1 PR'), text);
+  assert(lines.includes('Weight trend −0.5 kg'), text);
+  eq(lines[lines.length - 1], 'Shared from Forge');
+  assert(!/HRV|heart|sleep|61|49|fat/i.test(text), 'no recovery or body-comp values');
+  const same = reportText({ ...r, score: { now: 72, delta: 0.2 }, weight: { change: -0.01 } }, 'metric');
+  assert(!/−0|\+0/.test(same) && /steady/.test(same), same);
 });

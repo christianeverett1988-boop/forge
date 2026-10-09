@@ -12,6 +12,7 @@ No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; n
 - **Goal path** on Body and Weight (replaces the old "around this date" line): your date to reach your goal weight with a likely range, your pace next to the usual safe limit, and, if your scale reads body composition, an estimate of the daily calorie balance behind your changes. If your trend is going the other way it says so kindly and gives no date.
 - **Body Profile** on Body: lean mass and body fat on one 4×4 grid, with a bright dot for now and faint dots for earlier months. Needs your height and fat mass from the scale. The ranges are approximate and not adjusted for age (see `docs/trends.md`).
 - Formulas and thresholds are written down in `docs/trends.md`.
+- **Review round 1:** the Body Profile grid now fits the card (square cells, labels below, a "You" label on the dot); Today, Weight and Body give one goal date (Today's sentence and the chart's dotted line come from the Goal path); Today shows at most two compact insight cards after Daily targets (tap to open Why / Try; the sleep one is skipped when Readiness already blames sleep); a change too small to show reads "same as last week" with no sign or colour; metric screens show the unit on "vs previous"; the weigh-in list on Weight is called Weigh-ins; Share ends with "Shared from Forge" and falls back to copying; Body Profile cut points follow the commonly used FMI scheme; the training-sets control is a switch.
 
 ## 0.6.0 — A new look: near-black, calm and premium (2026-10-09)
 

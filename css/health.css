@@ -150,12 +150,20 @@
 .goalpath .trend { fill: none; }
 
 /* Body Profile */
-.bp-wrap { display: grid; grid-template-columns: 22px 1fr; gap: var(--s-2); align-items: stretch; }
-.bp-y { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; color: var(--text-2); font-size: 12px; font-weight: 700; }
-.bp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.bp-cell { position: relative; aspect-ratio: 1; background: var(--surface-2); border-radius: var(--r-sm); display: grid; place-items: center; }
+[data-bodyprofile] { overflow-x: clip; }
+.bp-wrap { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--s-2); width: min(100%, 280px); margin: 0 auto; }
+.bp-y { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; color: var(--text-2); font-size: 12px; font-weight: 700; max-height: 100%; overflow: hidden; white-space: nowrap; }
+.bp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; min-width: 0; }
+.bp-cell { position: relative; min-width: 0; aspect-ratio: 1; background: var(--surface-2); border-radius: var(--r-sm); display: grid; place-items: center; overflow: hidden; }
+.bp-you { position: absolute; bottom: 1px; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 800; color: var(--text-1); line-height: 1; }
 .bp-cell.c2.r0, .bp-cell.c2.r1, .bp-cell.c3.r0, .bp-cell.c3.r1 { background: var(--good-tint); }
 .bp-now { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); }
 .bp-trail { width: 8px; height: 8px; border-radius: 50%; background: var(--text-2); opacity: .45; margin: 1px; }
-.bp-x { display: flex; justify-content: space-between; margin-left: 30px; color: var(--text-2); font-size: 12px; font-weight: 700; }
+.bp-x { display: flex; justify-content: space-between; min-width: 0; color: var(--text-2); font-size: 12px; font-weight: 700; }
+
+/* Compact insight cards (Today) */
+.insight.compact .insight-head { display: grid; gap: 2px; width: 100%; text-align: left; padding: var(--s-3) var(--s-4); min-height: 56px; border: 0; background: none; color: inherit; font: inherit; border-radius: var(--r-xl); cursor: pointer; }
+.insight.compact .insight-body { font-size: 15px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.insight.compact .insight-head[aria-expanded="true"] .insight-body { -webkit-line-clamp: unset; display: block; }
+.insight-more { display: grid; gap: 6px; padding: 0 var(--s-4) var(--s-4); }
 

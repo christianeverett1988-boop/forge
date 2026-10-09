@@ -113,8 +113,11 @@ Single-day rules only look at readings from the last 2 days.
 
   | | FFMI cuts | FMI cuts |
   |---|---|---|
-  | Men | 17.0 / 19.0 / 21.0 | 3.5 / 5.5 / 8.0 |
-  | Women | 14.0 / 15.5 / 17.0 | 5.0 / 7.5 / 10.5 |
+  | Men | 17.0 / 19.0 / 21.0 | 3 / 6 / 9 |
+  | Women | 15.0 / 16.5 / 18.0 | 5 / 9 / 13 |
+
+  The FMI cuts follow the commonly used scheme from the same group (men about 3–6 normal, 6–9 excess, over 9 obese; women about
+  5–9, 9–13, over 13) and the lowest FFMI cut is the "low" line (about 17 men, 15 women). The upper FFMI cuts are our own spacing.
   | Not stated | midpoint of the two | midpoint of the two |
 
   If you want the published percentile tables used instead, replace the table; nothing else changes.

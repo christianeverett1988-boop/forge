@@ -55,6 +55,8 @@ const SHELL = [
   './js/health/insights.js',
   './js/health/weekly.js',
   './js/health/goalpath.js',
+  './js/health/delta.js',
+  './js/health/weektext.js',
   './js/health/bodyprofile.js',
   './js/health/intel.js',
   './js/health/cards.js',

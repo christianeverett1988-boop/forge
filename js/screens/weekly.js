@@ -2,6 +2,8 @@
 import { units as getUnits } from '../state.js';
 import { esc, $, toast, formatDay } from '../ui.js';
 import { weightToDisplay, weightUnit } from '../units.js';
+import { fmtDelta } from '../health/delta.js';
+import { reportText } from '../health/weektext.js';
 import { progressTabs } from './progress.js';
 import { reportFor, currentReportWeek } from '../health/intel.js';
 import { shiftWeek } from '../health/weekly.js';
@@ -11,32 +13,33 @@ import { icon, emptyState } from '../ui/icons.js';
 const MAX_WEEKS_BACK = 52;
 let weekStart = null;
 
-const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '');
-const arrow = (x, eps = 0) => icon(x > eps ? 'arrowup' : x < -eps ? 'arrowdown' : 'flat');
 const dash = '—';
 
 /** Headline for the week: the Forge Score change as one big number. */
 function scoreHead(delta) {
-  if (delta == null) return '<p class="big-title">First week of scores</p>';
-  if (delta === 0) return '<p class="big-title">Same as the week before</p>';
-  return `<p class="hero-num w-hero"><span data-count>${delta > 0 ? '+' : '−'}${Math.abs(round(delta))}</span> <small>points ${delta > 0 ? 'up' : 'down'}</small></p>`;
+  const d = delta == null ? null : fmtDelta(delta);
+  if (!d) return '<p class="big-title">First week of scores</p>';
+  if (d.same) return '<p class="big-title">Same as the week before</p>';
+  return `<p class="hero-num w-hero"><span data-count>${d.text}</span> <small>points ${d.sign > 0 ? 'up' : 'down'}</small></p>`;
 }
 
-function line(label, now, change, { good = null } = {}) {
-  const cls = change == null || good == null || change === 0 ? '' : (change > 0) === good ? 'good' : 'warn';
-  return `<li><span>${esc(label)}</span><b>${now}</b><small class="${cls}">${change == null ? '' : change}</small></li>`;
+/**
+ * One report line. dv is the change as a number (null = no comparison). A change that rounds to nothing at the
+ * shown precision reads "same as last week" in neutral text. good: true / false = which way is good, null = no colour.
+ */
+function line(label, now, dv, { good = null, digits = 0, unit = '', post = '', note = null } = {}) {
+  const d = dv == null ? null : fmtDelta(dv, { digits, unit });
+  let cls = '';
+  let html = note || '';
+  if (d && d.same) html = 'same as last week';
+  else if (d) {
+    cls = good == null ? '' : (d.sign > 0) === good ? 'good' : 'warn';
+    html = `${icon(d.sign > 0 ? 'arrowup' : 'arrowdown')} ${d.text}${post}`;
+  }
+  return `<li><span>${esc(label)}</span><b>${now}</b><small class="${cls}">${html}</small></li>`;
 }
 
-/** The report as plain text, for Share. */
-export function reportText(r, u) {
-  const wu = weightUnit(u);
-  const bits = [`Forge weekly report · ${formatDay(r.days[0])} – ${formatDay(r.days[6])}`];
-  if (r.score.now != null) bits.push(`Forge Score ${round(r.score.now)}${r.score.delta != null ? ` (${sign(round(r.score.delta))}${Math.abs(round(r.score.delta))})` : ''}`);
-  bits.push(`Workouts ${r.training.workouts}/${r.training.planned}${r.training.prs ? ` · ${r.training.prs} PR${r.training.prs === 1 ? '' : 's'}` : ''}`);
-  if (r.weight.change != null) bits.push(`Weight trend ${sign(r.weight.change)}${Math.abs(weightToDisplay(r.weight.change, u)).toFixed(1)} ${wu}`);
-  bits.push(`Next week: ${r.suggestion.text}`);
-  return bits.join('\n');
-}
+export { reportText };
 
 export function renderWeekly(el) {
   const u = getUnits();
@@ -46,8 +49,8 @@ export function renderWeekly(el) {
   const r = reportFor(weekStart);
   const isCurrent = weekStart === current;
   const canBack = weekStart > shiftWeek(current, -MAX_WEEKS_BACK);
-  const kg = (v) => `${sign(v)}${Math.abs(weightToDisplay(v, u)).toFixed(1)} ${wu}`;
-  const pct = (v) => `${sign(v)}${Math.abs(Math.round(v))}%`;
+  const mass = (kg) => (kg == null ? null : weightToDisplay(kg, u)); // a change in your units
+  const massOpts = { digits: 1, unit: wu };
   const wGood = r.goal === 'lose' || r.goal === 'recomp' ? false : r.goal === 'muscle' ? true : null;
 
   const scoreBlock = r.score.now != null ? `
@@ -55,7 +58,7 @@ export function renderWeekly(el) {
       <p class="label">Forge Score</p>
       <div class="row gap center"><div class="score-mini">${ringSvg(r.score.now, { size: 84, stroke: 9 })}<b>${round(r.score.now)}</b></div>
         <div>${scoreHead(r.score.delta)}<p class="small muted">7-day average</p></div></div>
-      <ul class="w-lines">${r.score.pillars.map((p) => line(p.label, p.now == null ? dash : round(p.now), p.delta == null ? null : `${arrow(p.delta, 0.5)} ${sign(round(p.delta))}${Math.abs(round(p.delta))}`, { good: true })).join('')}</ul>
+      <ul class="w-lines">${r.score.pillars.map((p) => line(p.label, p.now == null ? dash : round(p.now), p.delta, { good: true })).join('')}</ul>
     </div>` : '';
 
   const t = r.training;
@@ -64,17 +67,17 @@ export function renderWeekly(el) {
     <div class="card stack" data-w-body>
       <p class="label">Body</p>
       <ul class="w-lines">
-        ${line('Weight trend', r.weight.now == null ? dash : `${weightToDisplay(r.weight.now, u).toFixed(1)} ${wu}`, r.weight.change == null ? null : `${arrow(r.weight.change, 0.05)} ${kg(r.weight.change)}`, { good: wGood == null ? null : wGood })}
-        ${r.comp.fat.now != null ? line('Fat mass', `${weightToDisplay(r.comp.fat.now, u).toFixed(1)} ${wu}`, r.comp.fat.change == null ? null : `${arrow(r.comp.fat.change, 0.05)} ${kg(r.comp.fat.change)}`, { good: r.goal === 'muscle' ? null : false }) : ''}
-        ${r.comp.lean.now != null ? line('Fat-free mass', `${weightToDisplay(r.comp.lean.now, u).toFixed(1)} ${wu}`, r.comp.lean.change == null ? null : `${arrow(r.comp.lean.change, 0.05)} ${kg(r.comp.lean.change)}`, { good: true }) : ''}
+        ${line('Weight trend', r.weight.now == null ? dash : `${weightToDisplay(r.weight.now, u).toFixed(1)} ${wu}`, mass(r.weight.change), { ...massOpts, good: wGood })}
+        ${r.comp.fat.now != null ? line('Fat mass', `${weightToDisplay(r.comp.fat.now, u).toFixed(1)} ${wu}`, mass(r.comp.fat.change), { ...massOpts, good: r.goal === 'muscle' ? null : false }) : ''}
+        ${r.comp.lean.now != null ? line('Fat-free mass', `${weightToDisplay(r.comp.lean.now, u).toFixed(1)} ${wu}`, mass(r.comp.lean.change), { ...massOpts, good: true }) : ''}
       </ul>
       <p class="small muted">${r.weight.weighIns} weigh-in${r.weight.weighIns === 1 ? '' : 's'} this week.</p>
     </div>
     <div class="card stack" data-w-training>
       <p class="label">Training</p>
       <ul class="w-lines">
-        ${line('Workouts', `${t.workouts} of ${t.planned}`, t.workouts >= t.planned ? 'Goal met' : null, { good: true })}
-        ${line('Volume', `${Math.round(weightToDisplay(t.volumeKg, u)).toLocaleString()} ${wu}`, t.volumeChangePct == null ? null : `${arrow(t.volumeChangePct, 1)} ${pct(t.volumeChangePct)} vs last week`, { good: true })}
+        ${line('Workouts', `${t.workouts} of ${t.planned}`, null, { note: t.workouts >= t.planned ? 'Goal met' : null })}
+        ${line('Volume', `${Math.round(weightToDisplay(t.volumeKg, u)).toLocaleString()} ${wu}`, t.volumeChangePct, { good: true, post: '% vs last week' })}
         ${line('Personal records', t.prs ? `${t.prs} ${icon('trophy', { filled: true })}` : '0', null)}
         ${line('Cardio', `${Math.round(t.cardioMin)} min`, null)}
       </ul>
@@ -83,9 +86,9 @@ export function renderWeekly(el) {
     <div class="card stack" data-w-recovery>
       <p class="label">Recovery</p>
       <ul class="w-lines">
-        ${r.recovery.hrv.now != null ? line('Average HRV', `${Math.round(r.recovery.hrv.now)} ms`, r.recovery.hrv.change == null ? null : `${arrow(r.recovery.hrv.change, 0.5)} ${sign(r.recovery.hrv.change)}${Math.abs(Math.round(r.recovery.hrv.change))} ms`, { good: true }) : ''}
-        ${r.recovery.rhr.now != null ? line('Resting heart rate', `${Math.round(r.recovery.rhr.now)} bpm`, r.recovery.rhr.change == null ? null : `${arrow(r.recovery.rhr.change, 0.5)} ${sign(r.recovery.rhr.change)}${Math.abs(Math.round(r.recovery.rhr.change))} bpm`, { good: false }) : ''}
-        ${r.recovery.sleep.now != null ? line('Sleep a night', `${Math.floor(r.recovery.sleep.now / 60)} h ${String(Math.round(r.recovery.sleep.now % 60)).padStart(2, '0')}`, r.recovery.sleep.change == null ? null : `${arrow(r.recovery.sleep.change, 3)} ${sign(r.recovery.sleep.change)}${Math.abs(Math.round(r.recovery.sleep.change))} min`, { good: true }) : ''}
+        ${r.recovery.hrv.now != null ? line('Average HRV', `${Math.round(r.recovery.hrv.now)} ms`, r.recovery.hrv.change, { good: true, unit: 'ms' }) : ''}
+        ${r.recovery.rhr.now != null ? line('Resting heart rate', `${Math.round(r.recovery.rhr.now)} bpm`, r.recovery.rhr.change, { good: false, unit: 'bpm' }) : ''}
+        ${r.recovery.sleep.now != null ? line('Sleep a night', `${Math.floor(r.recovery.sleep.now / 60)} h ${String(Math.round(r.recovery.sleep.now % 60)).padStart(2, '0')}`, r.recovery.sleep.change, { good: true, unit: 'min' }) : ''}
       </ul>
     </div>` : ''}
     ${r.best || r.worst ? `<div class="card stack" data-w-bestworst>
@@ -117,9 +120,10 @@ export function renderWeekly(el) {
   const share = $('[data-share]', el);
   if (share) share.onclick = async () => {
     const text = reportText(r, u);
-    try {
-      if (navigator.share) await navigator.share({ title: 'My Forge week', text });
-      else { await navigator.clipboard.writeText(text); toast('Copied to your clipboard'); }
-    } catch { /* cancelled */ }
+    const copy = async () => {
+      try { await navigator.clipboard.writeText(text); toast('Copied to your clipboard'); } catch { toast('Couldn’t copy. Try again.'); }
+    };
+    if (!navigator.share) { await copy(); return; }
+    try { await navigator.share({ title: 'My Forge week', text }); } catch (e) { if (e && e.name !== 'AbortError') await copy(); /* cancelled: nothing to do */ }
   };
 }

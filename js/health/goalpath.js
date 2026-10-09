@@ -59,6 +59,12 @@ export function goalPath({ series, goalKg, today }) {
   };
 }
 
+/** The chart's dotted line: ends on the goal at the same date as the sentence. null unless there is a date. */
+export const goalProjection = (path) => (path && path.status === 'ok' ? { reached: false, day: path.etaDay } : null);
+
+/** One sentence for Today, from the same fit as the Goal path card. fmt(dayKey) formats the date. */
+export const goalLine = (path, fmt) => (path && path.status === 'ok' ? `On pace for your goal around ${fmt(path.etaDay)}` : '');
+
 /**
  * Energy balance implied by the change in fat mass and fat-free mass over 28 days (kcal/day, negative = deficit).
  * measures: body_measures docs. Returns null without 4+ fat-mass readings over 14+ days.

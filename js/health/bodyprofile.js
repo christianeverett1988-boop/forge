@@ -8,8 +8,9 @@
  * the screen says so. "unspecified" uses the midpoint of the two.
  */
 export const CUTS = {
-  male: { ffmi: [17.0, 19.0, 21.0], fmi: [3.5, 5.5, 8.0] },
-  female: { ffmi: [14.0, 15.5, 17.0], fmi: [5.0, 7.5, 10.5] },
+  // FMI: men ~3–6 normal / 6–9 excess / >9 obese, women ~5–9 / 9–13 / >13. FFMI "low" is below ~17 (men) / ~15 (women).
+  male: { ffmi: [17.0, 19.0, 21.0], fmi: [3.0, 6.0, 9.0] },
+  female: { ffmi: [15.0, 16.5, 18.0], fmi: [5.0, 9.0, 13.0] },
 };
 export const FFMI_BANDS = ['Low', 'Moderate', 'Good', 'High'];
 export const FMI_BANDS = ['Low', 'Healthy', 'Higher', 'High'];
