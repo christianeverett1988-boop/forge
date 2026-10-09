@@ -34,7 +34,20 @@ Each day is a list of slots. A slot lists movement patterns in order of preferen
 - be at your level or below (beginners and intermediates get up to level 2);
 - for chains, be the chain step you're currently on.
 
-If a pattern has no candidates, the slot tries its next pattern.
+If a pattern has no candidates, the slot tries its next pattern. If none of the slot's own patterns has a candidate, it tries the **fallback patterns** below, in order, before the slot is dropped (`PATTERN_FALLBACKS` in `generator.js`). The `used` set still stops any exercise repeating in a session, and Build my own picks never fall back.
+
+| Slot pattern | Falls back to |
+|---|---|
+| `vertical_pull` | `horizontal_pull`, then `rear_delt` |
+| `horizontal_pull` | `rear_delt` (beyond the original spec; keeps a bodyweight-only Pull day at 4+ moves) |
+| `lateral_raise` | `vertical_push` |
+| `biceps` | `horizontal_pull` |
+| `shrug`, `carry` | `rear_delt` |
+| `chest_fly` | `horizontal_push` |
+
+The "This location doesn’t have much for today’s focus" note shows only when a session still ends up with fewer than 4 exercises.
+
+**Around the house:** towel, sturdy table, sturdy chair or step, backpack and stairs are equipment keys like any other. Flat and adjustable benches and the plyo box count as a chair, the plyo box as stairs, and dumbbells and kettlebells as a backpack (`EQUIPMENT_SATISFIES`). Backpack moves use `load: 'backpack'`: reps first, weight optional, scored between band and bodyweight.
 
 **Pinned exercises** (5×5 lifts) go through the same filters: injury tags, "never suggest", and the level cap. If a pin fails, the slot falls back to its movement patterns. If nothing in those patterns is safe for your note (every overhead press carries the shoulder tag, so with your shoulder note 5×5 day B has no press), the slot is left out and the session notes say exactly which one and why, so you can add something back yourself. **Exercises you picked yourself** in Build my own are always kept; if one carries a tag from your injury note, it shows a warning instead.
 

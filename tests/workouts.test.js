@@ -1,9 +1,9 @@
 import { test, eq, near, assert } from './harness.js';
 import { EXERCISES } from '../js/workouts/exercises.js';
-import { expandEquipment, canDo, LOCATION_PRESETS, YMCA_PRESET, presetPickerRows, locationFromPreset, presetDescription } from '../js/workouts/equipment.js';
+import { EQUIPMENT_GROUPS, expandEquipment, canDo, LOCATION_PRESETS, YMCA_PRESET, presetPickerRows, locationFromPreset, presetDescription } from '../js/workouts/equipment.js';
 import { fatigueAt, recoveryPct, effortFactor, SETS_TO_EXHAUST } from '../js/workouts/recovery.js';
 import { nextTarget, availableLoads, warmups, platesPerSide, e1rm, detectPRs, isStalled, predictedReps } from '../js/workouts/progression.js';
-import { generateWorkout, injuryTags, deloadInfo, pickDayType } from '../js/workouts/generator.js';
+import { generateWorkout, injuryTags, deloadInfo, pickDayType, PATTERN_FALLBACKS, fallbackPatterns } from '../js/workouts/generator.js';
 import { PROGRAMS, DAY_TYPES } from '../js/workouts/programs.js';
 
 const byId = (id) => EXERCISES.find((e) => e.id === id);
@@ -465,7 +465,7 @@ test('create from preset copies equipment and inventory', () => {
 
 test('preset copy matches onboarding wording', () => {
   assert(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'ymca')).startsWith('Standard gym setup (30 items).'));
-  eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'travel')), 'Bodyweight only');
+  eq(presetDescription(LOCATION_PRESETS.find((l) => l.key === 'travel')), 'Bodyweight, a towel, a sturdy chair and a backpack.');
 });
 
 test('Home copy drops the "Edit any time" line inside Settings → Locations only', () => {
@@ -482,4 +482,120 @@ test('preview edits: Switch at a bare location still fills every slot it can', (
   const base = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: none, profile, exercises: EXERCISES, unit: 'lb' });
   const sw = generateWorkout({ programKey: 'smart', dayType: 'full_a', location: none, profile, exercises: EXERCISES, unit: 'lb', avoidIds: base.exercises.map((it) => it.exercise_id) });
   eq(sw.exercises.length, base.exercises.length);
+});
+
+// ---------- v0.9.0: train anywhere ----------
+
+const same = (a, b) => eq(JSON.stringify(a), JSON.stringify(b));
+const ALL_EQUIP = new Set(EQUIPMENT_GROUPS.flatMap((g) => g.items.map(([k]) => k)));
+const TRAVEL = LOCATION_PRESETS.find((l) => l.key === 'travel');
+const BODYWEIGHT_ONLY = { equipment: [], weight_inventory: {} };
+
+/** Slots filled across every non-5x5 day type, beginner and intermediate, 90 min. */
+function coverage(location) {
+  let filled = 0;
+  let total = 0;
+  const sessions = [];
+  for (const exp of ['beginner', 'intermediate']) {
+    for (const day of Object.keys(DAY_TYPES)) {
+      if (day.startsWith('sl5x5')) continue;
+      const w = generateWorkout({ programKey: 'smart', dayType: day, location, profile: { experience: exp, sessionMin: 90, trainingDays: 3 }, exercises: EXERCISES, unit: 'lb' });
+      filled += w.exercises.length;
+      total += DAY_TYPES[day].slots.length;
+      sessions.push({ day, exp, count: w.exercises.length, slots: DAY_TYPES[day].slots.length });
+    }
+  }
+  return { filled, total, sessions };
+}
+
+test('library: ids are unique and every equipment key exists in the catalog', () => {
+  eq(new Set(EXERCISES.map((e) => e.id)).size, EXERCISES.length);
+  for (const e of EXERCISES) for (const req of e.equip) for (const k of req) assert(ALL_EQUIP.has(k), `${e.id} needs unknown "${k}"`);
+});
+
+test('library: chain steps are contiguous within each chain', () => {
+  const groups = new Map();
+  for (const e of EXERCISES.filter((x) => x.chain)) groups.set(e.chain, [...(groups.get(e.chain) || []), e.step]);
+  for (const [key, steps] of groups) {
+    const sorted = [...steps].sort((a, b) => a - b);
+    assert(new Set(sorted).size === sorted.length, `${key} repeats a step`);
+    assert(sorted[sorted.length - 1] - sorted[0] === sorted.length - 1, `${key} has a gap: ${sorted}`);
+  }
+  same(EXERCISES.filter((e) => e.chain === 'row_bw').map((e) => e.step).sort(), [1, 2, 3]);
+});
+
+test('household gear: benches and boxes count as a chair; dumbbells as a backpack', () => {
+  assert(expandEquipment(['bench_flat']).has('sturdy_chair'));
+  assert(expandEquipment(['bench_adjustable']).has('sturdy_chair'));
+  assert(expandEquipment(['plyo_box']).has('sturdy_chair') && expandEquipment(['plyo_box']).has('stairs'));
+  assert(expandEquipment(['dumbbells']).has('backpack') && expandEquipment(['kettlebells']).has('backpack'));
+  assert(!expandEquipment([]).has('towel'));
+});
+
+test('presets: Travel has a towel, chair and backpack; Home has the whole Around the house group', () => {
+  eq(TRAVEL.name, 'Travel / hotel room');
+  for (const k of ['towel', 'sturdy_chair', 'backpack']) assert(TRAVEL.equipment.includes(k), k);
+  const group = EQUIPMENT_GROUPS.find((g) => g.group === 'Around the house').items.map(([k]) => k);
+  eq(group.length, 5);
+  for (const k of group) assert(HOME.equipment.includes(k), k);
+});
+
+test('bench dip needs a chair or bench (not nothing); table rows need a table', () => {
+  assert(!canDo(byId('bench_dip'), expandEquipment([])));
+  assert(canDo(byId('bench_dip'), expandEquipment(['bench_flat'])));
+  assert(!canDo(byId('table_row_bent_knees'), expandEquipment(['towel', 'backpack'])));
+  assert(byId('table_row_bent_knees').cues[0].includes('can’t tip'));
+});
+
+test('fallback map: pull and delt patterns fall back in order', () => {
+  same(PATTERN_FALLBACKS.vertical_pull, ['horizontal_pull', 'rear_delt']);
+  same(PATTERN_FALLBACKS.lateral_raise, ['vertical_push']);
+  same(PATTERN_FALLBACKS.biceps, ['horizontal_pull']);
+  same(PATTERN_FALLBACKS.shrug, ['rear_delt']);
+  same(PATTERN_FALLBACKS.carry, ['rear_delt']);
+  same(PATTERN_FALLBACKS.chest_fly, ['horizontal_push']);
+  same(fallbackPatterns({ patterns: ['vertical_pull', 'horizontal_pull'] }), ['rear_delt']);
+  same(fallbackPatterns({ patterns: ['squat'] }), []);
+});
+
+test('fallbacks never repeat an exercise in a session', () => {
+  for (const loc of [TRAVEL, BODYWEIGHT_ONLY, HOME]) {
+    for (const day of Object.keys(DAY_TYPES)) {
+      const w = generateWorkout({ programKey: 'smart', dayType: day, location: loc, profile, exercises: EXERCISES, unit: 'lb' });
+      const ids = w.exercises.map((it) => it.exercise_id);
+      eq(new Set(ids).size, ids.length);
+    }
+  }
+});
+
+test('coverage: Travel / hotel room fills at least 90% of slots; Pull and Upper give 5+', () => {
+  const c = coverage(TRAVEL);
+  assert(c.filled / c.total >= 0.9, `Travel ${c.filled}/${c.total}`);
+  for (const s of c.sessions) if (s.day === 'pull' || s.day === 'upper') assert(s.count >= 5, `${s.day} ${s.exp} gave ${s.count}`);
+});
+
+test('coverage: pure bodyweight gives every day type at least 4 exercises', () => {
+  for (const s of coverage(BODYWEIGHT_ONLY).sessions) assert(s.count >= 4, `${s.day} ${s.exp} gave ${s.count}`);
+});
+
+test('coverage: Home and YMCA still fill every slot', () => {
+  for (const loc of [HOME, YMCA]) {
+    const c = coverage(loc);
+    eq(c.filled, c.total);
+  }
+});
+
+test('the "doesn’t have much" note only appears when a session ends up under 4 exercises', () => {
+  const full = generateWorkout({ programKey: 'smart', dayType: 'pull', location: TRAVEL, profile, exercises: EXERCISES, unit: 'lb' });
+  assert(full.exercises.length >= 4);
+  assert(!full.notes.some((n) => n.includes('doesn’t have much')));
+  const tiny = generateWorkout({ programKey: 'smart', dayType: 'pull', location: BODYWEIGHT_ONLY, profile, exercises: EXERCISES.filter((e) => e.pattern === 'core_flexion'), unit: 'lb' });
+  assert(tiny.exercises.length < 4);
+  assert(tiny.notes.some((n) => n.includes('doesn’t have much')));
+});
+
+test('backpack moves have no starting weight and are chosen at Travel', () => {
+  eq(nextTarget(byId('backpack_curl'), [], { role: 'accessory' }).weight, null);
+  const w = generateWorkout({ programKey: 'smart', dayType: 'pull', location: TRAVEL, profile, exercises: EXERCISES, unit: 'lb' });
+  assert(w.exercises.some((it) => byId(it.exercise_id).load === 'backpack'));
 });

@@ -37,7 +37,7 @@ export function setsPerMuscle(workouts, from, to) {
 }
 
 function bestOf(ex, sets) {
-  if (ex.timed || ['bodyweight', 'band', 'other'].includes(ex.load)) return { v: Math.max(...sets.map((s) => s.reps || 0)), unit: ex.timed ? 's' : 'reps' };
+  if (ex.timed || ['bodyweight', 'band', 'other', 'backpack'].includes(ex.load)) return { v: Math.max(...sets.map((s) => s.reps || 0)), unit: ex.timed ? 's' : 'reps' };
   const best = Math.max(0, ...sets.map((s) => e1rm(s.weight, s.reps) || 0));
   if (best) return { v: Math.round(best), unit: 'e1RM' };
   return { v: Math.max(...sets.map((s) => s.weight || 0)), unit: 'top' };

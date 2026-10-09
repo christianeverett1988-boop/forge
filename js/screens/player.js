@@ -233,7 +233,7 @@ function drawSet(el) {
   const order = exerciseOrder(w);
   const exNo = order.indexOf(i) + 1;
   const isTimed = !!ex.timed;
-  const bw = ['bodyweight', 'band', 'other'].includes(ex.load);
+  const bw = ['bodyweight', 'band', 'other', 'backpack'].includes(ex.load);
   const showWeight = !bw;
   const boxing = BOXING.has(ex.id);
 
@@ -417,7 +417,7 @@ function go(el, to, kind) {
 function doneSet(el, ex, i, j, repsOverride) {
   const u = unit();
   const s = live.w.exercises[i].sets[j];
-  const bw = ['bodyweight', 'band', 'other'].includes(ex.load);
+  const bw = ['bodyweight', 'band', 'other', 'backpack'].includes(ex.load);
   const weightKg = bw && !ex.timed ? (s.weight_kg ?? s.plan_weight_kg ?? null) : draft.weight != null ? fromUnit(draft.weight, u) : null;
   const res = completeSet(i, j, { reps: repsOverride ?? draft.reps, weightKg, rir: s.warmup ? null : draft.rir });
   if (!res.ok) {

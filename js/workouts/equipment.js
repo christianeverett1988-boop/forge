@@ -66,6 +66,16 @@ export const EQUIPMENT_GROUPS = [
     ],
   },
   {
+    group: 'Around the house',
+    items: [
+      ['towel', 'Bath towel'],
+      ['sturdy_table', 'Sturdy table (for rows)'],
+      ['sturdy_chair', 'Sturdy chair or step'],
+      ['backpack', 'Backpack (load it up)'],
+      ['stairs', 'Stairs or a step'],
+    ],
+  },
+  {
     group: 'Cardio',
     items: [
       ['treadmill', 'Treadmill'],
@@ -92,7 +102,10 @@ export const YMCA_PRESET = [
 
 // Home gym, from photos (2026-10-07): 5 and 30 lb dumbbell pairs, one 20 lb kettlebell,
 // a single tube band with handles (no door anchor), jump rope, ab wheel, push-up handles, Peloton.
-export const HOME_PRESET = ['dumbbells', 'kettlebells', 'resistance_bands', 'jump_rope', 'ab_wheel', 'pushup_handles', 'bike'];
+export const HOUSEHOLD_ITEMS = ['towel', 'sturdy_table', 'sturdy_chair', 'backpack', 'stairs'];
+export const HOME_PRESET = ['dumbbells', 'kettlebells', 'resistance_bands', 'jump_rope', 'ab_wheel', 'pushup_handles', 'bike', ...HOUSEHOLD_ITEMS];
+// Hotel room: a towel, a chair and a bag you already packed.
+export const TRAVEL_PRESET = ['towel', 'sturdy_chair', 'backpack'];
 
 const lbs = (...lb) => lb.map((x) => Math.round(x * 0.45359237 * 1000) / 1000);
 
@@ -100,14 +113,14 @@ const lbs = (...lb) => lb.map((x) => Math.round(x * 0.45359237 * 1000) / 1000);
 export const LOCATION_PRESETS = [
   { key: 'home', name: 'Home gym', equipment: HOME_PRESET, weight_inventory: { dumbbells_kg: lbs(5, 30), kettlebells_kg: lbs(20) } },
   { key: 'ymca', name: 'YMCA', equipment: YMCA_PRESET, weight_inventory: {} },
-  { key: 'travel', name: 'Travel / no equipment', equipment: [], weight_inventory: {} },
+  { key: 'travel', name: 'Travel / hotel room', equipment: TRAVEL_PRESET, weight_inventory: {} },
 ];
 
 /** The friendly line under each preset (onboarding and the Locations picker share it). */
 export function presetDescription(preset, { inLocations = false } = {}) {
   if (preset.key === 'home') return 'Dumbbells (5 and 30 lb), kettlebells, band, jump rope, ab wheel, push-up handles, Peloton.' + (inLocations ? '' : ' Edit any time in Settings → Locations.');
   if (preset.key === 'ymca') return `Standard gym setup (${preset.equipment.length} items). Turn off anything your branch doesn’t have.`;
-  return 'Bodyweight only';
+  return 'Bodyweight, a towel, a sturdy chair and a backpack.';
 }
 
 /** The record fields for a new location made from a preset. Copies, so edits never touch the preset. */
@@ -129,7 +142,11 @@ export function presetPickerRows(locations) {
 // One item can stand in for another (e.g. an adjustable bench works as a flat bench).
 export const EQUIPMENT_SATISFIES = {
   adjustable_dumbbells: ['dumbbells'],
-  bench_adjustable: ['bench_flat'],
+  bench_adjustable: ['bench_flat', 'sturdy_chair'],
+  bench_flat: ['sturdy_chair'],
+  plyo_box: ['sturdy_chair', 'stairs'],
+  dumbbells: ['backpack'], // a backpack move can always be done with a dumbbell
+  kettlebells: ['backpack'],
   power_rack: ['pullup_bar'],
   machine_assisted_pullup: ['dip_station'],
   gymnastic_rings: ['dip_station'],

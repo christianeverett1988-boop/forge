@@ -109,7 +109,7 @@ export function exerciseComplete(exercise) {
 /** Checks a set before it's completed. Returns an error message or null. */
 export function validateSet(ex, s, { reps, weightKg }) {
   if (!reps || reps < 1) return ex && ex.timed ? 'Enter the seconds first.' : 'Enter your reps first.';
-  const loaded = ex && !['bodyweight', 'band', 'other'].includes(ex.load) && !ex.timed;
+  const loaded = ex && !['bodyweight', 'band', 'other', 'backpack'].includes(ex.load) && !ex.timed;
   if (loaded && weightKg == null && !s.warmup) return 'Enter the weight first.';
   return null;
 }
@@ -136,7 +136,7 @@ export function sessionStats(exercises, toDisplay) {
 export function versusLast(ex, now, prev, unit = 'lb') {
   if (!prev || !prev.length || !now.length) return null;
   const tone = (d) => (d > 0 ? 'up' : d < 0 ? 'down' : 'same');
-  if (ex.timed || ['bodyweight', 'band', 'other'].includes(ex.load)) {
+  if (ex.timed || ['bodyweight', 'band', 'other', 'backpack'].includes(ex.load)) {
     const d = Math.max(...now.map((s) => s.reps || 0)) - Math.max(...prev.map((s) => s.reps || 0));
     return { text: d === 0 ? 'Same as last time' : `${d > 0 ? '+' : ''}${d}${ex.timed ? 's' : ' reps'}`, tone: tone(d) };
   }
