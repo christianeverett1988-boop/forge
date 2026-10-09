@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.15.0 — iPhone app proof of concept (Capacitor) (2026-10-09)
+
+- Morning read: from 4:00 to 12:00, until last night's sleep has arrived (HRV alone doesn't count), Forge reads Apple Health again on open (at most every 20 min, 30 min back-off after a failure). Readiness updates by itself.
+- Clearer "nothing yet" notice on Apple Health; Today's Readiness no longer says "Connect" after you have; the setup script skips `npm ci` when nothing changed.
+
+The same Forge code can now run inside a native iPhone shell, built on your Mac with Xcode: one command (`bash scripts/ios-setup.sh`) and **docs/ios-setup.md**. HealthKit works with a free Apple ID (Personal Team); the $99 program is only for TestFlight, the App Store and no weekly re-sign. The web app on GitHub Pages works exactly as before; nothing here runs in a browser. No Cloud Functions, `firestore.rules` or `config.js` changes. Merge after 0.14.5 and 0.14.6.
+
+**In the iPhone app:**
+- **Real haptics:** the Taptic Engine on Done set, tabs, segments and "rest's over", instead of the iOS switch trick.
+- **The rest timer reaches the lock screen:** a "Rest's over · Next: Bench press" notification, kept in step with +/- 15 s, pause and skip.
+- **Apple Health straight from HealthKit:** Settings → Apple Health → Connect. Forge reads HRV, resting heart rate, breathing, blood oxygen, sleep stages, sleeping wrist temperature, VO₂max, steps, active energy and exercise minutes, turns them into the same daily summaries as the export import (same code), and saves only those. It reads again by itself on open, every 6 hours at most. The Shortcut and export import are still there under "Other ways". In the app, every "set up the Shortcut" prompt (Today, Score, metric screens, Settings) says **Connect Apple Health**. After connecting, the card shows which kinds arrived and, for any with nothing, the exact switch: Settings → Health → Data Access & Devices → Forge → Turn On All. Walking heart rate isn't in the HealthKit plugin, so it isn't read (nothing depends on it).
+- **Feels like an app:** the real Forge icon (1024 px) and a dark launch screen with the Forge mark (no Capacitor art, no white flash; it comes down once the first screen is drawn), the keyboard shrinks the view so sheets and set entry stay above it (key bar with Done stays on), no rubber-banding, no link previews or long-press callouts, no text selection on controls, portrait only, and the in-app edge swipe is the only back gesture.
+- **Ready to build:** the configured `ios/` project is committed (HealthKit entitlement, privacy strings, portrait, icon, splash) with `package-lock.json`, `scripts/ios-setup.sh`, `docs/ios-setup.md` and `docs/app-store-checklist.md`.
+- **Opens offline:** the app carries its own files and Firebase's code (`scripts/build-www.mjs`), so it needs no service worker.
+- **Withings sign-in** opens over the app (Safari view) instead of leaving it.
+- **Status bar** follows light and dark.
+
+**Under the hood:**
+- `js/native/bridge.js` is the only place the app touches native code. Every call is a no-op in a browser.
+- `js/native/health.js` maps HealthKit to export-style records. The export aggregator gained `addRecord()`.
+- New files: `capacitor.config.json` (bundle ID `com.christianeverett.forge` for now; it becomes your LLC's before TestFlight) and npm scripts `native:setup`, `native:build`, `native:assets`, `native:sync`, `native:open`.
+- New tests cover the bridge (with a fake native shell), the HealthKit → daily-summary path, and the www build.
+
 ## 0.14.6 — Polish: readable charts, plain-words errors, steadier family-weigh-in check (2026-10-09)
 
 Merge after 0.14.5 (food logging). **Cloud Functions changed** (one line, the history-import year windows): deploy with `firebase deploy --only functions` when convenient. Nothing breaks before you do. No `firestore.rules` or `config.js` changes.
@@ -11,7 +34,7 @@ Merge after 0.14.5 (food logging). **Cloud Functions changed** (one line, the hi
   - touch or drag across a chart to read that day's value.
 - **Errors in plain words:** the Withings and Apple Health screens no longer show "(permission-denied)". They say what's wrong and what to do.
 - **Data check:** the Apple Health card shows what's actually arriving (it still said "arrives with the next update"), with a link to Apple Health status. Saved reports are one box per row, not a box inside a box.
-- **"Is this you?" check:** starts from a weight you typed in or confirmed in the last 6 months, or from your profile weight, before falling back to the newest readings. So a run of a child's weigh-ins right after yours can no longer flip it.
+- **"Is this you?" check:** starts from a weight you typed in or confirmed within 14 days of your newest reading, or from your profile weight, before falling back to the newest readings. So a run of a child's weigh-ins right after yours can no longer flip it.
 - **History import:** yearly windows now stop one second before New Year, so a reading at exactly midnight on Jan 1 can't be counted in two years.
 - **docs/levels.md:** the title no longer says v0.3.2.
 

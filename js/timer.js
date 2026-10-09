@@ -3,6 +3,7 @@
 // backgrounded (iPhone freezes web timers while locked; when you come back the time is still right).
 // The rest timer can pause (with the workout) and carries a "next up" preview for the full-screen rest.
 import { unlockAudio as unlock, beep as coachBeep, coach } from './ui/sound.js';
+import { syncRestNotification, haptic as nativeHaptic } from './native/bridge.js';
 
 export const unlockAudio = unlock;
 
@@ -12,6 +13,7 @@ export function beep({ freq = 880, ms = 160 } = {}) {
 }
 
 export function buzz(pattern = [200, 100, 200]) {
+  if (nativeHaptic('success')) return; // the iPhone app: a real "done" buzz
   if (navigator.vibrate) navigator.vibrate(pattern); // ignored on iPhone; see js/ui/haptic.js for the switch trick
 }
 
@@ -127,6 +129,8 @@ export const restInfo = () => (rest ? { ...rest, left: restRemaining(), paused: 
 function run() {
   clearInterval(tick);
   persistRest();
+  // iPhone app: a "Rest's over" notification for the lock screen, kept in step with every change (no-op on the web).
+  syncRestNotification(rest && rest.pausedLeft == null ? rest.end : null, { body: rest && rest.next && rest.next.name ? `Next: ${rest.next.name}` : 'Time for your next set.' });
   render();
   if (!rest || rest.pausedLeft != null) return;
   tick = setInterval(() => {

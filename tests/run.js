@@ -19,6 +19,7 @@ import './rings.test.js';
 import './withings.test.js';
 import './awards.test.js';
 import './tour.test.js';
+import './native.test.js';
 import './polish.test.js';
 import './health.test.js';
 import './shell.test.js';

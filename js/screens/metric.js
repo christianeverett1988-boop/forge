@@ -14,6 +14,7 @@ import { fmtAmount } from '../health/insights.js';
 import { weekOf } from '../workouts/awards.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { vo2Series } from '../health/longevity.js';
+import { isNative } from '../native/bridge.js';
 let unbindScrub = () => {};
 
 let range = 90; // 7 / 28 / 90 / 365 days, or 0 for everything
@@ -93,7 +94,7 @@ export function renderMetric(el, key) {
   const wConnected = !!(state.integrations.withings && state.integrations.withings.connected);
   const choice = metricEmptyChoice(key, wConnected);
   const emptyText = def === apple
-    ? { text: 'Turn on the Apple Health bridge and your readings show up here.', action: { href: '#/apple', label: 'Set up Apple Health' } }
+    ? isNative() ? { text: 'Connect Apple Health and your readings show up here.', action: { href: '#/apple', label: 'Connect Apple Health' } } : { text: 'Turn on the Apple Health bridge and your readings show up here.', action: { href: '#/apple', label: 'Set up Apple Health' } }
     : { text: key === 'weight_kg' ? 'Log your weight and it shows up here.' : wConnected ? 'The data check shows whether Withings sends this one.' : 'Connect Withings to bring your readings in.', action: choice.primary };
   el.innerHTML = `
     <section class="stack">

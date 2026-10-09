@@ -5,6 +5,10 @@
 // its `change` event. Where switches aren't supported it's a plain invisible checkbox, so the button still
 // works, just without the tick. Marked experimental; Settings → Haptic tick turns it off.
 import { state } from '../state.js';
+import { isNative, haptic as nativeHaptic } from '../native/bridge.js';
+
+// In the iPhone app (js/native/bridge.js) the Taptic Engine is called directly, so the switch trick is off there.
+const NATIVE = isNative();
 
 const supportsSwitch = (() => {
   try {
@@ -15,15 +19,19 @@ const supportsSwitch = (() => {
 })();
 
 export const hapticsOn = () => !state.settings || state.settings.haptics !== false;
-export const hapticSupport = () => (supportsSwitch ? 'switch' : navigator.vibrate ? 'vibrate' : 'none');
+export const hapticSupport = () => (NATIVE ? 'native' : supportsSwitch ? 'switch' : navigator.vibrate ? 'vibrate' : 'none');
+const useSwitch = () => hapticsOn() && supportsSwitch && !NATIVE;
+/** A native tap where the app can; true if it did. */
+const nativeTap = (kind = 'light') => NATIVE && hapticsOn() && nativeHaptic(kind);
 
 /** The invisible control to put inside a <label class="haptic-btn">. Listen for `change` on it. */
 export function hapticInput(attrs = '') {
-  return `<input type="checkbox" ${hapticsOn() && supportsSwitch ? 'switch' : ''} class="haptic-input" ${attrs}>`;
+  return `<input type="checkbox" ${useSwitch() ? 'switch' : ''} class="haptic-input" ${attrs}>`;
 }
 
 /** A light tick where the browser has navigator.vibrate (not iPhone Safari: there only a real tap on a switch ticks). */
 export function tick() {
+  if (nativeTap('select')) return;
   if (hapticsOn() && navigator.vibrate) navigator.vibrate(10);
 }
 
@@ -41,12 +49,13 @@ function addSwitch(host, fn) {
     input.setAttribute('aria-hidden', 'true');
     input.addEventListener('change', () => {
       input.checked = false;
+      nativeTap('select');
       fn(host);
     });
     host.appendChild(input);
   }
   // Settings → Haptic tick can change at any time, so the `switch` attribute follows it.
-  if (hapticsOn() && supportsSwitch) input.setAttribute('switch', '');
+  if (useSwitch()) input.setAttribute('switch', '');
   else input.removeAttribute('switch');
 }
 
@@ -69,7 +78,7 @@ export function onHapticTap(input, fn) {
   if (!input) return;
   input.addEventListener('change', (e) => {
     input.checked = false;
-    if (navigator.vibrate && hapticsOn()) navigator.vibrate(12);
+    if (!nativeTap('medium') && navigator.vibrate && hapticsOn()) navigator.vibrate(12);
     fn(e);
   });
 }

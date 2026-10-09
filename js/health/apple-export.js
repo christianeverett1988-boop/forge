@@ -100,6 +100,9 @@ export function createAggregator({ since }) {
   }
 
   return {
+    /** Add one record directly ({ type, value, unit, startDate, endDate, sourceName }, dates as the export writes
+     * them). The iPhone app reads HealthKit and feeds records here (js/native/health.js). */
+    addRecord(a) { onRecord(a); },
     /** Feed the next chunk of export.xml text. */
     feed(chunk) {
       const text = carry + chunk;

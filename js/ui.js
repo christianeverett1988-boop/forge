@@ -1,5 +1,6 @@
 // Small UI helpers: escaping, toasts, bottom sheets, confirm.
 
+import { isNative } from './native/bridge.js';
 import { reducedMotion, DUR } from './ui/motion.js';
 import { icon } from './ui/icons.js';
 import { shouldDismiss, rubberBand, dragProgress, velocityOf } from './ui/gesture.js';
@@ -159,6 +160,6 @@ export function formatDay(key, opts = { month: 'short', day: 'numeric' }) {
 }
 
 export const isStandalone = () =>
-  window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  isNative() || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
 export const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

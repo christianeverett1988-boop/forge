@@ -1,4 +1,5 @@
 import { state, units as getUnits } from '../state.js';
+import { isNative } from '../native/bridge.js';
 import { photoStatus, downloadAllPhotos } from '../ui/photos.js';
 import { patch, deleteAllUserData, clearLocalCache } from '../db.js';
 import { signOut, reauth, deleteAccount, authErrorMessage } from '../auth.js';
@@ -21,6 +22,7 @@ function withingsLine() {
 }
 
 function appleLine() {
+  if (isNative() && !(state.health_daily || []).length) return 'Tap to connect';
   const a = (state.integrations && state.integrations.apple) || {};
   const n = (state.health_daily || []).length;
   if (a.connected) return n ? `Connected · ${n} days of data` : 'Connected · waiting for the first data';
@@ -69,7 +71,7 @@ export function renderSettings(el) {
           </div>
         </div>
         <label class="g-row sw"><span class="g-text"><span>Sound effects</span><small>Power-up, PR and finish sounds.</small></span><input type="checkbox" switch name="sfx" ${sfxOn ? 'checked' : ''}></label>
-        <label class="g-row sw"><span class="g-text"><span>Haptic tick</span><small>${hapSupport === 'switch' ? 'A light tap on tabs, controls and Done set.' : 'Not supported on this device.'}</small></span><input type="checkbox" switch name="haptics" ${hapOn ? 'checked' : ''}></label>
+        <label class="g-row sw"><span class="g-text"><span>Haptic tick</span><small>${hapSupport === 'native' || hapSupport === 'switch' ? 'A light tap on tabs, controls and Done set.' : 'Not supported on this device.'}</small></span><input type="checkbox" switch name="haptics" ${hapOn ? 'checked' : ''}></label>
       </div>
       <p class="sec-foot">Coach audio mixes with your music and is silent when your ringer switch is off.</p>
       <div class="stack" data-photos hidden>

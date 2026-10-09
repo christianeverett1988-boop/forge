@@ -10,6 +10,8 @@ import { currentReadiness } from '../health/today.js';
 import { shiftDay } from '../health/metrics.js';
 import { NEEDED_DAYS } from '../health/readiness.js';
 import { icon } from '../ui/icons.js';
+import { isNative } from '../native/bridge.js';
+import { autoReadMode, nativeReadKey, lastNativeRead } from '../native/autoread.js';
 
 const call = async (...args) => (await import('../functions.js')).call(...args);
 const INGEST_URL = `https://us-east1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/healthIngest`;
@@ -27,12 +29,105 @@ const ago = (iso) => {
 };
 const dayText = (d) => (d ? formatDay(d, { weekday: 'short', month: 'short', day: 'numeric' }) : '—');
 
+// ---------- iPhone app: read HealthKit directly (js/native/health.js) ----------
+const NATIVE_KEY = () => nativeReadKey(state.user && state.user.uid);
+let nativeState = null; // { text } while reading
+const NOT_IN_HEALTHKIT = ['walkhr', 'workouts']; // not read from HealthKit (Forge has its own workouts; the plugin has no walking heart rate)
+const lastNative = () => lastNativeRead(state.user && state.user.uid);
+
+/**
+ * Read Apple Health on this phone and save the daily summaries. The first time it reaches back IMPORT_DAYS days;
+ * after that, from 3 days before the last read (late Watch syncs). Returns the number of days saved.
+ */
+export async function nativeHealthSync({ onText = () => {} } = {}) {
+  const { readHealthDays } = await import('../native/health.js');
+  const last = lastNative();
+  const since = last ? shiftDay(new Date(last).toLocaleDateString('en-CA'), -3) : shiftDay(todayKey(), -(IMPORT_DAYS - 1));
+  onText('Reading Apple Health on this phone…');
+  const { days, records } = await readHealthDays({ since });
+  if (!records) throw new Error('Apple Health shared nothing with Forge. On your iPhone: Settings → Health → Data Access & Devices → Forge → Turn On All. Then try again.');
+  let sent = 0;
+  for (let i = 0; i < days.length; i += CHUNK) {
+    onText(`Saving ${days.length} daily summaries…`);
+    const r = await call('importHealthDays', { days: days.slice(i, i + CHUNK) });
+    sent += r.days || 0;
+  }
+  try { localStorage.setItem(NATIVE_KEY(), String(Date.now())); } catch { /* private mode */ }
+  return sent;
+}
+
+let autoFailedAt = 0;
+let morningAt = 0;
+let morningFailedAt = 0;
+/**
+ * Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old, or, after
+ * 4:00, if today's overnight data hasn't arrived yet (at most every 20 min; js/native/autoread.js). Not while you're
+ * reading by hand. The Today cards update by themselves when health_daily changes.
+ */
+export async function autoHealthSync() {
+  if (!isNative() || !state.user || nativeState || !lastNative()) return 0;
+  const now = new Date();
+  const mode = autoReadMode({ now, last: lastNative(), today: todayKey(), rows: state.health_daily, failedAt: autoFailedAt, morningAt, morningFailedAt });
+  if (!mode) return 0;
+  morningAt = now.getTime(); // any auto read counts as the morning try, so the 20 minutes start now
+  try { return await nativeHealthSync(); } catch {
+    if (mode === 'morning') morningFailedAt = Date.now(); else autoFailedAt = Date.now();
+    return 0;
+  }
+}
+
+function nativeCard() {
+  const last = lastNative();
+  return `<div class="card stack" data-native-health>
+    <p class="label">Apple Health on this iPhone</p>
+    <p>Forge reads your Watch’s HRV, resting heart rate, sleep, wrist temperature, breathing, blood oxygen, cardio fitness, steps and exercise straight from Apple Health. Only daily summaries are saved. ${last ? '' : 'iOS asks once which data to share: turn them all on.'}</p>
+    ${nativeState ? `<p class="small" aria-live="polite">${esc(nativeState.text)}</p>` : ''}
+    <button class="btn bigbtn" data-native-read ${nativeState ? 'disabled' : ''}>${nativeState ? 'Reading…' : last ? 'Read Apple Health now' : 'Connect Apple Health'}</button>
+    <p class="small muted">${last ? `Last read ${esc(ago(new Date(last).toISOString()))}. Forge reads again by itself when you open it. In the morning it checks every 20 minutes until last night’s sleep is in, then every 6 hours.` : `The first read brings in the last ${IMPORT_DAYS} days.`}</p>
+  </div>`;
+}
+
+async function runNative(el) {
+  if (nativeState) return;
+  nativeState = { text: 'Asking Apple Health…' };
+  renderApple(el);
+  try {
+    const n = await nativeHealthSync({ onText: (text) => { nativeState = { text }; const p = $('[data-native-health] [aria-live]', el); if (p) p.textContent = text; } });
+    nativeState = null;
+    toast(n ? `Saved ${n} days from Apple Health` : 'Up to date', 3500);
+  } catch (e) {
+    nativeState = null;
+    toast(e.message || 'Couldn’t read Apple Health.', 5000);
+  }
+  renderApple(el);
+}
+
+const ACRONYMS = new Set(['HRV']);
+const lowerLabel = (l) => (ACRONYMS.has(l) ? l : l.toLowerCase());
+const WATCH_ONLY = new Set(['Wrist temperature', 'Cardio fitness', 'Exercise minutes']);
+const joinWords = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] || '');
+
+/** Short bold line, then the iOS path on its own line; the Watch sentence only if one of those kinds is missing. */
+function missingNotice(labels) {
+  const names = joinWords(labels.map(lowerLabel));
+  const watch = labels.filter((l) => WATCH_ONLY.has(l));
+  return `<div class="notice info small" data-missing style="display:grid;gap:6px">
+      <b>Nothing yet for ${esc(names)}</b>
+      <span>Settings → Health → Data Access &amp; Devices → Forge → <b>Turn On All</b></span>
+      <span>Then tap Read Apple Health now.${watch.length ? ` ${esc(joinWords(watch.map(lowerLabel)).replace(/^./, (c) => c.toUpperCase()))} also ${watch.length > 1 ? 'need' : 'needs'} an Apple Watch that records ${watch.length > 1 ? 'them' : 'it'}.` : ''}</span>
+    </div>`;
+}
+
 function statusCard() {
   const today = todayKey();
   const st = fieldStatus(state.health_daily, today);
   const r = currentReadiness();
   const a = A();
   const have = Math.min(NEEDED_DAYS, r.baselineDays || 0);
+  const native = isNative();
+  if (native) st.fields = st.fields.filter((f) => !NOT_IN_HEALTHKIT.includes(f.key)); // the plugin can't read these
+  // After the first read: kinds HealthKit gave nothing for, with the exact switch to flip in iOS.
+  const missing = native && lastNative() ? st.fields.filter((f) => !f.lastDay).map((f) => f.label) : [];
   const chips = st.fields.map((f) => `<div class="field-chip ${f.lastDay ? 'on' : 'off'}">
       <b>${esc(f.label)}</b><small>${f.lastDay ? `${f.count28} of last 28 days · last ${esc(dayText(f.lastDay))}` : 'Not received yet'}</small></div>`).join('');
   return `<div class="card stack apple-status" data-status>
@@ -44,6 +139,7 @@ function statusCard() {
       <p class="small muted" style="margin-top:6px">${have >= NEEDED_DAYS ? 'Readiness has enough history.' : `Readiness needs ${NEEDED_DAYS} days of HRV, resting heart rate or sleep. You have ${have}.`}</p>
     </div>
     ${(a.rejected_last || []).length ? `<div class="notice warn small" data-rejected>${esc(rejectedText(a.rejected_last))}</div>` : ''}
+    ${missing.length ? missingNotice(missing) : ''}
     <div class="field-grid">${chips}</div>
   </div>`;
 }
@@ -158,7 +254,9 @@ export function renderApple(el) {
       <h1>Apple Health</h1>
       ${readErr ? `<div class="notice warn">${esc(serverErrorText(readErr, 'Apple Health'))}</div>` : ''}
       <p class="muted">Bring your Watch’s overnight HRV, resting heart rate, sleep and wrist temperature into Forge for Readiness and your Forge Score. Everything stays in your own Forge account.</p>
+      ${isNative() ? nativeCard() : ''}
       ${statusCard()}
+      ${isNative() ? '<details class="card"><summary>Other ways: Shortcut or export file</summary><div class="stack" style="margin-top:12px">' : ''}
       <div class="card stack">
         <p class="label">Shortcut token</p>
         <p>${has ? 'A token is active. Your Shortcut uses it to send data to Forge.' : 'Make a token, then paste it into the Shortcut below. It works like a password for just this one job.'}</p>
@@ -168,6 +266,7 @@ export function renderApple(el) {
       </div>
       ${recipe()}
       ${importCard()}
+      ${isNative() ? '</div></details>' : ''}
       <div class="card stack">
         <p class="label">Delete Apple Health data</p>
         <p class="small muted">Removes every Apple Health day from Forge and turns the Shortcut token off. Your Withings data and your workouts stay.</p>
@@ -177,6 +276,8 @@ export function renderApple(el) {
     </section>`;
 
   $$('[data-copy-text]', el).forEach((b) => (b.onclick = () => copyText(b.dataset.copyText, b)));
+  const nr = $('[data-native-read]', el);
+  if (nr) nr.onclick = () => runNative(el);
   $('[data-delete]', el).onclick = () => deleteApple(el);
   $('[data-create]', el).onclick = () => createToken(el, has);
   const rv = $('[data-revoke]', el);

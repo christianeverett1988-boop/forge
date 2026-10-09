@@ -18,6 +18,8 @@ import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
+import { isNative } from '../native/bridge.js';
+import { lastNativeRead } from '../native/autoread.js';
 import { programLine, completionCards, afterCompletionCards } from '../body-programs/ui.js';
 import { missionsCard, afterMissionsRender, badgeCelebrationCards, afterBadgeCelebrations } from '../missions/ui.js';
 import { coachData } from '../coach/data.js';
@@ -87,18 +89,18 @@ function readinessCard() {
   const hasHealth = (state.health_daily || []).length > 0;
   if (r.status === 'none' && !hasHealth) {
     return `<a class="card row between center nav-card" href="#/apple" data-readiness>
-      <div><p class="label">Readiness</p><p>Add your Apple Watch data to see how ready you are each morning.</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
+      <div><p class="label">Readiness</p><p>${isNative() ? 'Connect Apple Health to see how ready you are each morning.' : 'Add your Apple Watch data to see how ready you are each morning.'}</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
   }
   if (r.status === 'building' || r.status === 'none') {
     const have = Math.min(r.needed, r.baselineDays || 0);
     return `<a class="card stack nav-card" href="#/apple" data-readiness><p class="label">Readiness</p>
       <p>Getting to know your normal: <b data-count>${have} of ${r.needed} days</b>.</p>
       <div class="ready-progress"><i style="width:${Math.round((have / r.needed) * 100)}%"></i></div>
-      <p class="small muted">Import your Health export in Settings → Apple Health to get there today.</p></a>`;
+      <p class="small muted">${isNative() ? (lastNativeRead(state.user && state.user.uid) ? `Forge has your history. Readiness fills in as your Watch records more nights: ${Math.max(0, r.needed - have)} to go.` : 'Tap here and choose Connect Apple Health: it reads your history right away.') : 'Import your Health export in Settings → Apple Health to get there today.'}</p></a>`;
   }
   if (r.status === 'waiting') {
     return `<a class="card stack nav-card" href="#/apple" data-readiness><p class="label">Readiness</p>
-      <p>Waiting for this morning’s Watch data.</p><p class="small muted">It arrives when your Shortcut runs after you wake up.</p></a>`;
+      <p>Waiting for this morning’s Watch data.</p><p class="small muted">${isNative() ? 'Open Forge after you wake up and it reads Apple Health by itself. Or tap here and choose Read Apple Health now.' : 'It arrives when your Shortcut runs after you wake up.'}</p></a>`;
   }
   const over = readinessOverridden();
   const bars = r.parts.filter((p) => p.key !== 'load').map((p) => `<span class="${p.dir === 'bad' ? 'bad' : p.dir === 'low' ? 'low' : p.dir === 'good' || p.dir === 'ok' ? 'ok' : 'meh'}" title="${esc(p.text)}"><i></i></span>`).join('');

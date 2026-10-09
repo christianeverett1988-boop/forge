@@ -193,3 +193,14 @@ main.snap { position: relative; pointer-events: none; }
 .ptr.pulling { transition: none; }
 .ptr.busy svg { animation: spin 0.9s linear infinite; transform: none; }
 @media (prefers-reduced-motion: reduce) { .ptr { transition: opacity var(--t-med) linear; transform: translateY(calc(var(--ptr-y, 0px) - 56px)); } .ptr.busy svg { animation: pulse 1s infinite; } }
+
+/* ---------- iPhone app (Capacitor shell, js/native/bridge.js): no web-page tells ---------- */
+html.native { -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+html.native body { overscroll-behavior: none; }
+html.native button, html.native a, html.native label, html.native summary, html.native [role="button"], html.native [role="tab"],
+html.native select, html.native .card.nav-card, html.native .g-row, html.native img, html.native svg {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+html.native img { -webkit-user-drag: none; }
+/* Fields and the Shortcut token stay selectable and editable. */
+html.native input, html.native textarea, html.native .token-box { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
