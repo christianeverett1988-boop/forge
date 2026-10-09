@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.1 — Health summary for your doctor (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Health summary for your doctor** at Settings → Your data (`#/report`): a clean page you can **print or save as a PDF** (on iPhone the share sheet has *Save to Files*) or **share as text**. Pick **30 days, 90 days (default) or 1 year**.
+- Sections appear only when they have data: weight and body composition (start → end trend, change per week, body fat, fat-free mass, visceral fat, FFMI, a black-and-white chart), heart and fitness (resting heart rate, HRV, VO₂max with its band, walking heart rate, SpO₂), sleep (average, nights under 6 h, bedtime and how much it varies), activity and training, the Forge Score with its pillars, and neutral **notes for the doctor** from Forge's existing checks. HRV, VO₂max and FFMI get a one-line explanation.
+- Weights show in your units with kg in brackets (`204.2 lb (92.6 kg)`). No name or email is on the page or in the shared text. Nothing is uploaded; it is built on the phone.
+- Printing hides the nav bar, tab bar and buttons and gives black-on-white, page-friendly sections.
+- Docs in `docs/report.md`. New tests cover section inclusion and exclusion with empty and partial data, the range maths, unit formatting, flag wording, privacy and the text version.
+
 ## 0.13.0 — Long-term trends and Longevity on Score (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

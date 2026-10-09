@@ -93,6 +93,7 @@ export function renderSettings(el) {
 
       <p class="sec-title">Your data</p>
       <div class="group">
+        ${nav('#/report', 'heart', 'Health summary for your doctor', 'Print or save a PDF')}
         <button class="g-row" data-export-json><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export everything (JSON)</span></span></button>
         <button class="g-row" data-export-csv><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
         <button class="g-row" data-export-workouts><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>
