@@ -5,7 +5,7 @@
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
 
 - **36 more moves have a moving figure.** The hotel, travel and bodyweight plans pick these a lot, so their detail and guided screens no longer show an empty box:
-  - **Table, towel, doorframe and wall:** table rows (bent knees, straight legs, feet raised), doorframe row, wall and table triceps extensions, and the six towel moves (lat pulldown, floor pulldown, pull-apart, iso curl, iso lateral raise).
+  - **Table, towel, doorframe and wall:** table rows (bent knees, straight legs, feet raised), doorframe row, wall and table triceps extensions, and the five towel moves (lat pulldown, floor pulldown, pull-apart, iso curl, iso lateral raise).
   - **Floor:** side plank, Copenhagen plank, superman, prone Y-T-W, reverse snow angel, side-lying leg raise, Russian twist, slider leg curl, reverse Nordic, sissy squat.
   - **Lunges and bands:** bodyweight and dumbbell lateral lunge, band lateral walk, band hip abduction and adduction.
   - **Mobility:** cat-cow, inchworm, world's greatest stretch, kneeling hip-flexor stretch, 90/90, thoracic open book.
