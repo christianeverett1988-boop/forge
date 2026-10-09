@@ -92,6 +92,7 @@
 .ready-parts li::before { background: var(--muted); } /* neutral = grey; amber only means "watch this" */
 .ready-parts li.warn::before { background: var(--ready-amber); }
 .ready-bars .meh i { background: var(--muted); opacity: .6; }
+.ready-bars .low i { background: var(--ready-amber); }
 .ready-why-btn { min-height: 44px; min-width: 44px; padding: 0 8px; }
 .ready-stale { font-size: 14px; color: var(--muted); }
 .copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
