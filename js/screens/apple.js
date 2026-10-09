@@ -82,7 +82,7 @@ function nativeCard() {
     <p>Forge reads your Watch’s HRV, resting heart rate, sleep, wrist temperature, breathing, blood oxygen, cardio fitness, steps and exercise straight from Apple Health. Only daily summaries are saved. ${last ? '' : 'iOS asks once which data to share: turn them all on.'}</p>
     ${nativeState ? `<p class="small" aria-live="polite">${esc(nativeState.text)}</p>` : ''}
     <button class="btn bigbtn" data-native-read ${nativeState ? 'disabled' : ''}>${nativeState ? 'Reading…' : last ? 'Read Apple Health now' : 'Connect Apple Health'}</button>
-    <p class="small muted">${last ? `Last read ${esc(ago(new Date(last).toISOString()))}. Forge reads again by itself when you open it (every 6 hours at most).` : `The first read brings in the last ${IMPORT_DAYS} days.`}</p>
+    <p class="small muted">${last ? `Last read ${esc(ago(new Date(last).toISOString()))}. Forge reads again by itself when you open it. In the morning it checks every 20 minutes until last night’s sleep is in, then every 6 hours.` : `The first read brings in the last ${IMPORT_DAYS} days.`}</p>
   </div>`;
 }
 
@@ -103,14 +103,14 @@ async function runNative(el) {
 
 const ACRONYMS = new Set(['HRV']);
 const lowerLabel = (l) => (ACRONYMS.has(l) ? l : l.toLowerCase());
-const WATCH_ONLY = new Set(['Wrist temperature', 'Cardio fitness']);
+const WATCH_ONLY = new Set(['Wrist temperature', 'Cardio fitness', 'Exercise minutes']);
 const joinWords = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] || '');
 
 /** Short bold line, then the iOS path on its own line; the Watch sentence only if one of those kinds is missing. */
 function missingNotice(labels) {
   const names = joinWords(labels.map(lowerLabel));
   const watch = labels.filter((l) => WATCH_ONLY.has(l));
-  return `<div class="notice small stack" data-missing>
+  return `<div class="notice info small" data-missing style="display:grid;gap:6px">
       <b>Nothing yet for ${esc(names)}</b>
       <span>Settings → Health → Data Access &amp; Devices → Forge → <b>Turn On All</b></span>
       <span>Then tap Read Apple Health now.${watch.length ? ` ${esc(joinWords(watch.map(lowerLabel)).replace(/^./, (c) => c.toUpperCase()))} also ${watch.length > 1 ? 'need' : 'needs'} an Apple Watch that records ${watch.length > 1 ? 'them' : 'it'}.` : ''}</span>

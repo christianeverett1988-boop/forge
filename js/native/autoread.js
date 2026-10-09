@@ -1,7 +1,7 @@
 // When the iPhone app reads Apple Health by itself. Two rules:
 //  - the steady one: the last read is 6 h old;
-//  - the morning one: it's after 4:00 and today's overnight data (HRV, resting heart rate or sleep) isn't in
-//    health_daily yet (the Watch may not have synced the night when Forge was first opened), at most every 20 minutes.
+//  - the morning one: it's between 4:00 and 12:00 and today's sleep isn't in health_daily yet (HRV usually syncs
+//    during the night, but the sleep session is written only after waking), at most every 20 minutes.
 // A failure backs the steady rule off for 6 h and the morning rule for 30 minutes.
 import { indexDays } from '../health/metrics.js';
 
@@ -9,11 +9,12 @@ export const STEADY_EVERY_MS = 6 * 3600 * 1000;
 export const MORNING_EVERY_MS = 20 * 60 * 1000;
 export const MORNING_BACKOFF_MS = 30 * 60 * 1000;
 export const MORNING_FROM_HOUR = 4;
+export const MORNING_UNTIL_HOUR = 12;
 
-/** Is there overnight data for `today` (YYYY-MM-DD) in the health_daily rows? */
+/** Is last night's sleep for `today` (YYYY-MM-DD) in the health_daily rows? HRV or resting HR alone don't count. */
 export function hasOvernight(rows, today) {
   const r = indexDays(rows).get(today);
-  return !!r && (r.hrv_sdnn_ms != null || r.rhr_bpm != null || (r.sleep && r.sleep.asleep_min != null));
+  return !!r && !!r.sleep && r.sleep.asleep_min != null;
 }
 
 /**
@@ -23,7 +24,7 @@ export function hasOvernight(rows, today) {
 export function autoReadMode({ now, last, today, rows, failedAt = 0, morningAt = 0, morningFailedAt = 0 }) {
   const t = now.getTime();
   if (t - last >= STEADY_EVERY_MS && t - failedAt >= STEADY_EVERY_MS) return 'steady';
-  if (now.getHours() >= MORNING_FROM_HOUR && !hasOvernight(rows, today)
+  if (now.getHours() >= MORNING_FROM_HOUR && now.getHours() < MORNING_UNTIL_HOUR && !hasOvernight(rows, today)
     && t - morningAt >= MORNING_EVERY_MS && t - morningFailedAt >= MORNING_BACKOFF_MS) return 'morning';
   return null;
 }

@@ -2,7 +2,7 @@
 
 ## 0.15.0 — iPhone app proof of concept (Capacitor) (2026-10-09)
 
-- Morning read: after 4:00, if today's HRV, resting heart rate or sleep hasn't arrived, Forge reads Apple Health again on open (at most every 20 min, 30 min back-off after a failure). Readiness updates by itself.
+- Morning read: from 4:00 to 12:00, until last night's sleep has arrived (HRV alone doesn't count), Forge reads Apple Health again on open (at most every 20 min, 30 min back-off after a failure). Readiness updates by itself.
 - Clearer "nothing yet" notice on Apple Health; Today's Readiness no longer says "Connect" after you have; the setup script skips `npm ci` when nothing changed.
 
 The same Forge code can now run inside a native iPhone shell, built on your Mac with Xcode: one command (`bash scripts/ios-setup.sh`) and **docs/ios-setup.md**. HealthKit works with a free Apple ID (Personal Team); the $99 program is only for TestFlight, the App Store and no weekly re-sign. The web app on GitHub Pages works exactly as before; nothing here runs in a browser. No Cloud Functions, `firestore.rules` or `config.js` changes. Merge after 0.14.5 and 0.14.6.

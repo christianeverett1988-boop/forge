@@ -194,4 +194,11 @@ test('morning auto-read: reads when today has no overnight data (every 20 min), 
   assert(hasOvernight(got, today));
   eq(autoReadMode({ now: at(7, 30), last: at(6, 59).getTime(), today, rows: got }), null);
   eq(autoReadMode({ now: at(13, 5), last: at(6, 59).getTime(), today, rows: got }), 'steady');
+  // 6:02 read brought HRV and resting HR but no sleep: the night isn't in yet, so 6:25 reads
+  const partial = [{ id: today, hrv_sdnn_ms: 50, rhr_bpm: 55 }];
+  assert(!hasOvernight(partial, today));
+  const six02 = at(6, 2).getTime();
+  eq(autoReadMode({ now: at(6, 25), last: six02, today, rows: partial, morningAt: six02 }), 'morning');
+  // the morning rule ends at 12:00
+  eq(autoReadMode({ now: at(12, 10), last: at(11, 10).getTime(), today, rows: partial }), null);
 });
