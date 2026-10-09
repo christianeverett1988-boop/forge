@@ -57,16 +57,21 @@ export function bindInsightCards(root, dismiss, rerender) {
 
 // ---- sparkline of {day, v} points ----
 
-export function sparkSvg(points, today, days = 28, { width = 84, height = 28 } = {}) {
+/** minSpan: the smallest value range the full height stands for (default 5% of the mean), so a steady
+ * metric draws nearly flat, centred, instead of being stretched to fill the box. */
+export function sparkSvg(points, today, days = 28, { width = 84, height = 28, minSpan } = {}) {
   const from = addDays(today, -(days - 1));
   const pts = points.filter((p) => p.day >= from && p.day <= today);
   if (pts.length < 2) return '<svg viewBox="0 0 84 28" class="spark" aria-hidden="true"></svg>';
   const vals = pts.map((p) => p.v);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const span = Math.max(hi - lo, minSpan > 0 ? minSpan : Math.abs(mean) * 0.05) || 1;
+  const mid = (hi + lo) / 2;
   const d = pts.map((p, i) => {
     const x = 2 + (daysBetween(from, p.day) / (days - 1)) * (width - 4);
-    const y = max === min ? height / 2 : 2 + (1 - (p.v - min) / (max - min)) * (height - 4);
+    const y = 2 + (0.5 - (p.v - mid) / span) * (height - 4);
     return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
   return `<svg viewBox="0 0 ${width} ${height}" class="spark" aria-hidden="true"><path d="${d}"/></svg>`;

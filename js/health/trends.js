@@ -134,6 +134,9 @@ export function smoothFull(points, n) {
 
 const APPLE_KEYS = new Set(TREND_METRICS.filter((m) => m.source === 'apple').map((m) => m.key));
 
+/** Smallest range a Trends sparkline stretches to full height, per metric (units as stored). */
+export const SPARK_MIN_SPAN = { sleep_min: 30, hrv_sdnn_ms: 6, rhr_bpm: 3, steps: 1500, exercise_min: 10, fat_ratio_pct: 1, weight_kg: 1 };
+
 /** The points a Trends row's sparkline draws: weight → the smoothed trend line; daily Apple Health metrics
  * → a 7-day rolling mean (full windows only); scale readings stay raw. */
 export function trendRowSeries(t, weights = []) {
