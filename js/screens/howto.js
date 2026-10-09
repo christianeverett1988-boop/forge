@@ -13,6 +13,7 @@ import { exerciseRecords } from '../workouts/history.js';
 import { mountFigure, hasFigure } from '../ui/figure.js';
 import { photoLoop, hasPhotos, loadPhotoIndex, photoFallback } from '../ui/photos.js';
 import { bodyMap, exerciseValues } from '../ui/bodymap.js';
+import { icon } from '../ui/icons.js';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
@@ -41,8 +42,8 @@ export function openHowTo(id, { extra, focus } = {}) {
         <div data-viewseg></div>
         <div class="ht-actions">
           <button class="ht-act" data-fav aria-pressed="false"><span aria-hidden="true" data-favicon>☆</span><small>Favourite</small></button>
-          <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▶</span><small>Watch on YouTube</small></a>
-          <button class="ht-act" data-share><span aria-hidden="true">⤴</span><small>Share</small></button>
+          <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${icon('play', { size: 22 })}</span><small>Watch on YouTube</small></a>
+          <button class="ht-act" data-share><span aria-hidden="true">${icon('share', { size: 22 })}</span><small>Share</small></button>
         </div>
         <div class="seg ht-seg" role="tablist" aria-label="Details">
           <button role="tab" data-tab="steps" class="on" aria-selected="true">Instructions</button><button role="tab" data-tab="target" aria-selected="false">Target</button>

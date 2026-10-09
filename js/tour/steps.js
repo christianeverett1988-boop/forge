@@ -12,7 +12,7 @@
 export const TOUR_STEPS = [
   {
     id: 'welcome', route: 'today', target: null,
-    title: 'Welcome to Forge 👋',
+    title: 'Welcome to Forge',
     body: 'Here’s a quick tour of the app. It takes about a minute. You can skip it any time, and you can play it again from Settings.',
   },
   {

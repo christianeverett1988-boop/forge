@@ -189,7 +189,7 @@ function done(el) {
   renderTimer(el);
   const face = document.querySelector('[data-face]');
   if (face) {
-    face.querySelector('[data-phase]').textContent = 'Done 💪';
+    face.querySelector('[data-phase]').textContent = 'Done';
     face.querySelector('[data-left]').textContent = `${minutes} min`;
   }
   const btn = document.createElement('button');

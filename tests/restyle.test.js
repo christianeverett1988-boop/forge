@@ -56,3 +56,27 @@ test('pull to refresh: resistance, threshold and cap', () => {
   eq(pullState(10000).offset, 110, 'capped');
   eq(pullState(10000).progress, 1);
 });
+
+test('no emoji or text glyphs used as icons in js/screens (SVG icons from js/ui/icons.js instead)', () => {
+  const GLYPH = /\p{Extended_Pictographic}|[☰❚✕›‹⇄⏱✓✗▶⤴⋯]/u;
+  const ALLOW = new Set([]); // the share card canvas is js/ui/sharecard.js and may keep emoji
+  for (const f of files('js/screens', '.js')) {
+    if (ALLOW.has(f)) continue;
+    read(f).split('\n').forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return; // comments are not UI
+      assert(!GLYPH.test(line), `${f}:${i + 1} has an emoji or glyph used as an icon`);
+    });
+  }
+});
+
+test('icons: every name renders decorative currentColor SVG; unknown names render nothing', async () => {
+  const { icon, ICON_NAMES, emptyState } = await import('../js/ui/icons.js');
+  for (const n of ICON_NAMES) {
+    const svg = icon(n);
+    assert(svg.includes('aria-hidden="true"') && svg.includes('currentColor') && svg.includes('viewBox="0 0 24 24"'), n);
+  }
+  eq(icon('nope'), '');
+  assert(icon('trophy', { filled: true }).includes('fill="currentColor"'));
+  const es = emptyState({ icon: 'chart', title: 'No workouts yet', text: 'Finish one and it shows up here.', action: { href: '#/train', label: 'Start a workout' } });
+  assert(es.includes('<h3>No workouts yet</h3>') && es.includes('href="#/train"') && es.includes('es-icon'));
+});

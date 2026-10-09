@@ -19,6 +19,7 @@ import { summaryAwards, rememberBadges } from '../workouts/awards-store.js';
 import { badgeSVG } from '../ui/badges.js';
 import { levelUp } from '../ui/fx.js';
 import { renderShareCard, shareImage } from '../ui/sharecard.js';
+import { icon } from '../ui/icons.js';
 
 const fmtDuration = (ms) => {
   const m = Math.round(ms / 60000);
@@ -89,7 +90,7 @@ export function renderSummary(el, id) {
         <div><span>Time</span><b data-c="time">${fmtDuration(durationMs)}</b></div>
         <div><span>Sets</span><b data-c="sets">${st.sets}</b></div>
         <div><span>Volume</span><b><span data-c="vol">${st.volume.toLocaleString()}</span> <small>${u}</small></b></div>
-        <div class="${prs.length ? 'gold' : ''}"><span>Records</span><b>🏆 <span data-c="prs">${prs.length}</span></b></div>
+        <div class="${prs.length ? 'gold' : ''}"><span>Records</span><b>${icon('trophy', { filled: true })} <span data-c="prs">${prs.length}</span></b></div>
       </div>
 
       ${aw ? `
@@ -98,9 +99,9 @@ export function renderSummary(el, id) {
         ${xpParts.length ? `<p class="small muted sum-xp-parts">${xpParts.map(([k, v]) => `${k} +${v}`).join(' · ')}</p>` : ''}
         <div class="aw-bar" role="progressbar" aria-label="Level progress"><i data-xpbar style="--p:${(aw.levelUp ? aw.after.progress : aw.after.progress).toFixed(3)}"></i></div>
         <p class="small muted"><b class="lvl-name">Level ${aw.after.level} · ${esc(aw.after.name)}</b>${aw.after.next != null ? ` · ${(aw.after.next - aw.after.xp).toLocaleString()} XP to ${esc(aw.after.nextName)}` : ''}</p>
-        <p class="small">${aw.streak.current ? `🔥 ${aw.streak.current}-week streak` : '🔥 Streak starts when you hit your planned days this week'} · ${aw.streak.thisWeek.done} of ${aw.streak.thisWeek.goal} days this week</p>
+        <p class="small">${aw.streak.current ? `${icon('flame', { filled: true })} ${aw.streak.current}-week streak` : `${icon('flame')} Streak starts when you hit your planned days this week`} · ${aw.streak.thisWeek.done} of ${aw.streak.thisWeek.goal} days this week</p>
         ${aw.badges.length ? `<p class="label">New badge${aw.badges.length === 1 ? '' : 's'}</p><div class="sum-badges">${aw.badges.map((b, k) => `<span class="sum-badge ${celebrate.has(b.id) ? 'bdg-pop' : ''}" style="--d:${(1.6 + k * 0.3).toFixed(1)}s">${badgeSVG(b.id, { shine: celebrate.has(b.id), size: 64 })}${esc(b.name)}</span>`).join('')}</div>` : ''}
-        <a class="small" href="#/awards">See all awards ›</a>
+        <a class="small" href="#/awards">See all awards ${icon('chev', { size: 14 })}</a>
       </div>` : ''}
 
       ${topMus.length ? `
@@ -116,11 +117,11 @@ export function renderSummary(el, id) {
       <ul class="list sum-list">
         ${rows.map((r) => `
           <li>
-            <span class="sum-check" aria-hidden="true">✓</span>
+            <span class="sum-check" aria-hidden="true">${icon('check')}</span>
             <div class="grow">
               <b>${esc(r.ex.name)}</b>
               <small class="muted">${r.sets.map((s) => `${s.weight ? `${s.weight}×` : ''}${s.reps}${r.ex.timed ? 's' : ''}`).join(' · ')}</small>
-              ${r.exPrs.map((p) => `<span class="sum-pr">🏆 ${esc(p.label.split(': ').slice(1).join(': ') || p.label)}${p.prev != null ? ` <s>${Math.round(p.prev * 10) / 10}</s>` : ''}</span>`).join('')}
+              ${r.exPrs.map((p) => `<span class="sum-pr">${icon('trophy', { filled: true })} ${esc(p.label.split(': ').slice(1).join(': ') || p.label)}${p.prev != null ? ` <s>${Math.round(p.prev * 10) / 10}</s>` : ''}</span>`).join('')}
             </div>
             ${r.vs ? `<span class="vs ${r.vs.tone}">${esc(r.vs.text)}</span>` : '<span class="vs new">First time</span>'}
           </li>`).join('')}

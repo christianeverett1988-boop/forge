@@ -188,7 +188,7 @@ async function copyText(text, btn) {
   const was = span.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    span.textContent = 'Copied ✓';
+    span.textContent = 'Copied';
   } catch {
     const code = btn.querySelector('code');
     if (code) {
@@ -233,7 +233,7 @@ function showToken(token) {
     $('[data-copy]', body).onclick = async (e) => {
       try {
         await navigator.clipboard.writeText(token);
-        e.currentTarget.textContent = 'Copied ✓';
+        e.currentTarget.textContent = 'Copied';
       } catch {
         const range = document.createRange();
         range.selectNodeContents($('[data-token]', body));
@@ -251,8 +251,8 @@ function showToken(token) {
         setTimeout(() => { b.textContent = was; }, 2000);
       };
     };
-    plain('[data-copy-bearer]', `Bearer ${token}`, 'Copied ✓');
-    plain('[data-copy-url]', INGEST_URL, 'Copied ✓');
+    plain('[data-copy-bearer]', `Bearer ${token}`, 'Copied');
+    plain('[data-copy-url]', INGEST_URL, 'Copied');
     $('[data-done]', body).onclick = close;
   });
 }

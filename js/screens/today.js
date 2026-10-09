@@ -17,6 +17,7 @@ import { exerciseById } from '../workouts/library.js';
 import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
+import { icon } from '../ui/icons.js';
 
 function workoutCard() {
   const active = activeWorkout();
@@ -31,8 +32,8 @@ function workoutCard() {
     const w = doneToday[0];
     const sets = (w.exercises || []).reduce((n, it) => n + it.sets.filter((x) => x.done && !x.warmup).length, 0);
     return `<div class="card" data-tour="workout"><p class="label">Today’s workout</p>
-      <p class="big-title">✓ ${esc(w.label)}</p>
-      <p class="small muted">${sets} sets${(w.prs || []).length ? ` · ${w.prs.length} PR${w.prs.length === 1 ? '' : 's'} 🏆` : ''}. Recovery starts now.</p>
+      <p class="big-title">${icon('check', { filled: true })} ${esc(w.label)}</p>
+      <p class="small muted">${sets} sets${(w.prs || []).length ? ` · ${w.prs.length} PR${w.prs.length === 1 ? '' : 's'} ${icon('trophy', { filled: true })}` : ''}. Recovery starts now.</p>
       <a class="btn ghost" href="#/history">See history</a></div>`;
   }
   const plan = previewPlan(); // with any edits you made on Train
@@ -57,7 +58,7 @@ function readinessCard() {
   const hasHealth = (state.health_daily || []).length > 0;
   if (r.status === 'none' && !hasHealth) {
     return `<a class="card row between center nav-card" href="#/apple" data-readiness>
-      <div><p class="label">Readiness</p><p>Add your Apple Watch data to see how ready you are each morning.</p></div><span aria-hidden="true">›</span></a>`;
+      <div><p class="label">Readiness</p><p>Add your Apple Watch data to see how ready you are each morning.</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
   }
   if (r.status === 'building' || r.status === 'none') {
     const have = Math.min(r.needed, r.baselineDays || 0);
@@ -91,7 +92,7 @@ function scoreCard() {
   return `<a class="card score-card" href="#/score" data-score>
     <div class="score-mini">${ringSvg(s.score, { size: 84, stroke: 9 })}<b data-count>${round(s.score)}</b></div>
     <div><p class="label" style="margin:0">Forge Score</p><p class="small muted">7-day average${s.movers[0] ? ` · ${esc(s.movers[0].label)} ${s.movers[0].delta >= 0 ? 'up' : 'down'}` : ''}</p></div>
-    <span class="chev" aria-hidden="true">›</span></a>`;
+    <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
 }
 
 function greeting() {
@@ -141,7 +142,7 @@ export function renderToday(el) {
       ${readinessCard()}
 
       <div class="card rings-card">
-        <div class="row between center"><p class="label">This week</p><a class="link small" href="#/awards">Awards ›</a></div>
+        <div class="row between center"><p class="label">This week</p><a class="link small" href="#/awards">Awards ${icon('chev', { size: 14 })}</a></div>
         ${ringsHtml(rings)}
       </div>
 

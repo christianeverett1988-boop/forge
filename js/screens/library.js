@@ -8,6 +8,7 @@ import { MUSCLES, MUSCLE_LABELS } from '../workouts/recovery.js';
 import { PATTERN_LABELS, equipmentText } from './picker.js';
 import { openHowTo } from './session.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
+import { icon } from '../ui/icons.js';
 
 let q = '';
 let pattern = '';
@@ -39,7 +40,7 @@ export function renderLibrary(el) {
           <li class="tap" data-id="${esc(e.id)}">
             <div><b>${fav.has(e.id) ? '★ ' : ''}${esc(e.name)}</b>
             <small class="muted">${esc(equipmentText(e))}${e.custom ? ' · custom' : ''}${excluded.has(e.id) ? ' · never suggested' : ''}</small></div>
-            <span aria-hidden="true">›</span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}
       </ul>
       <p class="small muted">Library curated for this app. Step-by-step instructions from free-exercise-db by Yuhonas (public domain, Unlicense).</p>

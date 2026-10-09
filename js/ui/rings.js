@@ -2,6 +2,7 @@
 // Weekly sets) gets a burst, once per week. Room is left in the legend grid for food rings (Checkpoint C).
 import { reducedMotion } from './motion.js';
 import { esc } from '../ui.js';
+import { icon } from './icons.js';
 
 const COLORS = { training: '#FF6A2B', sets: '#C6FF3D', recovery: '#3AD0FF' };
 const SIZE = 132;
@@ -20,7 +21,7 @@ export function ringsHtml(rings) {
   }).join('');
   const legend = rings.map((r) => `
     <li style="--rc:${COLORS[r.key]}"><span class="ring-dot" aria-hidden="true"></span>
-      <span><b>${esc(r.label)}${r.value >= 1 ? ' <span class="ring-done">✓</span>' : ''}</b><small class="muted">${esc(r.text)}</small></span></li>`).join('');
+      <span><b>${esc(r.label)}${r.value >= 1 ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="muted">${esc(r.text)}</small></span></li>`).join('');
   const aria = rings.map((r) => `${r.label}: ${r.text}`).join('; ');
   return `<div class="rings" role="img" aria-label="${esc(aria)}">
     <svg class="rings-svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" aria-hidden="true"><g transform="rotate(-90 ${SIZE / 2} ${SIZE / 2})">${arcs}</g></svg>

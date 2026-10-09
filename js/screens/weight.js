@@ -8,6 +8,7 @@ import { weightChartSVG } from '../weight/chart.js';
 import { weightSeries } from '../derived.js';
 import { suspectIds, SCALE_SOURCES } from '../withings/review.js';
 import { progressTabs } from './progress.js';
+import { icon } from '../ui/icons.js';
 
 const SOURCE_LABELS = { manual: 'Manual', withings: 'Withings', withings_csv: 'Withings (export)', apple_shortcut: 'Apple Health (Shortcut)', apple_health: 'Apple Health' };
 let range = 90;
@@ -96,7 +97,7 @@ export function renderWeight(el) {
         </div>
         ${weightChartSVG(series, { units: u, goalKg, projection, rangeDays: range || null })}
         <p class="small muted legend"><span class="key dot"></span>weigh-ins <span class="key line"></span>trend ${goalKg ? '<span class="key dash"></span>goal' : ''}</p>
-        ${projection ? `<p class="small">${projection.reached ? 'You’ve reached your goal weight. 🎉' : `At your current pace you’ll reach ${formatWeight(goalKg, u, 0)} around <b>${formatDay(projection.day, { month: 'short', day: 'numeric', year: 'numeric' })}</b>.`}</p>` : ''}
+        ${projection ? `<p class="small">${projection.reached ? 'You’ve reached your goal weight.' : `At your current pace you’ll reach ${formatWeight(goalKg, u, 0)} around <b>${formatDay(projection.day, { month: 'short', day: 'numeric', year: 'numeric' })}</b>.`}</p>` : ''}
         ${!projection && goalKg && series.length >= 2 ? '<p class="small muted">A goal date appears once your trend has about a week of data and is moving toward your goal.</p>' : ''}
       </div>` : '<div class="card empty">No weigh-ins yet. Log your first one.</div>'}
 
@@ -106,7 +107,7 @@ export function renderWeight(el) {
         ${(showAll ? entries : entries.slice(0, HISTORY_LIMIT)).map((w) => `
           <li>
             <div><b>${formatWeight(w.kg, u)}</b><small class="muted">${formatDay(w.day, { weekday: 'short', month: 'short', day: 'numeric' })}${timeOf(w)} · ${esc(SOURCE_LABELS[w.source] || w.source)}${asking(w) ? ' · <a href="#/withings">is this you?</a>' : ''}${!asking(w) && trendDays.has(w.day) && trendDays.get(w.day) !== w.id ? ' · not in trend (earlier scale reading used)' : ''}</small></div>
-            <button class="icon-btn" data-del="${esc(w.id)}" data-src="${esc(w.source || '')}" aria-label="Delete this weigh-in">🗑</button>
+            <button class="icon-btn" data-del="${esc(w.id)}" data-src="${esc(w.source || '')}" aria-label="Delete this weigh-in">${icon('trash')}</button>
           </li>`).join('')}
       </ul>
       ${!showAll && entries.length > HISTORY_LIMIT ? `<button class="btn ghost" data-all>Show all ${entries.length}</button>` : ''}` : ''}

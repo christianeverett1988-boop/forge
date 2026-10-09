@@ -9,6 +9,7 @@ import { exerciseById } from '../workouts/library.js';
 import { MUSCLE_LABELS, muscleStats } from '../workouts/recovery.js';
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
 import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
+import { icon } from '../ui/icons.js';
 
 const SHOW = ['chest', 'front_delts', 'side_delts', 'rear_delts', 'lats', 'upper_back', 'traps', 'biceps', 'triceps', 'forearms', 'abs', 'obliques', 'lower_back', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
 
@@ -24,7 +25,7 @@ function compositionCard() {
   const docs = myBodyMeasures();
   const w = state.integrations && state.integrations.withings;
   if (!docs.length) {
-    return `<a class="card row between center nav-card" href="#/withings"><div><p class="label">Body composition</p><p class="small">${w && w.connected ? 'Importing your Withings history…' : 'Connect your Withings scale to see fat, muscle, water and more here.'}</p></div><span aria-hidden="true">›</span></a>`;
+    return `<a class="card row between center nav-card" href="#/withings"><div><p class="label">Body composition</p><p class="small">${w && w.connected ? 'Importing your Withings history…' : 'Connect your Withings scale to see fat, muscle, water and more here.'}</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
   }
   const u = getUnits();
   const h = heightM(docs, state.profile);

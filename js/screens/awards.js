@@ -7,6 +7,7 @@ import { streak, LEVELS, xpForLevel, XP_RULES } from '../workouts/awards.js';
 import { myAwards, syncBadges, goalDays } from '../workouts/awards-store.js';
 import { badgeSVG, BADGE_ART, TIER_NAMES } from '../ui/badges.js';
 import { progressTabs } from './progress.js';
+import { icon } from '../ui/icons.js';
 
 const RECENT = 3 * 86400000; // badges earned in the last 3 days shine when you open Awards
 
@@ -44,7 +45,7 @@ export function renderAwards(el) {
 
       <div class="card aw-streak">
         <div class="row between center">
-          <div><p class="label">Weekly streak</p><p class="aw-big">🔥 ${st.current} ${st.current === 1 ? 'week' : 'weeks'}</p></div>
+          <div><p class="label">Weekly streak</p><p class="aw-big">${icon('flame', { filled: true })} ${st.current} ${st.current === 1 ? 'week' : 'weeks'}</p></div>
           <div class="aw-best"><small class="muted">Best</small><b>${st.best}</b></div>
         </div>
         <div class="aw-week"><span class="small muted">This week</span><span class="aw-dots" aria-label="${st.thisWeek.done} of ${goal} days">${dots}</span><span class="small">${st.thisWeek.done} of ${goal} days</span></div>

@@ -19,6 +19,7 @@ import { openPlateCalculator, openCardioLog } from './tools.js';
 import { openExercisePicker } from './picker.js';
 import { patch } from '../db.js';
 import { unlockAudio } from '../ui/sound.js';
+import { icon } from '../ui/icons.js';
 
 /** Guided player by default; List view if you chose it in Settings. */
 export const playerRoute = () => (state.settings && state.settings.player === 'list' ? '#/session' : '#/play');
@@ -124,15 +125,15 @@ export function renderTrain(el) {
 
       <a class="card row between center nav-card" href="#/body">
         <div><p class="label">Recovery</p><p>${['chest', 'lats', 'quads', 'hamstrings', 'glutes', 'front_delts'].filter((m) => rec[m] >= 85).length} of 6 major muscles fresh</p></div>
-        <span aria-hidden="true">›</span>
+        <span class="chev" aria-hidden="true">${icon('chev')}</span>
       </a>
 
       <div class="tools">
-        <a class="tool" href="#/timer"><span aria-hidden="true">⏱</span>Interval timer</a>
-        <button class="tool" data-cardio><span aria-hidden="true">🚴</span>Log cardio</button>
-        <button class="tool" data-plates><span aria-hidden="true">🏋️</span>Plate calculator</button>
-        <a class="tool" href="#/library"><span aria-hidden="true">📚</span>Exercise library</a>
-        <a class="tool" href="#/history"><span aria-hidden="true">📈</span>History &amp; PRs</a>
+        <a class="tool" href="#/timer"><span class="t-ic" aria-hidden="true">${icon('timer')}</span>Interval timer</a>
+        <button class="tool" data-cardio><span class="t-ic" aria-hidden="true">${icon('bike')}</span>Log cardio</button>
+        <button class="tool" data-plates><span class="t-ic" aria-hidden="true">${icon('dumbbell')}</span>Plate calculator</button>
+        <a class="tool" href="#/library"><span class="t-ic" aria-hidden="true">${icon('book')}</span>Exercise library</a>
+        <a class="tool" href="#/history"><span class="t-ic" aria-hidden="true">${icon('chart')}</span>History &amp; PRs</a>
       </div>
     </section>`;
 
@@ -170,7 +171,7 @@ function previewCard(plan, { d, loc, program, u }) {
       <div class="pv-thumb" data-thumb="${esc(ex.id)}" aria-hidden="true"></div>
       <div class="pv-txt">${label ? `<span class="pv-tag">${label}</span>` : ''}<b>${esc(ex.name)}</b>
         <small class="muted">${esc(targetText(it.target, u, ex))}${it.warmups.length ? ` · ${it.warmups.length} warm-up` : ''}${rest}</small></div>
-      <button class="icon-btn pv-more" data-more="${i}" aria-label="More for ${esc(ex.name)}">⋯</button>
+      <button class="icon-btn pv-more" data-more="${i}" aria-label="More for ${esc(ex.name)}">${icon('more')}</button>
     </li>`;
   };
   const blocks = planBlocks(plan.exercises).map((b) => (b.group
@@ -182,11 +183,11 @@ function previewCard(plan, { d, loc, program, u }) {
         <p class="label">Today${d.deload ? ' · deload' : ''}</p>
         <div class="row between center">
           <p class="big-title">${esc(plan.label)}</p>
-          ${n ? '<button class="btn ghost small" data-switch aria-label="Switch exercises">⇄ Switch</button>' : ''}
+          ${n ? `<button class="btn ghost small" data-switch aria-label="Switch exercises">${icon('swap')} Switch</button>` : ''}
         </div>
         <div class="pv-chips">
-          <span class="pill">⏱ ~${plan.est_minutes} min</span>
-          <span class="pill">📍 ${esc(loc.name)}</span>
+          <span class="pill">${icon('timer')} ~${plan.est_minutes} min</span>
+          <span class="pill">${icon('pin')} ${esc(loc.name)}</span>
         </div>
         <label class="field"><span class="small muted">Or train a different day</span>
           <select data-day>
@@ -198,7 +199,7 @@ function previewCard(plan, { d, loc, program, u }) {
         ${n ? `
         <div class="pv-sum">
           ${bodyMap(planValues(plan), { size: 'mini', caption: false })}
-          <p><b>${n} exercise${n === 1 ? '' : 's'} · ${muscles} muscle${muscles === 1 ? '' : 's'}</b><small class="muted">Tap ⋯ to replace an exercise, see its history or set its rest.</small></p>
+          <p><b>${n} exercise${n === 1 ? '' : 's'} · ${muscles} muscle${muscles === 1 ? '' : 's'}</b><small class="muted">Tap the dots to replace an exercise, see its history or set its rest.</small></p>
         </div>
         <div class="pv-warm">
           <p class="pv-group-h"><span>Warm-up</span><small class="muted">~5 min</small></p>
@@ -343,10 +344,10 @@ function openCustomBuilder(existing, draftDays = null) {
             <div class="card">
               <div class="row gap center">
                 <input class="grow" value="${esc(d.name)}" data-name="${i}" aria-label="Day name" maxlength="30">
-                <button class="icon-btn" data-delday="${i}" aria-label="Remove day">✕</button>
+                <button class="icon-btn" data-delday="${i}" aria-label="Remove day">${icon('close')}</button>
               </div>
               <ul class="list">${d.exercise_ids.map((id, j) => `
-                <li><span>${esc(exerciseById(id)?.name || id)}</span><button class="icon-btn" data-delex="${i}:${j}" aria-label="Remove">✕</button></li>`).join('') || '<li class="muted">No exercises yet</li>'}</ul>
+                <li><span>${esc(exerciseById(id)?.name || id)}</span><button class="icon-btn" data-delex="${i}:${j}" aria-label="Remove">${icon('close')}</button></li>`).join('') || '<li class="muted">No exercises yet</li>'}</ul>
               <button class="btn ghost small" data-addex="${i}">+ Add exercise</button>
             </div>`).join('')}
           ${days.length < 7 ? '<button class="btn ghost" data-addday>+ Add a day</button>' : ''}

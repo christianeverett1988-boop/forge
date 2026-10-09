@@ -8,6 +8,7 @@
 import { onFrame, reducedMotion, EASE } from './motion.js';
 import { sfx, coach } from './sound.js';
 import { tick } from './haptic.js';
+import { icon } from './icons.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const COLORS = { ember: '#FF6A2B', volt: '#C6FF3D', gold: '#FFC94D', white: '#FFFFFF', hot: '#FFB547' };
@@ -233,7 +234,7 @@ export function prExplosion(prs, { origin } = {}) {
     const title = (list[0].label || '').split(': ')[0];
     layer.innerHTML = `
       <div class="pr-card2">
-        <span class="pr-trophy" aria-hidden="true">🏆</span>
+        <span class="pr-trophy" aria-hidden="true">${icon('trophy', { filled: true, size: 52 })}</span>
         <b class="pr-title">${list.length > 1 ? `${list.length} NEW PRs` : 'NEW PR'}</b>
         <span class="pr-ex">${esc(title)}</span>
         ${list.map((pr, i) => `

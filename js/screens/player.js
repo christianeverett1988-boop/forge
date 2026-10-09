@@ -19,6 +19,7 @@ import { hapticInput, onHapticTap } from '../ui/haptic.js';
 import { openPaused, openAway, openComplete, saveAndSummarize, closeOverlays } from './overlays.js';
 import { openHowTo } from './session.js';
 import { COMBOS } from './timer.js';
+import { icon } from '../ui/icons.js';
 
 const BOXING = new Set(['shadowboxing', 'heavy_bag_rounds', 'db_shadowboxing', 'boxing_footwork', 'slip_and_roll']);
 const round1 = (x) => Math.round(x * 10) / 10;
@@ -267,9 +268,9 @@ function drawSet(el) {
   el.innerHTML = `
     <section class="player" data-player>
       <header class="pl-top">
-        <a class="pl-ico" href="#/session" aria-label="List view">☰</a>
+        <a class="pl-ico" href="#/session" aria-label="List view">${icon('list')}</a>
         <div class="pl-clock"><span data-clock>${fmtClock(elapsed() / 1000)}</span></div>
-        <button class="pl-ico" data-pause aria-label="Pause workout">❚❚</button>
+        <button class="pl-ico" data-pause aria-label="Pause workout">${icon('pause')}</button>
       </header>
       <div class="pl-segs" role="progressbar" aria-valuemin="0" aria-valuemax="${order.length}" aria-valuenow="${exNo}" aria-label="Exercise ${exNo} of ${order.length}">${segs}</div>
       <p class="pl-count">Exercise ${exNo} of ${order.length}${tag ? ` <span class="tag ss">${esc(tag)}</span>` : ''}${s.warmup ? ' <span class="tag wu">Warm-up</span>' : ''}</p>
@@ -302,13 +303,13 @@ function drawSet(el) {
 
       <label class="haptic-btn pl-done ${s.done ? 'is-done' : ''}" data-done-label>
         ${hapticInput('data-done aria-label="Done set"')}
-        <span data-done-text>${s.done ? '✓ Done' : isTimed ? `Start ${draft.reps} s` : 'Done set'}</span>
+        <span data-done-text>${s.done ? `${icon('check')} Done` : isTimed ? `Start ${draft.reps} s` : 'Done set'}</span>
       </label>
       <p class="pl-next">${nextUp ? `Next: <b>${esc(nextUp.name)}</b> · ${esc(nextUp.detail)}` : 'Last one. Finish strong!'}</p>
       <nav class="pl-nav" aria-label="Sets">
-        <button data-prev ${k === 0 ? 'disabled' : ''}>‹ Back</button>
+        <button data-prev ${k === 0 ? 'disabled' : ''}>${icon('back', { size: 16 })} Back</button>
         <button data-undo>Undo last set</button>
-        <button data-skip ${k >= q.length - 1 ? 'disabled' : ''}>Next ›</button>
+        <button data-skip ${k >= q.length - 1 ? 'disabled' : ''}>Next ${icon('chev', { size: 16 })}</button>
       </nav>
     </section>`;
 
@@ -433,7 +434,7 @@ function doneSet(el, ex, i, j, repsOverride) {
   }
   const label = $('[data-done-label]', el);
   const txt = $('[data-done-text]', el);
-  if (txt) txt.textContent = '✓';
+  if (txt) txt.innerHTML = icon('check');
   label && label.classList.add('is-done');
   powerUp({
     button: label, hero: $('[data-hero]', el), shakeEl: $('[data-player]', el), segment: segment && segment.parentElement,
@@ -553,9 +554,9 @@ function drawRest(el) {
   el.innerHTML = `
     <section class="player rest" data-player>
       <header class="pl-top">
-        <a class="pl-ico" href="#/session" aria-label="List view">☰</a>
+        <a class="pl-ico" href="#/session" aria-label="List view">${icon('list')}</a>
         <div class="pl-clock"><span data-clock>${fmtClock(elapsed() / 1000)}</span></div>
-        <button class="pl-ico" data-pause aria-label="Pause workout">❚❚</button>
+        <button class="pl-ico" data-pause aria-label="Pause workout">${icon('pause')}</button>
       </header>
       <p class="rest-label">${esc(r.label)}</p>
       <div class="rest-ring" style="view-transition-name: pl-hero">

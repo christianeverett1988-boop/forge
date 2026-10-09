@@ -7,6 +7,7 @@ import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRo
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
 import { navBar, screenNav } from '../ui/navbar.js';
+import { icon } from '../ui/icons.js';
 
 const INVENTORY = [
   ['dumbbells_kg', 'Dumbbell pairs', 'dumbbells'],
@@ -34,7 +35,7 @@ export function renderLocations(el) {
           <li class="tap" data-edit="${esc(l.id)}">
             <div><b>${esc(l.name)}</b>${l.is_default ? ' <span class="pill">Default</span>' : ''}
               <small class="muted">${l.equipment.length ? `${l.equipment.length} items` : 'Bodyweight only'}</small></div>
-            <span aria-hidden="true">›</span>
+            <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}
       </ul>
       <button class="btn ghost" data-add>+ Add a location</button>
@@ -196,7 +197,7 @@ function inventoryHTML(loc) {
         <div class="inv" data-inv="${key}">
           <p><b>${label}</b>${!loc.equipment.includes(equip) && !(equip === 'dumbbells' && loc.equipment.includes('adjustable_dumbbells')) ? ' <small class="muted">(turned off below)</small>' : ''}</p>
           <div class="chips">
-            ${(inv[key] || []).slice().sort((a, b) => a - b).map((kg) => `<button class="chip-btn" data-rm="${key}:${kg}" aria-label="Remove ${show(kg)} ${u}">${show(kg)} ${u} ✕</button>`).join('') || '<span class="muted small">Full rack assumed</span>'}
+            ${(inv[key] || []).slice().sort((a, b) => a - b).map((kg) => `<button class="chip-btn" data-rm="${key}:${kg}" aria-label="Remove ${show(kg)} ${u}">${show(kg)} ${u} ${icon('close', { size: 14 })}</button>`).join('') || '<span class="muted small">Full rack assumed</span>'}
           </div>
           <form class="row gap" data-addinv="${key}">
             <input name="w" type="number" inputmode="decimal" step="0.5" min="0.5" placeholder="Weight (${u})" class="grow" aria-label="${label} weight in ${u}">

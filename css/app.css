@@ -507,3 +507,18 @@ body.tour-on main { padding-bottom: 360px; } /* room to scroll the last cards ab
   .tour-card { animation: tour-in var(--t-med) var(--ease-out); }
   @keyframes tour-in { from { opacity: 0; transform: translateY(10px); } }
 }
+
+/* ---------- icons: inline SVG that follows the text colour and size ---------- */
+.ic { width: 1.1em; height: 1.1em; vertical-align: -0.17em; flex: none; }
+.chev .ic { width: 18px; height: 18px; vertical-align: middle; }
+.pl-ico { display: inline-grid; place-items: center; }
+.pl-ico .ic { width: 22px; height: 22px; }
+.mini .ic { width: 16px; height: 16px; }
+.setcheck .ic { width: 22px; height: 22px; }
+.sum-check .ic { width: 18px; height: 18px; vertical-align: middle; }
+.sum-pr .ic, .aw-big .ic, .big-title .ic { vertical-align: -0.15em; }
+.aw-big .ic { color: var(--ember); width: 1.05em; height: 1.05em; }
+.pr-trophy { color: var(--gold); display: inline-grid; place-items: center; }
+.ht-act span .ic { width: 22px; height: 22px; }
+.btn.small .ic, .chip-btn .ic { width: 16px; height: 16px; }
+.nav-card .chev, .card.row .chev { align-self: center; }
