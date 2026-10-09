@@ -78,6 +78,21 @@ export function paceBand(targets, weightKg, { allowFastPace = false } = {}) {
 
 const trim = (n) => String(Number(n.toFixed(1)));
 /** "0.5–1.5 lb" in the user's units (kg values in). */
+/**
+ * The weekly pace as a number. When the goal isn't met it must never read as inside the safe range shown beside it:
+ * a pace just outside the band that rounds into it gets more decimals until it no longer does.
+ */
+export function paceNumber(value, band, done, units) {
+  if (!band || done) return trim(value);
+  const lo = Number(trim(weightToDisplay(band.loKg, units)));
+  const hi = Number(trim(weightToDisplay(band.hiKg, units)));
+  for (const places of [1, 2, 3]) {
+    const shown = Number(value.toFixed(places));
+    if (shown < lo || shown > hi) return String(shown);
+  }
+  return String(Number(value.toFixed(3)));
+}
+
 export function rangeText(loKg, hiKg, units) {
   return `${trim(weightToDisplay(loKg, units))}–${trim(weightToDisplay(hiKg, units))} ${weightUnit(units)}`;
 }
@@ -188,7 +203,7 @@ export function weekGoals(def, start, end, today, data) {
         g.bar = band && { value: down, lo: band.loPct, hi: band.hiPct, mode: 'down' };
         g.done = !!t && !!band && down >= band.loPct - 1e-9 && down <= band.hiPct + 1e-9;
         g.text = !t ? 'Weigh in a few more times to see your pace'
-          : `${down > 0.005 ? 'Losing' : down < -0.005 ? 'Gaining' : 'Holding'} ${trim(Math.abs(weightToDisplay(t.kg, data.units || 'imperial')))} ${weightUnit(data.units || 'imperial')} a week`
+          : `${down > 0.005 ? 'Losing' : down < -0.005 ? 'Gaining' : 'Holding'} ${paceNumber(Math.abs(weightToDisplay(t.kg, data.units || 'imperial')), band, g.done, data.units || 'imperial')} ${weightUnit(data.units || 'imperial')} a week`
             + (band ? ` (safe pace: ${rangeText(band.loKg, band.hiKg, data.units || 'imperial')})` : '');
       } else {
         const lim = def.steadyPct;

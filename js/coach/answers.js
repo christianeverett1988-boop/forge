@@ -7,7 +7,6 @@ import { fmtDelta } from '../health/delta.js';
 import { trendChange } from '../weight/smoothing.js';
 import { NOISE_FLOOR } from '../health/trends.js';
 import { MEDICAL } from '../health/insights.js';
-import { MISSION_XP, ALL_DONE_XP } from '../missions/core.js';
 import { SHOW_MUSCLES, MUSCLE_LABELS, FRESH_PCT, freshCount } from '../workouts/recovery.js';
 
 export { MEDICAL };
@@ -217,14 +216,13 @@ export function missionsAnswer(d) {
   const left = t.list.filter((x) => !x.done).map((x) => x.label);
   const lines = [];
   if (!t.total) lines.push('No missions today.');
-  else if (!left.length) lines.push(`Today: all ${t.total} done.`);
-  else lines.push(`Today: ${t.done} of ${t.total} done. Left: ${left.join(', ')}.`);
+  else if (!left.length) lines.push('All done today.');
+  else lines.push(`Still to do: ${left.join(', ')}.`);
   const counted = (m.week || []).filter((x) => x.counted);
   const full = counted.filter((x) => x.all).length;
   if (counted.length) lines.push(counted.length === 7 ? `${full} of the last 7 days complete.` : `${full} of the ${plural(counted.length, 'day')} since you started complete.`);
   lines.push(m.streak > 0 ? `Weigh-in streak: ${plural(m.streak, 'day')}.` : 'No weigh-in streak yet. A weigh-in today starts one.');
-  const xp = counted.reduce((s, x) => s + x.done * MISSION_XP + (x.all ? ALL_DONE_XP : 0), 0);
-  lines.push(`Mission XP this week: ${xp}.`);
+  lines.push(`You earned ${m.weekXP || 0} XP from missions this week.`);
   const headline = !t.total ? 'No missions today.' : !left.length ? 'All of today’s missions are done.' : `${t.done} of ${t.total} missions done today.`;
   return { id: 'missions', headline, lines: lines.slice(0, 4), why: 'Missions come from your own weigh-ins, workouts, steps and sleep. The week is the last 7 days, counted from the day you started missions.' };
 }

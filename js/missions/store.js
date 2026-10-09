@@ -59,9 +59,19 @@ export function weekProgress() {
   return weekDots(today(), liveIndex(), { targets: targets() }, startedDay());
 }
 
-/** What Coach needs: today's missions, the rolling week, and the weigh-in streak in days. */
+/** XP earned in the last 7 days (never before missions started): mission XP plus 100 per mission badge, as bonusXP sums it. */
+export function weekXP(badges = extraBadges()) {
+  const start = startedDay();
+  if (!start) return 0;
+  const week = shiftDay(today(), -6);
+  const from = week > start ? week : start;
+  const fromBadges = badges.filter((b) => b.earned && b.earned.at.slice(0, 10) >= from).length * XP_BADGE;
+  return missionXP(from, today(), liveIndex(), { targets: targets() }) + fromBadges;
+}
+
+/** What Coach needs: today's missions, the rolling week, the XP earned in it, and the weigh-in streak in days. */
 export function missionsSummary() {
-  return { started: !!startedDay(), today: todayMissions(), week: weekProgress(), streak: currentStreak([...liveIndex().weigh], today()) };
+  return { started: !!startedDay(), today: todayMissions(), week: weekProgress(), weekXP: weekXP(), streak: currentStreak([...liveIndex().weigh], today()) };
 }
 
 /** Mission badges (streaks, body composition), keeping any already saved in awards_seen. */

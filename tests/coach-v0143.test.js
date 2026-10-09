@@ -5,9 +5,9 @@ import {
   missionsAnswer, programAnswer, programLabel, longtermAnswer, availableQuestions, QUESTIONS, MAX_QUESTIONS,
 } from '../js/coach/answers.js';
 import { shiftDay } from '../js/health/metrics.js';
-import { indexDays, missionsFor, weekDots, MISSION_XP, ALL_DONE_XP } from '../js/missions/core.js';
+import { indexDays, missionsFor, weekDots, missionXP, MISSION_XP, ALL_DONE_XP } from '../js/missions/core.js';
 import { currentStreak } from '../js/missions/badges.js';
-import { PROGRAMS, programStatus, paceBand, recommendedId, recommendedWhy } from '../js/body-programs/core.js';
+import { PROGRAMS, programStatus, paceBand, paceNumber, rangeText, recommendedId, recommendedWhy } from '../js/body-programs/core.js';
 import { computeTargets } from '../js/nutrition/targets.js';
 import { longevityCards } from '../js/health/longevity.js';
 import { clearestChanges } from '../js/health/longview.js';
@@ -28,6 +28,7 @@ function missionsData({ weighDays = [], trainDays = [], startedAgo = 20 } = {}) 
     started: true,
     today: { list, done: list.filter((m) => m.done).length, total: list.length },
     week: weekDots(TODAY, idx, {}, shiftDay(TODAY, -startedAgo)),
+    weekXP: missionXP(shiftDay(TODAY, -Math.min(6, startedAgo)), TODAY, idx), // mission XP only; no badges in this fixture
     streak: currentStreak(weighDays, TODAY),
   };
 }
@@ -36,10 +37,10 @@ test('coach missions: full data — today and what is left, the last 7 days, str
   const m = missionsData({ weighDays: back(7), trainDays: back(6, shiftDay(TODAY, -1)) }); // today: weighed, not trained yet
   const a = missionsAnswer({ missions: m });
   eq(a.headline, '1 of 2 missions done today.');
-  eq(a.lines[0], 'Today: 1 of 2 done. Left: Train or move.');
+  eq(a.lines[0], 'Still to do: Train or move.');
   eq(a.lines[1], '6 of the last 7 days complete.');
   eq(a.lines[2], 'Weigh-in streak: 7 days.');
-  eq(a.lines[3], `Mission XP this week: ${6 * (2 * MISSION_XP + ALL_DONE_XP) + MISSION_XP}.`);
+  eq(a.lines[3], `You earned ${6 * (2 * MISSION_XP + ALL_DONE_XP) + MISSION_XP} XP from missions this week.`);
   eq(a.lines.length, 4);
   assert(a.why && !a.action, 'a why, and no action: the action system has no link type');
 });
@@ -47,12 +48,12 @@ test('coach missions: full data — today and what is left, the last 7 days, str
 test('coach missions: all done, just started, and no missions at all', () => {
   const all = missionsAnswer({ missions: missionsData({ weighDays: back(1), trainDays: back(1) }) });
   eq(all.headline, 'All of today’s missions are done.');
-  eq(all.lines[0], 'Today: all 2 done.');
+  eq(all.lines[0], 'All done today.');
   const fresh = missionsAnswer({ missions: missionsData({ startedAgo: 0 }) });
   eq(fresh.headline, '0 of 2 missions done today.');
   eq(fresh.lines[1], '0 of the 1 day since you started complete.');
   eq(fresh.lines[2], 'No weigh-in streak yet. A weigh-in today starts one.');
-  eq(fresh.lines[3], 'Mission XP this week: 0.');
+  eq(fresh.lines[3], 'You earned 0 XP from missions this week.');
   const idle = missionsAnswer({ missions: { ...missionsData(), today: { list: [], done: 0, total: 0 } } });
   eq(idle.headline, 'No missions today.');
   eq(idle.lines[0], 'No missions today.');
@@ -210,4 +211,13 @@ test('coach: the new answers keep the format and add no network or storage', () 
     const a = f(all, TODAY);
     assert(a.headline && a.lines.length >= 1 && a.lines.length <= 4 && a.why, f.name);
   }
+});
+
+test('pace text: a pace just outside the safe band never rounds into it', () => {
+  const band = { loKg: 0.5 / 2.20462, hiKg: 1.6 / 2.20462 }; // shown as 0.5–1.6 lb
+  eq(rangeText(band.loKg, band.hiKg, 'imperial'), '0.5–1.6 lb');
+  eq(paceNumber(0.46, band, false, 'imperial'), '0.46'); // just under: would round to 0.5, so more decimals
+  eq(paceNumber(1.62, band, false, 'imperial'), '1.62'); // just over
+  eq(paceNumber(0.3, band, false, 'imperial'), '0.3'); // clearly outside: unchanged
+  eq(paceNumber(0.46, band, true, 'imperial'), '0.5'); // goal met: usual rounding
 });
