@@ -177,6 +177,8 @@ export function renderToday(el) {
 
       ${weeklyCard()}
 
+      <div data-photo-reminder></div>
+
       <div class="card weight-card">
         <div class="row between center">
           <div>
@@ -235,6 +237,7 @@ export function renderToday(el) {
     renderToday(el);
   };
   bindInsightCards(el, dismissInsight);
+  import('../photos/cards.js').then((m) => m.mountPhotoReminder($('[data-photo-reminder]', el)));
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);
   animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));
