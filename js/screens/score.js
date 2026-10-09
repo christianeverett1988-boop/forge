@@ -6,10 +6,31 @@ import { progressTabs } from './progress.js';
 import { currentScore } from '../health/today.js';
 import { ringSvg, animateScoreRings, scoreColor, round } from '../health/ui.js';
 import { PILLARS } from '../health/score.js';
+import { weeklyScores, longTerm } from '../health/longterm.js';
+import { longevityCards } from '../health/longevity.js';
+import { longTermHtml, longevityHtml } from '../health/longview.js';
+import { myBodyMeasures, weightSeries } from '../derived.js';
+import { todayKey } from '../ui.js';
+import { units } from '../state.js';
 
 const DOC_URL = 'https://github.com/christianeverett1988-boop/forge/blob/main/docs/forge-score.md';
 
 let open = null; // which pillar's details are showing
+let ltRange = 90; // Long term card: 90 days or 365
+
+// Weekly scores for a year, worked out once and again only when the data or the day changes.
+let weeklyMemo = null;
+function weekly() {
+  const day = todayKey();
+  const keys = [state.health_daily, state.body_measures, state.weights, state.workouts, state.cardio, state.profile];
+  if (weeklyMemo && weeklyMemo.day === day && keys.every((k, i) => weeklyMemo.keys[i] === k)) return weeklyMemo.value;
+  const value = weeklyScores({
+    rows: state.health_daily || [], series: weightSeries(), measures: myBodyMeasures(), workouts: state.workouts,
+    cardio: state.cardio || [], profile: state.profile || {},
+  }, day);
+  weeklyMemo = { day, keys, value };
+  return value;
+}
 
 const pct = (w) => `${Math.round(w * 100)}%`;
 
@@ -80,6 +101,8 @@ export function renderScore(el) {
       <div data-detail-slot>${open ? detail(s.pillars.find((p) => p.key === open)) : ''}</div>
       ${hasData ? `<p class="small muted tcenter" style="text-align:center" data-based-on>Based on ${s.trackedCount} of 5 parts</p>` : ''}
       ${s.notTracked.includes('nutrition') ? `<p class="small muted"><b>Nutrition: not tracked yet.</b> Its 15% is shared among the ${s.trackedCount} part${s.trackedCount === 1 ? '' : 's'} with data until food logging arrives, so nothing is counted against you.</p>` : ''}
+      <div data-longterm-slot>${longTermHtml(longTerm(weekly(), todayKey(), ltRange), ltRange, todayKey())}</div>
+      ${longevityHtml(longevityCards({ rows: state.health_daily || [], measures: myBodyMeasures(), profile: state.profile || {}, today: todayKey() }), units(), todayKey())}
       <details class="card">
         <summary>How is this worked out?</summary>
         <p class="small muted" style="margin-top:8px">Each day gets a score from 0 to 100, and you see the average of the last 7. Weights: Body 25%, Recovery 20%, Sleep 15%, Training 25%, Nutrition 15%. If a part has no data, its weight is shared out, never scored as zero. Your score is only ever compared with your own past weeks.</p>
@@ -95,5 +118,11 @@ export function renderScore(el) {
     if (open) $('[data-detail]', el).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
   $$('[data-pillar]', el).forEach((b) => (b.onclick = () => toggle(b.dataset.pillar)));
+  const bindRange = () => $$('input[name=ltrange]', el).forEach((r) => (r.onchange = () => {
+    ltRange = Number(r.value);
+    $('[data-longterm-slot]', el).innerHTML = longTermHtml(longTerm(weekly(), todayKey(), ltRange), ltRange, todayKey());
+    bindRange();
+  }));
+  bindRange();
   $$('[data-open]', el).forEach((b) => (b.onclick = () => { open = null; toggle(b.dataset.open); }));
 }

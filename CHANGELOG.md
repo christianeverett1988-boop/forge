@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0 — Long-term trends and Longevity on Score (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Long term card** on Progress → Score, under the pillars: your Forge Score as weekly averages over **90 days or 1 year**, one plain sentence ("Up 6 points since July", "About the same as 3 months ago"), and one row per tracked pillar with its change and an arrow. It starts after 4 weeks of data. Weekly scores are sampled (two days a week) and cached, so a year stays fast.
+- **Longevity section**: cards for **Cardio fitness** (VO₂max from Apple Health or the scale, newest per day, with a band for your age and sex marked as an estimate, plus resting heart rate and vascular age), **Resting heart rate**, **HRV** (against your own usual), **Visceral fat** and **FFMI**. Each shows only when it has data; with none, one short line says what to connect. Trends need at least 6 readings in 90 days; words follow each metric's good direction. Tapping a card opens its metric screen.
+- Docs in `docs/longevity.md`. New tests cover weekly sampling (with a loose timing check), the change sentence, empty and partial states, FFMI, the VO₂max merge, direction words and the minimum-point rule.
+
 ## 0.12.2 — Home-gym demo figures; new mission badges get a moment on Today (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

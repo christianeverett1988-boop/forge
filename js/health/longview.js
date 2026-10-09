@@ -1,0 +1,59 @@
+// HTML for the Long term card and the Longevity cards on Progress → Score (v0.13.0). Strings only, no DOM calls.
+import { esc } from '../ui.js';
+import { rolling } from '../ui/linechart.js';
+import { sparkSvg } from './cards.js';
+import { fmtMetric } from '../withings/body.js';
+import { RANGES, WEEKS_MIN } from './longterm.js';
+
+export const EMPTY_LONGEVITY = 'Longevity cards appear when your watch or scale sends VO₂max, resting heart rate, HRV or body composition.';
+
+const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
+
+/** The Long term card. lt: result of longTerm(); range: 90 | 365. */
+export function longTermHtml(lt, range, today) {
+  const seg = `<div class="seg small" role="radiogroup" aria-label="Long-term range">${[90, 365].map((r) =>
+    `<label><input type="radio" name="ltrange" value="${r}" ${r === range ? 'checked' : ''}><span>${r === 90 ? '90 days' : '1 year'}</span></label>`).join('')}</div>`;
+  if (lt.status !== 'ok') {
+    return `<div class="card stack" data-longterm><p class="label">Long term</p>
+      <p class="muted">Your long-term view starts after ${WEEKS_MIN} weeks of data (${lt.weeksSoFar} so far).</p></div>`;
+  }
+  const pts = rolling(lt.points.map((p) => ({ day: p.day, v: p.score })), 3);
+  const rows = lt.pillars.map((p) => `<li class="lt-row"><span>${esc(p.label)}</span>
+    <b class="${p.delta >= 2 ? 'good' : p.delta <= -2 ? 'warn' : 'muted'}"><span aria-hidden="true">${p.arrow}</span> ${p.delta === 0 ? 'No change' : `${sign(p.delta)}${Math.abs(p.delta)} points`}</b></li>`).join('');
+  return `<div class="card stack" data-longterm><div class="row between center"><p class="label" style="margin:0">Long term</p></div>
+    ${seg}
+    <div class="lt-spark" role="img" aria-label="Your weekly Forge Score over ${range === 90 ? '90 days' : 'the last year'}">${sparkSvg(pts, today, RANGES[range].days, { width: 300, height: 64 })}</div>
+    <p class="big-title" style="margin:0">${esc(lt.sentence)}</p>
+    ${rows ? `<ul class="lt-list">${rows}</ul>` : ''}
+    <p class="small muted">Weekly averages of your Forge Score. Pillar changes compare your first weeks in this range with your latest.</p></div>`;
+}
+
+const FMT_KIND = { vo2max: 'vo2', rhr_bpm: 'bpm', hrv_sdnn_ms: 'ms', visceral_fat: 'index', ffmi: 'index' };
+
+/** One Longevity card. */
+function cardHtml(c, units, today) {
+  const kind = FMT_KIND[c.key];
+  const f = (v, unit = true) => fmtMetric(c.key, v, units, { kind, unit });
+  const n = c.ninety;
+  const chg = n.change == null ? '' : `<span class="${n.tone === 'good' ? 'good' : n.tone === 'bad' ? 'warn' : 'muted'}">${Math.abs(n.change) < 0.05 ? 'No change' : `${sign(n.change)}${f(Math.abs(n.change), false)}`} in 90 days</span>`;
+  const subs = [];
+  if (c.band) subs.push(`${esc(c.band.label)}${c.key === 'vo2max' ? ' for your age and sex (an estimate)' : ' (Kyle 2003 bands)'}`);
+  if (c.key === 'vo2max') {
+    if (c.rhr) subs.push(`Resting heart rate ${fmtMetric('rhr_bpm', c.rhr.v, units, { kind: 'bpm' })}`);
+    if (c.vascularAge != null) subs.push(`Vascular age ${fmtMetric('vascular_age', c.vascularAge, units, { kind: 'years' })}`);
+  }
+  if (c.key === 'ffmi' && c.fatFreeKg != null) subs.push(`Fat-free mass ${fmtMetric('fat_free_mass_kg', c.fatFreeKg, units, { kind: 'mass' })}`);
+  if (c.key === 'hrv_sdnn_ms' && c.usual) subs.push(c.usual.words);
+  return `<a class="card lt-card" href="${c.link}">
+    <div class="row between center"><strong>${esc(c.title)}</strong><b class="lt-val">${f(c.latest.v)}</b></div>
+    <div class="lt-spark ${n.tone}">${sparkSvg(c.series, today, 90, { width: 300, height: 44 })}</div>
+    <p class="small" style="margin:0">${chg}${chg ? ' · ' : ''}<span class="muted">${esc(n.words)}</span></p>
+    ${subs.map((s) => `<p class="small muted" style="margin:0">${s}</p>`).join('')}
+    <p class="small muted" style="margin:0">${esc(c.why)}</p></a>`;
+}
+
+/** The Longevity section: a card per metric with data, or one short line. */
+export function longevityHtml(cards, units, today) {
+  return `<div class="stack" data-longevity><p class="label" style="margin:0">Longevity</p>${cards.length ? cards.map((c) => cardHtml(c, units, today)).join('') : `<p class="muted">${EMPTY_LONGEVITY}</p>`}
+    ${cards.length ? '<p class="small muted">Ranges are general estimates, not medical advice. Everything is compared with your own past, never with other people.</p>' : ''}</div>`;
+}
