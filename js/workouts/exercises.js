@@ -1057,7 +1057,7 @@ export const EXERCISES = [
   { id: 'doorframe_row', name: 'Doorframe Row', pattern: 'horizontal_pull', kind: 'compound', load: 'bodyweight',
     primary: ['upper_back', 'lats'], secondary: ['biceps', 'rear_delts'],
     equip: [[]], reps: [8, 15], level: 1, unilateral: false,
-    cues: ['Hold both sides of a solid door frame with the door open and wedged', 'Lean back with straight arms, feet near the frame', 'Pull your chest to your hands; step closer to make it harder'],
+    cues: ['Only a solid frame you can grip firmly; keep your feet under you so you can stand up if your grip slips', 'Start nearly upright with straight arms and lean back only as far as feels secure', 'Pull your chest to your hands; lean back a little more once it feels easy'],
     avoid: ['shoulder'], fedb: null },
   { id: 'wall_triceps_extension', name: 'Wall Triceps Extension', pattern: 'triceps', kind: 'isolation', load: 'bodyweight',
     primary: ['triceps'], secondary: ['front_delts'],

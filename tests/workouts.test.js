@@ -599,3 +599,24 @@ test('backpack moves have no starting weight and are chosen at Travel', () => {
   const w = generateWorkout({ programKey: 'smart', dayType: 'pull', location: TRAVEL, profile, exercises: EXERCISES, unit: 'lb' });
   assert(w.exercises.some((it) => byId(it.exercise_id).load === 'backpack'));
 });
+
+test('Around the house moves show a figure template or a working muscle-map fallback', async () => {
+  const { templateFor } = await import('../js/ui/poses.js');
+  const { bodyMap, exerciseValues } = await import('../js/ui/bodymap.js');
+  const house = new Set(EQUIPMENT_GROUPS.find((g) => g.group === 'Around the house').items.map(([k]) => k));
+  const moves = EXERCISES.filter((e) => e.equip.some((req) => req.some((k) => house.has(k))) || /^(towel|table|backpack|doorframe|wall_triceps|reverse_snow|sliding|chair_dip|stair_step)/.test(e.id));
+  assert(moves.length >= 24, `only ${moves.length} moves found`);
+  for (const e of moves) {
+    if (templateFor(e.id)) continue;
+    const html = bodyMap(exerciseValues(e), { size: 'mini', caption: false });
+    assert(html.includes('bodymap') && Object.keys(exerciseValues(e)).length > 0, `${e.id} has neither figure nor map`);
+  }
+  for (const id of ['backpack_curl', 'backpack_shrug', 'chair_dip', 'stair_step_up']) assert(templateFor(id), id);
+});
+
+test('labels are plain nouns; the doorframe row leads with the safety check', () => {
+  const labels = EQUIPMENT_GROUPS.find((g) => g.group === 'Around the house').items.map(([, l]) => l);
+  same(labels, ['Bath towel', 'Sturdy table', 'Sturdy chair or step', 'Backpack', 'Stairs']);
+  assert(byId('doorframe_row').cues[0].startsWith('Only a solid frame you can grip firmly'));
+  assert(!byId('doorframe_row').cues.join(' ').includes('wedged'));
+});

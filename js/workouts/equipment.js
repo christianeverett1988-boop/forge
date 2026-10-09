@@ -67,12 +67,13 @@ export const EQUIPMENT_GROUPS = [
   },
   {
     group: 'Around the house',
+    hint: 'Load the backpack with books or water bottles.',
     items: [
       ['towel', 'Bath towel'],
-      ['sturdy_table', 'Sturdy table (for rows)'],
+      ['sturdy_table', 'Sturdy table'],
       ['sturdy_chair', 'Sturdy chair or step'],
-      ['backpack', 'Backpack (load it up)'],
-      ['stairs', 'Stairs or a step'],
+      ['backpack', 'Backpack'],
+      ['stairs', 'Stairs'],
     ],
   },
   {
