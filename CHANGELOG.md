@@ -4,13 +4,12 @@
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
 
-- **12 more moves have a moving figure**, all from the home gym:
-  - **Kettlebell:** halo, clean, snatch, sumo high pull, windmill and Russian twist. Clean, snatch and high pull show a hinge, a middle and a finish (rack, lockout, elbow-high), and the bell stays in the hand: it hangs under it, rests in front of the rack, or sits behind the wrist overhead, never through the arm.
+- **9 more moves have a moving figure**, all from the home gym:
+  - **Kettlebell:** halo, clean, snatch, sumo high pull and Russian twist. Clean, snatch and high pull show a hinge, a middle and a finish (rack, lockout, elbow-high), and the bell stays in the hand: it hangs under it, rests in front of the rack, or sits behind the wrist overhead, never through the arm.
   - **Dumbbell:** renegade row, Z press and side bend.
   - **Band:** shoulder dislocate (wide grip, band drawn between the hands).
-  - **Fire hydrant and kneeling slider fly**, retried from 0.12.1 with a floor line, hands and knees planted and a front 3/4 camera from above. The hydrant keeps the knee at 90° while the thigh opens out; in the fly the hands slide apart and the chest lowers between them without touching the floor.
-- **Still no figure:** the Turkish get-up (too many phases), machines, cardio equipment, boxing and jump rope, the muscle-up and cable hip abduction and adduction. Those keep the muscle map. The windmill folds forward from the hips rather than bending sideways, so it is the roughest of the new set.
-- **New mission badges are celebrated.** When a weigh-in streak or body-comp badge is earned (and isn't saved yet), Today shows a small card with the badge, its name, "+100 XP" and a "See awards" link; the card has a dismiss button. Badges earned before missions started are never celebrated, same as XP. The shine and the spring-in stop under reduced motion.
+- **Still no figure:** the Turkish get-up (too many phases), machines, cardio equipment, boxing and jump rope, the muscle-up and cable hip abduction and adduction. Those keep the muscle map. The kettlebell windmill (the rig can't hinge sideways) and the fire hydrant and kneeling slider fly (third try, still read wrong) are unmapped too: a wrong demo is worse than none.
+- **New mission badges are celebrated.** When a weigh-in streak or body-comp badge is earned (and isn't saved yet), Today shows a small card at the very top, under the greeting, with the badge, its name, "+100 XP" and a "See awards" link; the card has a dismiss button. A badge is only saved as seen once its card has been on screen for a moment, or when you dismiss it or open Awards, so it can't vanish unseen. Badges earned before missions started are never celebrated, same as XP. The shine and the spring-in stop under reduced motion.
 - Under the hood: the figure rig can tip the trunk sideways (`lean`) and point a kettlebell on its own (`kb`), and floor moves can ask for a floor line (`floor`). Tests cover every new template (finite numbers, all frames solve, nothing through the floor, hands on their grips, the bell in the hand and clear of the forearm and head) and the celebration rules.
 
 ## 0.12.1 — Demo figures for home, travel and bodyweight moves; sheets close on navigation (2026-10-09)

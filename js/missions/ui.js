@@ -86,15 +86,30 @@ export function badgeCelebrationCards() {
   }).join('');
 }
 
-/** Wire the buttons and, a moment later (so the shine isn't cut off by the re-render), remember the badges. */
+/**
+ * Wire the buttons. A badge is remembered (awards_seen) only once its card has been on screen for a moment (so the
+ * shine isn't cut off by the re-render), or when it's dismissed or "See awards" is tapped. Never before it was seen.
+ */
 export function afterBadgeCelebrations(el) {
+  const remember = (id) => {
+    const fresh = unseenMissionBadges().filter((b) => b.id === id);
+    if (fresh.length) rememberBadges(fresh);
+  };
   for (const card of el.querySelectorAll('[data-new-badge]')) {
+    const id = card.dataset.newBadge;
     card.querySelector('[data-badge-dismiss]').onclick = () => {
-      shown.delete(card.dataset.newBadge);
+      shown.delete(id);
       card.remove();
+      remember(id);
     };
-    card.querySelector('[data-badge-awards]').onclick = () => shown.delete(card.dataset.newBadge);
+    card.querySelector('[data-badge-awards]').onclick = () => { shown.delete(id); remember(id); };
+    let timer = 0;
+    const onScreen = () => { if (!timer) timer = setTimeout(() => card.isConnected && remember(id), 1500); };
+    if (typeof IntersectionObserver === 'function') {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); onScreen(); }
+      }, { threshold: 0.6 });
+      io.observe(card);
+    } else onScreen();
   }
-  const fresh = unseenMissionBadges();
-  if (fresh.length) setTimeout(() => rememberBadges(fresh), 1500);
 }

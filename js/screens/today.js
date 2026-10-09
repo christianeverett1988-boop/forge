@@ -167,6 +167,8 @@ export function renderToday(el) {
         <h1>${greeting()}</h1>
       </header>
 
+      ${badgeCelebrationCards()}
+
       ${installHint ? `
         <div class="notice info">
           <b>Install this app first.</b> Tap the Share button, then <b>Add to Home Screen</b>, and open it from there.
@@ -183,8 +185,6 @@ export function renderToday(el) {
       </div>
 
       ${workoutCard()}
-
-      ${badgeCelebrationCards()}
 
       ${missionsCard()}
 

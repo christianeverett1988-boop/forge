@@ -1,5 +1,5 @@
-// Demo figures for the home gym (v0.12.2): kettlebell, dumbbell and band moves, plus two floor moves retried from
-// v0.12.1. Same a/m/b/tempo model as poses-lib.js.
+// Demo figures for the home gym (v0.12.2): kettlebell, dumbbell and band moves. The windmill (needs a side hinge),
+// fire hydrant and slider fly (three tries) stay unmapped: a wrong demo is worse than none. Same a/m/b/tempo model as poses-lib.js.
 //
 // A kettlebell is drawn at the near hand from the exercise's load. Param `kb` (degrees: 0 hangs under the hand,
 // 90 points forward, 180 up) says where its body lies from the handle, so in the rack it sits in front of the
@@ -14,8 +14,6 @@ const BALLISTIC_SLOW = { con: 0.9, top: 0.5, ecc: 1.4, pause: 0.5 };
 const HINGE = { px: -0.14, py: 0.74, trunk: 62, head: -30, sh: -28, el: 0, abd: -6, kb: -28 };
 const FREE_ARM = { shF: 0, elF: 0, abdF: 22 };
 const KB_FEET = STAND({ feet: { x: 0, z: 0.2, kneesOut: 0.45 } });
-// Quadruped / kneeling: the thigh lies along the body line from the knee, the shin flat on the floor behind it.
-const KNEEL = (line) => ({ hipN: line - 90, kneeN: line, footN: -90, hipF: line - 90, kneeF: line, footF: -90 });
 
 export const KB = {
   // ---------------- kettlebell ----------------
@@ -59,15 +57,6 @@ export const KB = {
     m: { px: -0.02, py: 0.9, trunk: 14, head: -4, sh: 2, el: 0, abd: 10, kb: 0 },
     b: { px: 0.02, py: 0.93, trunk: -2, head: 0, sh: 120, el: -140, abd: 45, foreAbd: -0.9, kb: 60 },
     tempo: BALLISTIC, slow: BALLISTIC_SLOW,
-  }),
-  // Bell locked out overhead, the hips go back and the torso folds while the free hand slides down the leg.
-  kb_windmill: T({
-    cam: { yaw: 36, pitch: 6 },
-    rig: STAND({ feet: { x: 0, z: 0.28, kneesOut: 0.1 } }),
-    a: { px: 0, py: 0.93, pz: 0, trunk: 0, head: 0, shN: 176, elN: 4, abdN: 6, kb: -85, shF: 0, elF: 0, abdF: 8, foreAbd: 1 },
-    b: { px: -0.3, py: 0.84, pz: 0, trunk: 62, head: -50, shN: 176, elN: 4, abdN: 6, kb: -85, shF: 4, elF: 0, abdF: 8, foreAbd: 1 },
-    first: 'down',
-    tempo: { ecc: 2.2, pause: 0.5, con: 1.8, top: 0.6 }, slow: { ecc: 3.2, pause: 0.8, con: 2.4, top: 0.8 },
   }),
   // Seated and leaning back, feet off the floor, the bell swung from one hip to the other.
   kb_russian_twist: T({
@@ -122,27 +111,6 @@ export const KB = {
     b: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 338, el: 0, abd: 36, foreAbd: 1 },
     tempo: { con: 1.8, top: 0.3, ecc: 1.8, pause: 0.3 }, slow: { con: 2.6, top: 0.4, ecc: 2.6, pause: 0.4 },
   }),
-
-  // ---------------- floor retries ----------------
-  // On hands and knees (floor line, hands and knees planted), the near knee stays bent at 90° and opens out sideways.
-  bw_fire_hydrant: T({
-    cam: { yaw: 40, pitch: 20 },
-    floor: true,
-    rig: { root: 'plank', pivot: { at: [-0.4, 0.07], joint: 'knee' }, legsN: 'fk', legsF: 'fk', arms: 'ik', hands: { x: 0.1, y: 0.03 }, grip: 0.2, pole: [-0.4, 0.2, 0.5] },
-    a: { line: 90, pike: -90, head: 20, ...KNEEL(90), splayN: 3, shinSplayN: 0 },
-    b: { line: 90, pike: -90, head: 20, ...KNEEL(90), splayN: 72, shinSplayN: 0 },
-    tempo: { con: 1.1, top: 0.4, ecc: 1.5, pause: 0.3 }, slow: { con: 1.6, top: 0.6, ecc: 2.2, pause: 0.4 },
-  }),
-  // Kneeling with a hand on each towel: the hands slide apart and the chest lowers between them, never touching.
-  towel_slider_fly: T({
-    cam: { yaw: 40, pitch: 20 },
-    floor: true,
-    rig: { root: 'plank', pivot: { at: [-0.4, 0.07], joint: 'knee' }, legsN: 'fk', legsF: 'fk', arms: 'ik', hands: { x: 0.7, y: 0.03 }, grip: 0.14, pole: [0, 0.2, 1] },
-    a: { line: 34, head: 14, hx: 0.5, hz: 0.14, ...KNEEL(34) },
-    b: { line: 14, head: 14, hx: 0.78, hz: 0.62, ...KNEEL(14) },
-    first: 'down',
-    tempo: { ecc: 2, pause: 0.4, con: 1.6, top: 0.5 }, slow: { ecc: 3, pause: 0.6, con: 2.2, top: 0.6 },
-  }),
 };
 
 // Exercise id → template name. Moves left out are listed in the CHANGELOG.
@@ -151,12 +119,9 @@ export const KB_MAP = {
   kb_clean: 'kb_clean',
   kb_snatch: 'kb_snatch',
   kb_high_pull: 'kb_high_pull',
-  kb_windmill: 'kb_windmill',
   kb_russian_twist: 'kb_russian_twist',
   db_renegade_row: 'db_renegade_row',
   db_z_press: 'db_z_press',
   db_side_bend: 'db_side_bend',
   band_shoulder_dislocate: 'band_shoulder_dislocate',
-  bw_fire_hydrant: 'bw_fire_hydrant',
-  towel_slider_fly: 'towel_slider_fly',
 };
