@@ -4,6 +4,7 @@
 // YouTube is a link out to a search (no embed), so the CSP's frame-src stays 'none'.
 import { state } from '../state.js';
 import { esc, $, $$, sheet, toast } from '../ui.js';
+import { icon } from '../ui/icons.js';
 import { patch } from '../db.js';
 import { exerciseById, loadInstructions } from '../workouts/library.js';
 import { equipmentText } from './picker.js';
@@ -41,7 +42,7 @@ export function openHowTo(id, { extra, focus } = {}) {
         <div class="ht-demo" data-demo></div>
         <div data-viewseg></div>
         <div class="ht-actions">
-          <button class="ht-act" data-fav aria-pressed="false"><span aria-hidden="true" data-favicon>☆</span><small>Favourite</small></button>
+          <button class="ht-act" data-fav aria-pressed="false"><span aria-hidden="true" data-favicon>${icon('star')}</span><small>Favourite</small></button>
           <a class="ht-act" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} exercise form`)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${icon('play', { size: 22 })}</span><small>Watch on YouTube</small></a>
           <button class="ht-act" data-share><span aria-hidden="true">${icon('share', { size: 22 })}</span><small>Share</small></button>
         </div>
@@ -124,7 +125,7 @@ export function openHowTo(id, { extra, focus } = {}) {
       const on = favs().includes(id);
       favBtn.setAttribute('aria-pressed', String(on));
       favBtn.classList.toggle('on', on);
-      $('[data-favicon]', favBtn).textContent = on ? '★' : '☆';
+      $('[data-favicon]', favBtn).innerHTML = icon('star', { filled: on });
     };
     paintFav();
     favBtn.onclick = () => {

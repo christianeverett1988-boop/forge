@@ -38,7 +38,7 @@ export function renderLibrary(el) {
       <ul class="list">
         ${list.slice(0, 150).map((e) => `
           <li class="tap" data-id="${esc(e.id)}">
-            <div><b>${fav.has(e.id) ? '★ ' : ''}${esc(e.name)}</b>
+            <div><b>${fav.has(e.id) ? `<span class="fav-star" aria-label="Favourite">${icon('star', { filled: true, size: 14 })}</span> ` : ''}${esc(e.name)}</b>
             <small class="muted">${esc(equipmentText(e))}${e.custom ? ' · custom' : ''}${excluded.has(e.id) ? ' · never suggested' : ''}</small></div>
             <span class="chev" aria-hidden="true">${icon('chev')}</span>
           </li>`).join('')}

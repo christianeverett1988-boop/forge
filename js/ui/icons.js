@@ -41,6 +41,7 @@ const P = {
   more: '<circle cx="5.5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   share: '<path d="M12 15V4M8 8l4-4 4 4M6 11H5.5A1.5 1.5 0 004 12.5v6A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-6a1.5 1.5 0 00-1.5-1.5H18"/>',
+  star: '<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
   moon:'<path d="M19.5 14.5A8 8 0 019.5 4.5a8 8 0 1010 10z"/>',
 };
 
@@ -48,6 +49,7 @@ const P = {
 const F = {
   trophy: '<path d="M7 3.5h10v6a5 5 0 01-10 0z" fill="currentColor"/><path d="M7 5.5H3.8c0 3.4 1.7 5 4.2 5.4M17 5.5h3.2c0 3.4-1.7 5-4.2 5.4M12 14.5V17.5M8 20.5h8M9.8 17.5h4.4"/>',
   flame: '<path d="M12 21.5c-4.2 0-7-2.9-7-6.7 0-3.2 2.1-5 3.4-7C9.2 6.5 9.5 5 9.5 2.5c4 1.7 6 5 6.2 7.6 1-.7 1.5-1.8 1.6-2.9 1.5 1.7 2 3.7 2 5.6 0 4.7-3 8.7-7.3 8.7z" fill="currentColor" stroke="none"/>',
+  star: '<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z" fill="currentColor"/>',
   heart: '<path d="M12 20.5s-8-4.8-8-10.5A4.6 4.6 0 0112 7.4 4.6 4.6 0 0120 10c0 5.7-8 10.5-8 10.5z" fill="currentColor" stroke="none"/>',
   check: '<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.8 12.4l3 3 5.4-6" stroke="var(--bg)" stroke-width="2.2"/>',
 };

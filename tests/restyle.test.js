@@ -98,7 +98,7 @@ test('metric weight falls back to hand-logged weigh-ins; empty state leads with 
 });
 
 test('no emoji or text glyphs used as icons in js/screens (SVG icons from js/ui/icons.js instead)', () => {
-  const GLYPH = /\p{Extended_Pictographic}|[☰❚✕›‹⇄⏱✓✗▶⤴⋯]/u;
+  const GLYPH = /\p{Extended_Pictographic}|[☰❚✕›‹★☆⇄⏱✓✗▶⤴⋯]/u;
   const ALLOW = new Set([]); // the share card canvas is js/ui/sharecard.js and may keep emoji
   for (const f of files('js/screens', '.js')) {
     if (ALLOW.has(f)) continue;

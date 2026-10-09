@@ -14,7 +14,7 @@ No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; n
 - **Friendly empty screens.** Weight, History, Body, Awards, the exercise search and Locations each show an icon, a line, a short hint and one button when there is nothing yet.
 - **Toasts and pull to refresh.** Toasts are frosted capsules with an optional icon. Pull down at the top of Today, Progress or Body to refresh (it also asks Withings for new weigh-ins when connected).
 - **Swipe back shows the screen behind.** Swiping from the left edge now reveals the previous screen sliding in behind, like iOS.
-- **Review fixes.** The Today weight keeps its number and unit on one line (small unit). Metric → Weight uses the weights you logged by hand when the scale sent nothing, and the empty state leads with Log weight. Pull to refresh waits at most 8 seconds and asks Withings at most once every 2 minutes. The “Add a location” list looks tappable (grouped rows with arrows). Withings and Apple Health intros are short with a “Learn more”. Buttons stay on one line (shorter labels).
+- **Review fixes.** The Today weight keeps its number and unit on one line (small unit). Metric → Weight uses the weights you logged by hand when the scale sent nothing, and the empty state leads with Log weight. Pull to refresh waits at most 8 seconds and asks Withings at most once every 2 minutes. The “Add a location” list looks tappable (grouped rows with arrows). Withings and Apple Health intros are short with a “Learn more”. Buttons stay on one line (shorter labels). The favourite star is an SVG icon too.
 - **Home-screen icon** now has a proper 192 size for Android (maskable).
 
 ## 0.5.2 — Feels like an iPhone app: shell, navigation and motion (2026-10-09)
