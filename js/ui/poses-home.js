@@ -116,15 +116,6 @@ export const HOME = {
     b: { px: 0, py: 0.93, trunk: 0, head: 0, sh: 0, el: 0, abd: 58, foreAbd: 1 },
     tempo: HOLD, slow: HOLD,
   }),
-  towel_slider_fly: T({
-    cam: { yaw: 62, pitch: 14 },
-    // Kneeling plank (knees on the floor), hands on towels: slide them out wide, chest low but off the floor.
-    rig: { root: 'plank', pivot: { at: [-0.55, 0.07], joint: 'knee' }, feet: { z: 0.1, angle: 175 }, arms: 'ik', hands: { x: 0.34, y: 0.03 }, grip: 0.22, pole: [-0.3, 0.6, 0.55] },
-    a: { line: 30, head: 6, hz: 0.22 },
-    b: { line: 16, head: 6, hz: 0.62 },
-    first: 'down',
-  }),
-
   // ---------------- floor work ----------------
   bw_superman: T({
     cam: { yaw: 26, pitch: 10 },
@@ -175,14 +166,6 @@ export const HOME = {
     rig: SIDE(0.15, { arms: 'fk', armsN: 'ik', handsN: { world: true, x: 0.5, y: 0.04, z: -0.3 }, grip: 0.2, pole: [-0.3, 0.2, 0.5], legsN: 'fk' }),
     a: { line: 8, head: 0, shF: 100, elF: 0, abdF: 0, hipN: -90, kneeN: 0, footN: -90, splayN: -8 },
     b: { line: 8, head: 0, shF: 100, elF: 0, abdF: 0, hipN: -90, kneeN: 0, footN: -90, splayN: 42 },
-  }),
-  bw_fire_hydrant: T({
-    cam: { yaw: -62, pitch: 26 },
-    rig: QUAD({ legsN: 'fk', legsF: 'fk' }),
-    // Seen from behind and a little above: the knee stays bent at 90° and the near thigh lifts out to the side
-    // with the hips level (shin still pointing back, not a kick).
-    a: { line: 90, pike: -90, head: -15, hipN: 0, kneeN: 90, footN: -90, splayN: 2, shinSplayN: 0, hipF: 0, kneeF: 90, footF: -90 },
-    b: { line: 90, pike: -90, head: -15, hipN: 0, kneeN: 90, footN: -90, splayN: 84, shinSplayN: 0, hipF: 0, kneeF: 90, footF: -90 },
   }),
   bw_russian_twist: T({
     cam: { yaw: 40, pitch: 10 },
@@ -361,14 +344,12 @@ export const HOME_MAP = {
   towel_pull_apart: 'towel_pull_apart',
   towel_iso_curl: 'towel_iso_curl',
   towel_lateral_raise_iso: 'towel_lateral_raise_iso',
-  towel_slider_fly: 'towel_slider_fly',
   bw_superman: 'bw_superman',
   bw_prone_ytw: 'bw_prone_ytw',
   reverse_snow_angel: 'reverse_snow_angel',
   side_plank: 'side_plank',
   bw_copenhagen_plank: 'bw_copenhagen_plank',
   bw_side_lying_leg_raise: 'bw_side_lying_leg_raise',
-  bw_fire_hydrant: 'bw_fire_hydrant',
   bw_russian_twist: 'bw_russian_twist',
   bw_slider_leg_curl: 'bw_slider_leg_curl',
   bw_reverse_nordic: 'bw_reverse_nordic',

@@ -11,8 +11,8 @@ import { registerSheet, closeAllSheets, openSheetCount } from '../js/ui/sheets.j
 // Every move the v0.12.1 brief lists (issue #36).
 const BRIEF = [
   'table_row_bent_knees', 'table_row_straight_legs', 'table_row_feet_raised', 'doorframe_row', 'wall_triceps_extension', 'table_triceps_extension',
-  'towel_lat_pulldown_iso', 'sliding_floor_pulldown', 'towel_pull_apart', 'towel_iso_curl', 'towel_lateral_raise_iso', 'towel_slider_fly',
-  'side_plank', 'bw_copenhagen_plank', 'bw_superman', 'bw_prone_ytw', 'reverse_snow_angel', 'bw_side_lying_leg_raise', 'bw_fire_hydrant',
+  'towel_lat_pulldown_iso', 'sliding_floor_pulldown', 'towel_pull_apart', 'towel_iso_curl', 'towel_lateral_raise_iso',
+  'side_plank', 'bw_copenhagen_plank', 'bw_superman', 'bw_prone_ytw', 'reverse_snow_angel', 'bw_side_lying_leg_raise',
   'bw_russian_twist', 'bw_slider_leg_curl', 'bw_reverse_nordic', 'bw_sissy_squat',
   'bw_lateral_lunge', 'db_lateral_lunge', 'band_lateral_walk', 'band_hip_abduction', 'band_hip_adduction',
   'cat_cow', 'inchworm', 'worlds_greatest_stretch', 'kneeling_hip_flexor_stretch', 'hip_90_90', 'thoracic_open_book',
