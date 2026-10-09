@@ -98,6 +98,7 @@ const routes = {
   weekly: () => import('./screens/weekly.js').then((m) => m.renderWeekly(main)),
   withings: (sub) => import('./screens/withings.js').then((m) => m.renderWithings(main, sub)),
   metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
+  photos: (sub) => import('./screens/photos.js').then((m) => m.renderPhotos(main, sub)),
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
 };
 // Screens that fill the whole screen (no tab bar, no nav bar).

@@ -3,7 +3,7 @@
 // this week. (Strength score and weekly set targets come later.)
 import { myBodyMeasures } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
-import { esc, $$, sheet, todayKey } from '../ui.js';
+import { esc, $, $$, sheet, todayKey } from '../ui.js';
 import { topInsights, dismissInsight, intel, currentGoalPath, currentEnergy, currentBodyProfile } from '../health/intel.js';
 import { insightCardsHtml, bindInsightCards, goalPathHtml, bodyProfileHtml } from '../health/cards.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';
@@ -79,6 +79,7 @@ export function renderBody(el) {
       </div>
       ${insightCards()}
       ${compositionCard()}
+      <div data-photos-slot></div>
       ${goalPathCard()}
       ${bodyProfileHtml(currentBodyProfile(), state.profile || {})}
       <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
@@ -96,6 +97,7 @@ export function renderBody(el) {
     </section>`;
 
   bindInsightCards(el, dismissInsight);
+  import('../photos/cards.js').then((m) => m.mountBodyPhotosCard($('[data-photos-slot]', el)));
   const open = (region) => {
     const [side, slug] = region.split(':');
     const ms = musclesIn(side, slug);

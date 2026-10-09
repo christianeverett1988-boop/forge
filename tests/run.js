@@ -18,6 +18,7 @@ import './health.test.js';
 import './shell.test.js';
 import './restyle.test.js';
 import './trends.test.js';
+import './photos.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

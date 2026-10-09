@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0 — Weekly progress photos (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Your photos never leave your phone.** They are kept in a private store on this iPhone (one per signed-in account, so two people sharing a phone never see each other's). Nothing is uploaded, nothing syncs, no Forge server ever sees them.
+- **Location and camera details are removed.** Every photo is redrawn and saved fresh (longest side 1600 px), which drops GPS and EXIF. A test checks this.
+- **Body → Progress photos.** Take Front, Side and Back (each one is optional), from the camera or your library. Your last photo of that pose shows faintly so you can line up. Add a note; your weight trend for that date shows beside it (it is not saved with the photo).
+- **Compare** any two dates for a pose: side by side, or drag a divider across the picture. Under each: weight trend, fat mass if your scale reads it, and the days between.
+- **Time-lapse:** pick a pose and a range. Where your phone can record video (MP4 on newer iPhones, WebM elsewhere) you get a short video; otherwise a photo strip with every date and weight on it. Share it or save it.
+- **Weekly reminder:** a small card on Today from your chosen day (Sunday unless you change it) until you take the week's photos. You can hide it for the week, or turn it off in Settings → Progress photos. It only shows once you have taken a first set.
+- **Look after your photos:** delete one photo or a whole set; Settings → Progress photos has *Export all photos (zip)* as your backup and *Delete all photos on this phone*. Forge asks the phone not to clear them when space is tight. Deleting your Forge account also removes them from this phone.
+- An "AI analysis" row is shown switched off for later. Nothing is sent anywhere.
+- Not in this version: pinch-zoom while comparing.
+
 ## 0.7.0 — Trends, insights, weekly report, goal path and Body Profile (W2b) (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish. Everything is worked out on your phone from the data you already have.
