@@ -118,6 +118,16 @@ export function paramsAt(tpl, phases, t) {
 const trunkDir = (deg) => sag(180 - deg); // trunk lean: 0 = upright, + = forward
 const trunkFwd = (deg) => sag(90 - deg); // chest facing direction
 
+/** Rotate p by `deg` about the axis through `o` with unit direction `k` (Rodrigues). */
+function rotAbout(p, o, k, deg) {
+  const c = Math.cos(rad(deg));
+  const s = Math.sin(rad(deg));
+  const v = sub(p, o);
+  const kv = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]];
+  const d = dot(k, v) * (1 - c);
+  return add(o, [v[0] * c + kv[0] * s + k[0] * d, v[1] * c + kv[1] * s + k[1] * d, v[2] * c + kv[2] * s + k[2] * d]);
+}
+
 /**
  * Turn template parameters into 16 joint positions plus extras (toes, heels, hand tips, grips, prop points).
  * The template's `rig` says how the body is placed:
@@ -135,6 +145,13 @@ const trunkFwd = (deg) => sag(90 - deg); // chest facing direction
  *          elbows toward rig.pole [x, y, outward]
  *          'ik-bar': hands on a back-squat bar
  *          armsN / armsF override one side (rig.handsN / rig.handsF for its hand)
+ *          param `hz` sets how far apart the hands are (slider flyes); hands { world: true, z } is a world z
+ *   pz     shifts the whole body sideways; fzN / fzF set each foot's width on its own
+ *   fk legs: param `splay` (or splayN / splayF) swings a leg out sideways (default 3°); `shinSplay` swings the
+ *          shin on its own (negative = across the body)
+ *   roll   (plank root only) { deg }: the pose is built face-down, then the whole body rolls about its own
+ *          line by `deg` (90 = onto the far side, near arm up). Hand targets with `world: true` are given
+ *          after the roll.
  */
 export function solve(tpl, P) {
   const r = tpl.rig;
@@ -152,6 +169,8 @@ export function solve(tpl, P) {
     j.pelvis = add(piv, mul(dir, len));
     trunk = sgn * (90 - (P.line ?? 0)) - (P.pike || 0);
   }
+  const rollAxis = r.roll && r.root === 'plank' ? norm([(r.pivot.dir ?? 1) * Math.cos(rad(P.line ?? 0)), Math.sin(rad(P.line ?? 0)), 0]) : null;
+  const rollOrigin = rollAxis ? [r.pivot.at[0], r.pivot.at[1] + air, 0] : null;
   const up = trunkDir(trunk);
   const fwd = trunkFwd(trunk);
   // Bar on the upper back (back squat) or across the front of the shoulders (front squat, rack).
@@ -159,12 +178,12 @@ export function solve(tpl, P) {
     ? add(mul(up, BODY.spine - 0.02), mul(fwd, 0.11))
     : add(mul(up, BODY.spine - (r.barDrop ?? 0.05)), mul(fwd, -(r.barBack ?? 0.075))));
   if (r.root === 'chest') {
-    j.chest = [P.px, P.py + air, 0];
+    j.chest = [P.px, P.py + air, P.pz || 0];
     j.pelvis = sub(j.chest, mul(up, BODY.spine));
   } else if (r.root !== 'plank') {
     let px = P.px ?? 0;
     if (r.balance === 'bar') px = (r.feet.x + 0.06) - barLocal()[0];
-    j.pelvis = [px, P.py + air, 0];
+    j.pelvis = [px, P.py + air, P.pz || 0]; // pz shifts the whole body sideways (lateral lunges, skater hops)
   }
   j.chest = j.chest || add(j.pelvis, mul(up, BODY.spine));
   const headUp = trunkDir(trunk + (P.head || 0));
@@ -207,7 +226,8 @@ export function solve(tpl, P) {
           const hands = r['hands' + S] || r.hands;
           const hx = P['hx' + S] ?? P.hx ?? hands.x;
           const hy = P['hy' + S] ?? P.hy ?? hands.y;
-          target = [hx, hy, hands.z != null ? side * hands.z : side * (r.grip ?? 0.25)];
+          target = [hx, hy, hands.z != null ? side * hands.z : side * (P['hz' + S] ?? P.hz ?? r.grip ?? 0.25)];
+          if (hands.world && rollAxis) target = rotAbout([hx, hy, hands.z], rollOrigin, rollAxis, -r.roll.deg);
           const pl = r.pole || [0.35, -0.6, 0.75];
           pole = norm([pl[0], pl[1], side * pl[2]]);
         }
@@ -253,7 +273,7 @@ export function solve(tpl, P) {
         // A lifted heel pivots the foot about the toes.
         const lift = Math.min(heel, BODY.footFwd * 0.9);
         footA = Math.min(footA, 90 - (Math.asin(lift / BODY.footFwd) * 180) / Math.PI);
-        ankle = [fx, BODY.ankleY + fy + lift, side * (P.fz ?? f.z ?? 0.15)];
+        ankle = [fx, BODY.ankleY + fy + lift, side * (P['fz' + S] ?? P.fz ?? f.z ?? 0.15)];
       }
       const pole = norm([f.pole ?? 1, f.poleY ?? 0, side * (f.kneesOut ?? 0.35)]);
       const { mid, end } = ik2(hip, ankle, BODY.thigh, BODY.shin, pole);
@@ -266,12 +286,20 @@ export function solve(tpl, P) {
     } else {
       const hipA = P['hip' + S];
       const kneeA = hipA - P['knee' + S];
-      j['knee' + S] = add(hip, mul(sag(hipA, 3, side), BODY.thigh));
-      j['ankle' + S] = add(j['knee' + S], mul(sag(kneeA, 2, side), BODY.shin));
+      const splay = P['splay' + S] ?? P.splay; // swings the leg out sideways (abduction)
+      j['knee' + S] = add(hip, mul(sag(hipA, splay ?? 3, side), BODY.thigh));
+      j['ankle' + S] = add(j['knee' + S], mul(sag(kneeA, P['shinSplay' + S] ?? P.shinSplay ?? (splay == null ? 2 : splay * 0.66), side), BODY.shin));
       const footA = kneeA + 90 + (P['foot' + S] ?? 0); // + = toes point down
       const fd = sag(footA, 6, side);
       j['toe' + S] = add(j['ankle' + S], add(mul(fd, BODY.footFwd), mul(sag(kneeA), 0.07)));
       j['heel' + S] = add(j['ankle' + S], add(mul(fd, -BODY.heel), mul(sag(kneeA), 0.07)));
+    }
+  }
+  if (rollAxis) {
+    const DIRS = ['up', 'fwd', 'headUp', 'headFwd', 'handDirN', 'handDirF'];
+    for (const k of Object.keys(j)) {
+      if (!Array.isArray(j[k])) continue;
+      j[k] = rotAbout(j[k], DIRS.includes(k) ? [0, 0, 0] : rollOrigin, rollAxis, r.roll.deg);
     }
   }
   return j;
@@ -329,7 +357,9 @@ export const BODY_PARTS = ['thighN', 'shinN', 'footN', 'upperN', 'foreN', 'handN
  *   dumbbell → near dumbbell (both with tpl.both); goblet hold → one weight at the chest
  *   kettlebell → a bell in the near hand (both with tpl.both)
  *   cable / band → a line from the hand to tpl.anchor
- *   tpl.gear adds fixed kit: 'pullbar', 'dip', 'rings', 'ball', 'wheel'
+ *   tpl.gear adds fixed kit: 'pullbar', 'dip', 'rings', 'ball', 'wheel', 'towel' (pulled taut between the
+ *   hands), 'strap' (a towel from each hand down to tpl.anchor, under the feet), 'loop' (a mini-band between
+ *   two points, tpl.loop = { a, b }, see loopEnds)
  */
 export function propParts(tpl) {
   const load = tpl.load;
@@ -351,8 +381,21 @@ export function propParts(tpl) {
     if (g === 'rings') out.push('ringF', 'ringN');
     if (g === 'ball') out.push('ball');
     if (g === 'wheel') out.push('wheel');
+    if (g === 'towel') out.push('towel');
+    if (g === 'strap') out.push('strapN', 'strapF');
+    if (g === 'loop') out.push('loop');
   }
   return out;
+}
+
+/** Ends of a mini-band loop: each of tpl.loop.a / .b is a joint name, 'thighN' / 'thighF' (just above the knee) or a world point. */
+export function loopEnds(tpl, j) {
+  const pt = (s) => {
+    if (Array.isArray(s)) return s;
+    const m = /^thigh([NF])$/.exec(s);
+    return m ? add(j['hip' + m[1]], mul(sub(j['knee' + m[1]], j['hip' + m[1]]), 0.82)) : j[s];
+  };
+  return [pt(tpl.loop.a), pt(tpl.loop.b)];
 }
 
 /** World point whose depth decides where each part sits in the draw order, plus a small tie-break. */
@@ -389,7 +432,12 @@ function anchors(tpl, j) {
     } else if (/^(cable|band)[NF]$/.test(name)) {
       const g = j['grip' + name.slice(-1)];
       a[name] = [mid(g, [tpl.anchor[0], tpl.anchor[1], g[2]]), 0];
-    } else if (name === 'goblet' || name === 'ball' || name === 'wheel') a[name] = [mid(j.gripN, j.gripF), name === 'goblet' ? -0.02 : 0];
+    } else if (/^strap[NF]$/.test(name)) {
+      const g = j['grip' + name.slice(-1)];
+      a[name] = [mid(g, [tpl.anchor[0], tpl.anchor[1], g[2] * (tpl.anchorZ ?? 1)]), 0];
+    } else if (name === 'towel') a.towel = [mid(j.gripN, j.gripF), 0.01];
+    else if (name === 'loop') a.loop = [mid(...loopEnds(tpl, j)), -0.012]; // over the legs it wraps
+    else if (name === 'goblet' || name === 'ball' || name === 'wheel') a[name] = [mid(j.gripN, j.gripF), name === 'goblet' ? -0.02 : 0];
     else if (name === 'posts') a.posts = [[0, 0, 0], 98];
     else if (/^pb[FMN]$/.test(name)) {
       const { x, y } = tpl.rig.hands;
@@ -454,7 +502,9 @@ export function frameBox(tpl, project, phases, n = 16) {
   }
   if (!tpl.focus) {
     for (const e of tpl.env || []) {
-      const pts = e.type === 'bench' ? e.pads.flat() : e.type === 'box' ? [[e.x0, e.h], [e.x1, 0]] : [];
+      const pts = e.type === 'bench' ? e.pads.flat()
+        : e.type === 'box' || e.type === 'table' ? [[e.x0, e.h], [e.x1, 0]]
+          : e.type === 'doorframe' ? [[e.x, 0], [e.x, 1.7]] : [];
       for (const [x, y] of pts) for (const z of [-0.15, 0.15]) take([x, y, z]);
     }
   }

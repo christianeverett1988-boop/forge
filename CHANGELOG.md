@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.12.1 — Demo figures for home, travel and bodyweight moves; sheets close on navigation (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **36 more moves have a moving figure.** The hotel, travel and bodyweight plans pick these a lot, so their detail and guided screens no longer show an empty box:
+  - **Table, towel, doorframe and wall:** table rows (bent knees, straight legs, feet raised), doorframe row, wall and table triceps extensions, and the five towel moves (lat pulldown, floor pulldown, pull-apart, iso curl, iso lateral raise).
+  - **Floor:** side plank, Copenhagen plank, superman, prone Y-T-W, reverse snow angel, side-lying leg raise, Russian twist, slider leg curl, reverse Nordic, sissy squat.
+  - **Lunges and bands:** bodyweight and dumbbell lateral lunge, band lateral walk, band hip abduction and adduction.
+  - **Mobility:** cat-cow, inchworm, world's greatest stretch, kneeling hip-flexor stretch, 90/90, thoracic open book.
+  - **Warm-up cardio:** high knees, burpee, bear crawl, skater hops.
+- Held moves (planks, towel isometrics, stretches) breathe slightly instead of freezing. Small new props: a table, a doorframe, a towel (pulled tight between the hands or under the feet) and a mini-band loop.
+- **Still no figure** (by design, for now): machines, cardio equipment, boxing and jump rope, kettlebell ballistics (clean, snatch, high pull, Turkish get-up, windmill, halo), the muscle-up, cable hip abduction and adduction, and a few dumbbell odds and ends (renegade row, Z press, side bend). Those keep the muscle map.
+- **Sheets no longer stay on top of the next screen.** If a button, a deep link or the back gesture changes the screen while a bottom sheet is open, the sheet closes first.
+- Under the hood: the rig can roll a lying figure onto its side, shift sideways, and set each foot's width; the figure tests now cover every new template (finite numbers, nothing through the floor, hands on their grips, nothing through the table or wall).
+
 ## 0.12.0 — Daily missions, weigh-in streaks and body-comp badges (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

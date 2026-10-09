@@ -7,7 +7,7 @@
 // sleeps while the workout is paused or resting. The view box is fitted to the whole rep at mount.
 // Pure code and data: offline, no downloads. Templates: js/ui/poses.js. Skeleton and camera: js/ui/rig.js.
 import { TEMPLATES, EXERCISE_TEMPLATES } from './poses.js';
-import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, drawOrder, frameBox } from './rig.js';
+import { BODY, BODY_PARTS, solve, camera, boneMatrix, repPhases, progressAt, paramsAt, propParts, loopEnds, drawOrder, frameBox } from './rig.js';
 import { onFrame, reducedMotion } from './motion.js';
 
 export const hasFigure = (exerciseId) => !!EXERCISE_TEMPLATES[exerciseId];
@@ -327,6 +327,10 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     } else if (/^(cable|band)[NF]$/.test(name)) {
       const band = name.startsWith('band');
       g._line = el('line', { stroke: band ? '#e0663f' : '#c3cad3', 'stroke-width': (band ? 0.022 : 0.008) * s, 'stroke-linecap': 'round', opacity: name.endsWith('F') ? 0.6 : 1 }, g);
+    } else if (name === 'towel' || /^strap[NF]$/.test(name)) {
+      g._line = el('line', { stroke: name === 'strapF' ? '#a9b3c2' : '#d7dee9', 'stroke-width': 0.034 * s, 'stroke-linecap': 'round', opacity: name === 'strapF' ? 0.7 : 1 }, g);
+    } else if (name === 'loop') {
+      g._line = el('line', { stroke: '#e0663f', 'stroke-width': 0.026 * s, 'stroke-linecap': 'round' }, g);
     } else if (name === 'ball') {
       g._b = el('circle', { r: 0.11 * s, fill: '#3b3128', stroke: '#6b5a48', 'stroke-width': 1.2 }, g);
     } else if (name === 'wheel') {
@@ -386,13 +390,22 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
         }
         for (const [a, b2] of e.pads) slab(a, b2, w, 0.07, ['#4a3a32', '#2c231e', '#3a2e27'], e.z || 0);
       } else if (e.type === 'box') {
-        slab([e.x0, e.h], [e.x1, e.h], e.w ?? 0.5, e.h, ['#4b4035', '#2e271f', '#3b3229']);
+        slab([e.x0, e.h], [e.x1, e.h], e.w ?? 0.5, e.h, ['#4b4035', '#2e271f', '#3b3229'], e.z || 0);
       } else if (e.type === 'wall') {
         slab([e.x, 2.4], [e.x + 0.12, 2.4], 1.6, 2.4, ['#2a3038', '#1d2228', '#262c33']);
       } else if (e.type === 'stack') {
         slab([e.x - 0.12, e.h], [e.x + 0.12, e.h], 0.3, e.h, ['#2f363f', '#1f242a', '#282e35']);
       } else if (e.type === 'rails') {
         for (const z of [0.55, -0.55]) post(e.x, 0, 2.2, z, 0.045);
+      } else if (e.type === 'table') {
+        // A top slab on four legs (the far legs sit behind the figure).
+        const w = e.w ?? 0.8;
+        for (const z of [-w / 2 + 0.05, w / 2 - 0.05]) for (const x of [e.x0 + 0.06, e.x1 - 0.06]) post(x, 0, e.h - 0.04, z, 0.05);
+        slab([e.x0, e.h], [e.x1, e.h], w, 0.04, ['#5a4636', '#33271d', '#45352a']);
+      } else if (e.type === 'doorframe') {
+        // Two jambs with the doorway between them; the top runs off the demo box.
+        const w = e.w ?? 0.86;
+        for (const z of [-w / 2, w / 2]) post(e.x, 0, 2.1, z, 0.07);
       } else if (e.type === 'floorpad') {
         slab([e.x0, 0.02], [e.x1, 0.02], 0.6, 0.02, ['#262c33', '#1b1f24', '#20252b']);
       }
@@ -478,6 +491,7 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
       for (const kind of ['cable', 'band']) {
         if (g[kind + S]) line(g[kind + S]._line, grip, [tpl.anchor[0], tpl.anchor[1], grip[2] * (tpl.anchorZ ?? 1)]);
       }
+      if (g['strap' + S]) line(g['strap' + S]._line, grip, [tpl.anchor[0], tpl.anchor[1], grip[2] * (tpl.anchorZ ?? 1)]);
       if (g['dip' + S]) {
         const y = tpl.dipY ?? 1.15;
         const z = side * 0.26;
@@ -492,6 +506,8 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
         g['ring' + S]._ring.setAttribute('cy', f1(P0[1]));
       }
     }
+    if (g.towel) line(g.towel._line, j.gripN, j.gripF);
+    if (g.loop) line(g.loop._line, ...loopEnds(tpl, j));
     const mg = [(j.gripN[0] + j.gripF[0]) / 2, (j.gripN[1] + j.gripF[1]) / 2, (j.gripN[2] + j.gripF[2]) / 2];
     if (g.goblet) {
       const P0 = project([mg[0], mg[1] + 0.03, mg[2]]);
@@ -523,11 +539,11 @@ export function mountFigure(container, ex, { isPaused = () => false, slow = fals
     }
     bone('torso', j.pelvis, j.chest, BODY.spine, j.fwd);
     bone('pelvis', j.pelvis, j.chest, BODY.spine, j.fwd);
-    bone('neck', [j.chest[0] - j.up[0] * 0.02, j.chest[1] - j.up[1] * 0.02, 0], j.neck, LIMB.neck.L, j.fwd);
-    bone('head', j.neck, [j.neck[0] + j.headUp[0] * 0.24, j.neck[1] + j.headUp[1] * 0.24, 0], 0.24, j.headFwd);
+    bone('neck', [j.chest[0] - j.up[0] * 0.02, j.chest[1] - j.up[1] * 0.02, j.chest[2] - j.up[2] * 0.02], j.neck, LIMB.neck.L, j.fwd);
+    bone('head', j.neck, [j.neck[0] + j.headUp[0] * 0.24, j.neck[1] + j.headUp[1] * 0.24, j.neck[2] + j.headUp[2] * 0.24], 0.24, j.headFwd);
 
     // Shadow under the feet (smaller and fainter when hanging).
-    const O = project([(j.ankleN[0] + j.ankleF[0]) / 2, 0, 0]);
+    const O = project([(j.ankleN[0] + j.ankleF[0]) / 2, 0, (j.ankleN[2] + j.ankleF[2]) / 2]);
     const air = Math.max(0, Math.min(j.ankleN[1], j.ankleF[1]) - BODY.ankleY);
     groups.shadow.setAttribute('transform', `translate(${f1(O[0])},${f1(O[1])}) scale(${(1 - Math.min(0.6, air * 0.8)).toFixed(2)})`);
     groups.shadow.setAttribute('opacity', Math.max(0.3, 1 - air * 1.5).toFixed(2));

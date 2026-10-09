@@ -3,6 +3,9 @@
 import { reducedMotion, DUR } from './ui/motion.js';
 import { icon } from './ui/icons.js';
 import { shouldDismiss, rubberBand, dragProgress, velocityOf } from './ui/gesture.js';
+import { registerSheet } from './ui/sheets.js';
+
+export { closeAllSheets } from './ui/sheets.js';
 
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,9 +50,11 @@ export function sheet(title, render) {
     <div class="sheet-body"></div>`;
   document.body.appendChild(dlg);
   let closing = false;
+  let forget = () => {};
   const close = () => {
     if (closing) return;
     closing = true;
+    forget();
     dlg.classList.remove('dragging');
     dlg.style.removeProperty('--sheet-y'); // the .closing class slides it the rest of the way
     dlg.style.removeProperty('--sheet-p');
@@ -104,6 +109,7 @@ export function sheet(title, render) {
   dlg.addEventListener('click', (e) => {
     if (e.target === dlg) close(); // tap on the dimmed backdrop
   });
+  forget = registerSheet(close);
   render(dlg.querySelector('.sheet-body'), close);
   dlg.showModal();
   void dlg.offsetHeight; // lock in the off-screen start, then let it spring up

@@ -4,13 +4,13 @@
 // so one template covers several exercises.
 
 const CAM = { yaw: 20, pitch: 7, scale: 100, x: 100, ground: 200 };
-const STD = { ecc: 2, pause: 0.4, con: 1.1, top: 0.7 };
+export const STD = { ecc: 2, pause: 0.4, con: 1.1, top: 0.7 };
 const SLOW = { ecc: 3.5, pause: 1, con: 1.1, top: 0.8 };
-const HOLD = { ecc: 1.6, pause: 1.6, con: 1.6, top: 1.6 }; // isometric holds: a slow breath in and out
+export const HOLD = { ecc: 1.6, pause: 1.6, con: 1.6, top: 1.6 }; // isometric holds: a slow breath in and out
 
-const T = (o) => ({ first: 'up', tempo: STD, slow: SLOW, ...o, cam: { ...CAM, ...(o.cam || {}) } });
-const STAND = (o = {}) => ({ root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.13, kneesOut: 0.25 }, arms: 'fk', ...o });
-const HANG_ARMS = { shN: 0, elN: 0, shF: 0, elF: 0, abd: 6 };
+export const T = (o) => ({ first: 'up', tempo: STD, slow: SLOW, ...o, cam: { ...CAM, ...(o.cam || {}) } });
+export const STAND = (o = {}) => ({ root: 'pelvis', legs: 'ik', feet: { x: 0, z: 0.13, kneesOut: 0.25 }, arms: 'fk', ...o });
+export const HANG_ARMS = { shN: 0, elN: 0, shF: 0, elF: 0, abd: 6 };
 
 // Benches and boxes (world metres; the figure faces +x).
 const FLAT_BENCH = { type: 'bench', pads: [[[-1.05, 0.45], [0.3, 0.45]]] };
