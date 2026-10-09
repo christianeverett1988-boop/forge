@@ -34,6 +34,8 @@ const P = {
   medal: '<circle cx="12" cy="14" r="5.5"/><path d="M8.5 9.5L6.5 3.5h4l1.5 3 1.5-3h4l-2 6M12 11.8l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z"/>',
   arrowup: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   arrowdown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  arrowright: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  flat: '<path d="M5 12h14"/>',
   refresh: '<path d="M19.5 12a7.5 7.5 0 11-2.4-5.5M19.5 4.5v4h-4"/>',
   calendar: '<rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
   tape: '<rect x="3" y="8" width="18" height="8" rx="2"/><path d="M7 8v3.2M11 8v4.5M15 8v3.2M19 8v4.5"/>',

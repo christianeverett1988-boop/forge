@@ -9,8 +9,8 @@ import { parseCountText, formatCount } from '../js/ui/motion.js';
 const p = (hash) => hash.replace(/^#\/?/, '').split('/');
 
 test('route depth: tab roots are 0, detail screens 1, deeper screens 2', () => {
-  for (const r of ['today', 'train', 'body', 'weight', 'history', 'awards', 'score', 'settings', 'progress']) eq(routeDepth([r]), 0, r);
-  for (const r of ['session', 'library', 'timer', 'locations', 'withings', 'apple', 'metric', 'profile']) eq(routeDepth([r]), 1, r);
+  for (const r of ['today', 'train', 'body', 'weight', 'score', 'trends', 'weekly', 'settings', 'progress']) eq(routeDepth([r]), 0, r);
+  for (const r of ['session', 'library', 'timer', 'locations', 'withings', 'apple', 'metric', 'profile', 'history', 'awards']) eq(routeDepth([r]), 1, r);
   eq(routeDepth(p('#/play')), 2);
   eq(routeDepth(p('#/summary/abc')), 2);
   eq(routeDepth(p('#/withings/check')), 2, 'Data check sits on Withings');
@@ -26,7 +26,8 @@ test('transition kind: deeper = push, shallower = pop, tab to tab = crossfade', 
   eq(transitionKind(p('#/summary/x'), p('#/today')), 'pop');
   eq(transitionKind(p('#/today'), p('#/settings')), 'tab');
   eq(transitionKind(p('#/settings'), p('#/today')), 'tab');
-  eq(transitionKind(p('#/weight'), p('#/history')), 'tab', 'Progress siblings crossfade');
+  eq(transitionKind(p('#/weight'), p('#/trends')), 'tab', 'Progress siblings crossfade');
+  eq(transitionKind(p('#/weight'), p('#/history')), 'push', 'History is a row under Weight');
   eq(transitionKind(p('#/withings'), p('#/withings/check')), 'push');
   eq(transitionKind(p('#/withings/check'), p('#/withings')), 'pop');
 });
@@ -42,6 +43,12 @@ test('back target: roots have none; detail screens go to their parent', () => {
   eq(backTarget(p('#/metric/weight_kg')), '#/body');
   eq(tabOf('metric'), 'body');
   eq(tabOf('awards'), 'weight');
+  eq(tabOf('trends'), 'weight');
+  eq(tabOf('weekly'), 'weight');
+  eq(backTarget(p('#/history')), '#/weight');
+  eq(backLabel(p('#/awards')), 'Progress');
+  eq(backTarget(p('#/trends')), null);
+  eq(backTarget(p('#/weekly')), null);
 });
 
 test('scroll memory: each tab root keeps its own position; detail screens always start at the top', () => {
@@ -143,6 +150,11 @@ test('every input / select / textarea font size in the CSS is at least 16px', ()
     }
   }
   assert(checked >= 1, 'found no input font sizes to check');
+});
+
+test('CSS: a global [hidden] rule beats class rules that set display', () => {
+  const css = readFileSync(new URL('../css/app.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert(/(^|\n)\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css), 'css/app.css needs [hidden] { display: none !important }');
 });
 
 test('shell: no spinner, no floating sync pill, manifest has id and a maskable icon', () => {

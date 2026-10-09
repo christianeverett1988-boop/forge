@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0 — Trends, insights, weekly report, goal path and Body Profile (W2b) (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish. Everything is worked out on your phone from the data you already have.
+
+- **Progress → Trends:** every number in one grouped list (weight, body fat, fat mass, fat-free mass, muscle, water, visceral fat, standing heart rate, HRV, resting heart rate, sleep, steps, exercise minutes) with a tiny chart, today's value and how it moved per week over the last 4 weeks. An arrow only counts when the change is real (not just day-to-day wobble). Green or red shows only where it's clear what's good for your goal; the rest stays grey. Tap one for its chart.
+- **Progress now has four tabs:** Weight · Trends · Score · Week. History and Awards moved to two rows at the bottom of Weight (they didn't fit next to the switcher at phone width).
+- **Metric screens** switch between 7, 28, 90 days, 1 year and All, compare this period with the one before, and say in a sentence which way it's going. HRV, resting heart rate, sleep, steps and exercise minutes have their own screens too.
+- **Insight cards** on Today and Body: at most three, picked by how much they matter and how recent they are. Each says what's happening, why, and one thing to try. Tap for the chart; the close button hides it for 7 days (old hides are tidied away automatically). Examples: "Likely water. Your trend hasn't changed.", "Nice cut" (fat down, muscle steady), HRV low for a week, resting heart rate up for 3 days, short sleep three nights running, wrist temperature up for two nights, or a long gap since your last weigh-in. Heart-rate and temperature cards remind you it isn't medical advice.
+- **Progress → Week (weekly report):** Monday to Sunday, in your own time zone (on Sunday it says "so far this week"). Forge Score and each part vs. the week before, weight and body-fat changes, workouts done vs. planned, total weight lifted, PRs, cardio minutes, average HRV, resting heart rate and sleep, your best and worst number, and one suggestion for next week. The arrows browse older weeks. Share sends a short text summary. On Sunday and Monday Today shows a small card for it.
+- **Goal path** on Body and Weight (replaces the old "around this date" line): your date to reach your goal weight with a likely range, your pace next to the usual safe limit, and, if your scale reads body composition, an estimate of the daily calorie balance behind your changes. If your trend is going the other way it says so kindly and gives no date.
+- **Body Profile** on Body: lean mass and body fat on one 4×4 grid, with a bright dot for now and faint dots for earlier months. Needs your height and fat mass from the scale. The ranges are approximate and not adjusted for age (see `docs/trends.md`).
+- Formulas and thresholds are written down in `docs/trends.md`.
+- **Review round 1:** the Body Profile grid now fits the card (square cells, labels below, a "You" label on the dot); Today, Weight and Body give one goal date (Today's sentence and the chart's dotted line come from the Goal path); Today shows at most two compact insight cards after Daily targets (tap to open Why / Try; the sleep one is skipped when Readiness already blames sleep); a change too small to show reads "same as last week" with no sign or colour; metric screens show the unit on "vs previous"; the weigh-in list on Weight is called Weigh-ins; Share ends with "Shared from Forge" and falls back to copying; Body Profile cut points follow the commonly used FMI scheme; the training-sets control is a switch.
+- **Review round 2:** the compact insight cards on Today stay closed until tapped (a global `[hidden] { display: none !important }` in `css/app.css` stops any class that sets `display` from showing a hidden element).
+
 ## 0.6.0 — A new look: near-black, calm and premium (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy. (This is Part B of issue #18, the visual restyle.)

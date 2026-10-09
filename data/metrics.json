@@ -74,7 +74,8 @@
       "moves": "Drinking, sweating, salt, carbs, alcohol, illness.",
       "ranges": "Roughly half to two-thirds of body weight in adults; leaner people sit higher.",
       "caveats": "This is the number that explains most surprise weight jumps.",
-      "in_forge": "When weight jumps and water jumps with it, Forge calls it water, not fat (W2 trend cards)."
+      "in_forge": "When weight jumps and water jumps with it, Forge calls it water, not fat (Trends and insight cards).",
+      "noise_floor_per_week": 0.2
     },
     "bone_mass_kg": {
       "name": "Bone mass",
@@ -94,7 +95,8 @@
       "moves": "Time since waking, coffee, stress, poor sleep, illness, fitness over months.",
       "ranges": "60–100 bpm is the usual adult resting range (American Heart Association); standing reads a bit higher than lying down.",
       "caveats": "Not the same as resting heart rate from your Watch overnight. Compare like with like.",
-      "in_forge": "From W2, shown next to your Watch's overnight resting heart rate."
+      "in_forge": "Shown next to your Watch's overnight resting heart rate.",
+      "noise_floor_per_week": 0.5
     },
     "visceral_fat": {
       "name": "Visceral fat",
@@ -104,7 +106,8 @@
       "moves": "Overall fat loss or gain; it usually falls early in a fat-loss phase.",
       "ranges": "Withings' index has no published external standard. Compare with yourself over months.",
       "caveats": "An estimate, not an MRI. Only returned if your Withings API plan includes it (see the data check).",
-      "in_forge": "Trend over 90 days."
+      "in_forge": "Trend over 90 days.",
+      "noise_floor_per_week": 0.1
     },
     "bmr_kcal": {
       "name": "BMR",
@@ -175,6 +178,61 @@
       "ranges": "Reference bands by sex in Kyle et al., 2003 (used by the Forge Score from W2).",
       "caveats": "Inherits bioimpedance error.",
       "in_forge": "Shown next to BMI."
+    },
+    "hrv_sdnn_ms": {
+      "name": "HRV",
+      "unit": "ms",
+      "what": "Heart rate variability: how much the time between heartbeats varies. Higher usually means you are well recovered.",
+      "how": "Your Apple Watch measures it (SDNN) during the day and at night and sends it to Forge through Apple Health.",
+      "moves": "Sleep, stress, alcohol, illness, hard training and fitness over months.",
+      "ranges": "Very personal. Compare with your own normal, not with other people.",
+      "caveats": "Single readings jump around. Forge looks at the weekly trend and your 4-week normal.",
+      "in_forge": "Feeds Readiness and the Forge Score. An HRV 15% below your normal for a week gets a card.",
+      "noise_floor_per_week": 1
+    },
+    "rhr_bpm": {
+      "name": "Resting heart rate",
+      "unit": "bpm",
+      "what": "Your heart rate when you are calm, as measured by your Apple Watch.",
+      "how": "Apple Watch estimates it from quiet moments through the day and sends it to Forge through Apple Health.",
+      "moves": "Fitness (lower over months), poor sleep, stress, heat, illness and alcohol (higher).",
+      "ranges": "60–100 bpm is the usual adult range (American Heart Association). Athletes are often lower.",
+      "caveats": "Compare with your own normal. Not medical advice; if you feel unwell, talk to a doctor.",
+      "in_forge": "Feeds Readiness and the Forge Score. 5 bpm above your normal for 3 days gets a card.",
+      "noise_floor_per_week": 0.5
+    },
+    "sleep_min": {
+      "name": "Sleep",
+      "unit": "minutes",
+      "what": "How long you were asleep each night, from your Apple Watch.",
+      "how": "Apple Health sleep stages summed up for the night that ended on that day.",
+      "moves": "Bedtime, stress, caffeine, alcohol, light and room temperature.",
+      "ranges": "Most adults do best with 7–9 hours (American Academy of Sleep Medicine and Sleep Research Society).",
+      "caveats": "Wrist sleep tracking is an estimate. The trend matters more than one night.",
+      "in_forge": "Feeds Readiness and the Forge Score. Under 6 hours three nights running gets a card.",
+      "noise_floor_per_week": 5
+    },
+    "steps": {
+      "name": "Steps",
+      "unit": "steps",
+      "what": "Steps you walk each day, from your iPhone or Watch.",
+      "how": "Counted by the motion sensors and sent through Apple Health (one source per day, so nothing is counted twice).",
+      "moves": "Your routine, the weather and how busy the week is.",
+      "ranges": "Studies link more daily steps to better health, with most of the benefit by about 7,000–10,000 a day.",
+      "caveats": "Carrying your phone or wearing your Watch matters. Pushing a pram can undercount.",
+      "in_forge": "Shown in Trends and the weekly report.",
+      "noise_floor_per_week": 300
+    },
+    "exercise_min": {
+      "name": "Exercise minutes",
+      "unit": "minutes",
+      "what": "Minutes of brisk activity each day, as counted by your Apple Watch.",
+      "how": "Apple counts minutes at or above a brisk walk and sends them through Apple Health.",
+      "moves": "Your workouts, walks and active days.",
+      "ranges": "Health guidelines suggest at least 150 minutes of moderate activity a week.",
+      "caveats": "Strength training can count low on a wrist. Forge counts your logged workouts separately.",
+      "in_forge": "Shown in Trends and the weekly report.",
+      "noise_floor_per_week": 3
     }
   }
 }

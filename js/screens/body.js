@@ -3,7 +3,9 @@
 // this week. (Strength score and weekly set targets come later.)
 import { myBodyMeasures } from '../derived.js';
 import { state, units as getUnits } from '../state.js';
-import { esc, $$, sheet } from '../ui.js';
+import { esc, $$, sheet, todayKey } from '../ui.js';
+import { topInsights, dismissInsight, intel, currentGoalPath, currentEnergy, currentBodyProfile } from '../health/intel.js';
+import { insightCardsHtml, bindInsightCards, goalPathHtml, bodyProfileHtml } from '../health/cards.js';
 import { currentRecovery, historyIndex } from '../workouts/plan.js';
 import { exerciseById } from '../workouts/library.js';
 import { MUSCLE_LABELS, muscleStats } from '../workouts/recovery.js';
@@ -51,6 +53,17 @@ function compositionCard() {
   </div>`;
 }
 
+function insightCards() {
+  const cards = topInsights(3);
+  return cards.length ? `<div class="insights stack" data-insights>${insightCardsHtml(cards)}</div>` : '';
+}
+
+/** Goal path for the Body tab (also used on the weight screen). */
+export function goalPathCard() {
+  const goalKg = state.profile && state.profile.targetWeightKg;
+  return goalPathHtml(currentGoalPath(), currentEnergy(), { series: intel().weights, today: todayKey(), goalKg, units: getUnits() });
+}
+
 export function renderBody(el) {
   const rec = currentRecovery();
   const fresh = SHOW.filter((m) => rec[m] >= 85).length;
@@ -64,7 +77,11 @@ export function renderBody(el) {
         <div><b data-count>${fresh}</b><span>fresh muscle groups</span></div>
         <div><b data-count>${days == null ? '—' : days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>
       </div>
+      ${insightCards()}
       ${compositionCard()}
+      ${goalPathCard()}
+      ${bodyProfileHtml(currentBodyProfile(), state.profile || {})}
+      <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
       <div class="card">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>
         ${bodyMap(rec, { mode: 'recovery', tappable: true })}
@@ -78,6 +95,7 @@ export function renderBody(el) {
       </div>
     </section>`;
 
+  bindInsightCards(el, dismissInsight);
   const open = (region) => {
     const [side, slug] = region.split(':');
     const ms = musclesIn(side, slug);

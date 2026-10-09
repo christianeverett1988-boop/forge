@@ -9,12 +9,12 @@ export const TAB_FOR = {
   session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
   history: 'weight', awards: 'weight', score: 'weight',
   locations: 'settings', profile: 'settings', withings: 'settings', apple: 'settings',
-  metric: 'body', progress: 'weight',
+  metric: 'body', progress: 'weight', trends: 'weight', weekly: 'weight',
 };
 export const tabOf = (route) => TAB_FOR[route] || route;
 
 // Screens that live at the root of a tab (the Progress tab has four siblings behind its segmented control).
-const ROOTS = new Set(['progress', 'today', 'train', 'body', 'weight', 'history', 'awards', 'score', 'settings']);
+const ROOTS = new Set(['progress', 'today', 'train', 'body', 'weight', 'score', 'trends', 'weekly', 'settings']);
 // Screens pushed on top of another one, one level deeper than their parent.
 const DEPTH_2 = new Set(['play', 'summary']);
 
@@ -60,7 +60,7 @@ export function backLabel(parts) {
 }
 
 /** Large-title screens that should not show the title of their own sub-page (Progress shows one header). */
-export const TITLE_FOR = { weight: 'Progress', history: 'Progress', awards: 'Progress', score: 'Progress' };
+export const TITLE_FOR = { weight: 'Progress', trends: 'Progress', score: 'Progress', weekly: 'Progress' };
 
 /** Per-tab scroll memory: tab roots restore where you left them; detail screens always start at the top. */
 export function createScrollMemory() {

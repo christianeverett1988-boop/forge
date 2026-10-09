@@ -1,7 +1,7 @@
 import { state, units as getUnits } from '../state.js';
 import { esc, $, isStandalone, isIOS } from '../ui.js';
 import { weightToDisplay, weightUnit } from '../units.js';
-import { trendChange, projectGoalDate } from '../weight/smoothing.js';
+import { trendChange } from '../weight/smoothing.js';
 import { sparklineSVG } from '../weight/chart.js';
 import { weightSeries, currentTargets } from '../derived.js';
 import { FLOOR_SOURCE } from '../nutrition/targets.js';
@@ -18,6 +18,10 @@ import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
+import { topInsights, dismissInsight, reportFor, currentReportWeek, currentGoalPath } from '../health/intel.js';
+import { compactInsightsHtml, bindInsightCards } from '../health/cards.js';
+import { goalLine } from '../health/goalpath.js';
+import { showReportCard } from '../health/weekly.js';
 
 function workoutCard() {
   const active = activeWorkout();
@@ -95,6 +99,26 @@ function scoreCard() {
     <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
 }
 
+/** Sunday / Monday: the weekly report, with its one suggestion. */
+function weeklyCard() {
+  if (!showReportCard(todayKey())) return '';
+  const r = reportFor(currentReportWeek());
+  if (!r.hasData) return '';
+  return `<a class="card stack nav-card" href="#/weekly" data-weekly-card>
+    <p class="label">${r.partial ? 'Your week so far' : 'Your week'}</p>
+    <p class="big-title">${r.training.workouts} of ${r.training.planned} workouts${r.score.delta ? ` · Score ${r.score.delta > 0 ? 'up' : 'down'} ${Math.abs(round(r.score.delta))}` : ''}</p>
+    <p class="small muted">${esc(r.suggestion.text)}</p><span class="small link">See the full report${icon('chev')}</span></a>`;
+}
+
+/** At most 2 compact insight cards (ranked by severity × recency); tap to expand, hide for 7 days. Full cards live on Body. */
+function insightsBlock() {
+  const r = currentReadiness();
+  // Readiness already says "short sleep" when it is amber or red for sleep: don't say it twice.
+  const sleepShown = r.status === 'ok' && r.level !== 'green' && (r.parts || []).some((p) => p.key === 'sleep' && p.dir === 'bad');
+  const cards = topInsights(4).filter((c) => !(sleepShown && c.id === 'anomaly:sleep')).slice(0, 2);
+  return cards.length ? `<div class="insights stack" data-insights>${compactInsightsHtml(cards)}</div>` : '';
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
@@ -108,7 +132,8 @@ export function renderToday(el) {
   const change = trendChange(series, 7);
   const goal = state.profile.goal;
   const goalKg = state.profile.targetWeightKg;
-  const projection = goalKg ? projectGoalDate(series, goalKg) : null;
+  const fmtGoalDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) });
+  const goalSentence = goalKg ? goalLine(currentGoalPath(), fmtGoalDay) : ''; // same fit as the Goal path card
 
   // Arrow color: green when the trend moves the way your goal wants.
   let arrow = '→', tone = 'neutral';
@@ -150,6 +175,8 @@ export function renderToday(el) {
 
       ${scoreCard()}
 
+      ${weeklyCard()}
+
       <div class="card weight-card">
         <div class="row between center">
           <div>
@@ -159,7 +186,7 @@ export function renderToday(el) {
           </div>
           ${sparklineSVG(series)}
         </div>
-        ${projection && !projection.reached ? `<p class="small muted">On pace for your goal around ${new Date(projection.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>` : ''}
+        ${goalSentence ? `<p class="small muted" data-goal-line>${esc(goalSentence)}</p>` : ''}
         <div class="row gap">
           <button class="btn grow" data-log>Log weight</button>
           <a class="btn ghost grow" href="#/weight">See chart</a>
@@ -184,6 +211,8 @@ export function renderToday(el) {
         </details>
       </div>
 
+      ${insightsBlock()}
+
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
 
@@ -205,6 +234,7 @@ export function renderToday(el) {
     overrideReadiness(false);
     renderToday(el);
   };
+  bindInsightCards(el, dismissInsight);
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);
   animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));
