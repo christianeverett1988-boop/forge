@@ -16,6 +16,7 @@
 // and js/ui/poses-home.js the home, travel and bodyweight moves (table, towel, doorframe, floor, mobility).
 import { LIBRARY, LIBRARY_MAP } from './poses-lib.js';
 import { HOME, HOME_MAP } from './poses-home.js';
+import { KB, KB_MAP } from './poses-kb.js';
 
 export const TEMPLATES = {
   squat_barbell: {
@@ -60,7 +61,7 @@ export const TEMPLATES = {
   },
 };
 
-Object.assign(TEMPLATES, LIBRARY, HOME);
+Object.assign(TEMPLATES, LIBRARY, HOME, KB);
 
 /** Exercise id → template. Anything not listed falls back to photos or the muscle list. */
 export const EXERCISE_TEMPLATES = {
@@ -75,6 +76,7 @@ export const EXERCISE_TEMPLATES = {
   backpack_rdl: 'rdl', stair_step_up: 'step_up',
   ...LIBRARY_MAP,
   ...HOME_MAP,
+  ...KB_MAP,
 };
 
 export const templateFor = (exerciseId) => TEMPLATES[EXERCISE_TEMPLATES[exerciseId]] || null;

@@ -18,7 +18,7 @@ import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
-import { missionsCard, afterMissionsRender } from '../missions/ui.js';
+import { missionsCard, afterMissionsRender, badgeCelebrationCards, afterBadgeCelebrations } from '../missions/ui.js';
 import { coachData } from '../coach/data.js';
 import { availableQuestions } from '../coach/answers.js';
 
@@ -167,6 +167,8 @@ export function renderToday(el) {
         <h1>${greeting()}</h1>
       </header>
 
+      ${badgeCelebrationCards()}
+
       ${installHint ? `
         <div class="notice info">
           <b>Install this app first.</b> Tap the Share button, then <b>Add to Home Screen</b>, and open it from there.
@@ -254,6 +256,7 @@ export function renderToday(el) {
   };
   bindInsightCards(el, dismissInsight);
   afterMissionsRender();
+  afterBadgeCelebrations(el);
   import('../photos/cards.js').then((m) => m.mountPhotoReminder($('[data-photo-reminder]', el)));
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);

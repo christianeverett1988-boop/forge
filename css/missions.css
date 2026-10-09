@@ -28,6 +28,16 @@
   .ms-pop { animation: ms-spring .5s var(--ease-spring) both; }
   @keyframes ms-spring { 0% { transform: scale(.4); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
 }
+/* New mission badge on Today */
+.ms-badge { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 12px; min-height: var(--tap, 48px); }
+.ms-badge-text { display: grid; gap: 2px; }
+.ms-badge-text b { font-size: 17px; }
+.ms-badge-links { display: grid; justify-items: end; }
+.ms-badge-links .link { display: inline-flex; align-items: center; min-height: 44px; }
+.ms-badge-x { width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text-3); display: grid; place-items: center; cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) {
+  .ms-badge { animation: ms-spring .5s var(--ease-spring) both; }
+}
 @media (prefers-reduced-motion: reduce) {
   .ms-pop { animation: ms-fade .25s linear both; }
   @keyframes ms-fade { from { opacity: 0; } }

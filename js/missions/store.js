@@ -10,7 +10,7 @@ import { streak } from '../workouts/awards.js';
 import {
   DEFAULTS, indexDays, missionsFor, missionXP, weekDots, allDone, dayXP, localDay, shiftDay, MISSION_XP, ALL_DONE_XP,
 } from './core.js';
-import { missionBadges } from './badges.js';
+import { missionBadges, newMissionBadges } from './badges.js';
 
 const XP_BADGE = 100;
 export const today = () => localDay(Date.now());
@@ -63,6 +63,11 @@ export function weekProgress() {
 export function extraBadges() {
   const idx = liveIndex();
   return missionBadges({ weighDays: [...idx.weigh], bodyMeasures: state.body_measures || [], seen: (state.settings && state.settings.awards_seen) || {}, units: getUnits() });
+}
+
+/** Mission badges earned since missions started that Today hasn't celebrated yet. */
+export function unseenMissionBadges() {
+  return newMissionBadges(extraBadges(), state.settings && state.settings.awards_seen, startedDay());
 }
 
 /**

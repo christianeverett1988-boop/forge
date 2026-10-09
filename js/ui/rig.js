@@ -171,7 +171,9 @@ export function solve(tpl, P) {
   }
   const rollAxis = r.roll && r.root === 'plank' ? norm([(r.pivot.dir ?? 1) * Math.cos(rad(P.line ?? 0)), Math.sin(rad(P.line ?? 0)), 0]) : null;
   const rollOrigin = rollAxis ? [r.pivot.at[0], r.pivot.at[1] + air, 0] : null;
-  const up = trunkDir(trunk);
+  // param `lean` tips the trunk sideways about the forward axis (negative = toward the near side): side bends.
+  const lean = (v) => (P.lean ? rotAbout(v, [0, 0, 0], [1, 0, 0], P.lean) : v);
+  const up = lean(trunkDir(trunk));
   const fwd = trunkFwd(trunk);
   // Bar on the upper back (back squat) or across the front of the shoulders (front squat, rack).
   const barLocal = () => (r.barSide === 'front'
@@ -186,7 +188,7 @@ export function solve(tpl, P) {
     j.pelvis = [px, P.py + air, P.pz || 0]; // pz shifts the whole body sideways (lateral lunges, skater hops)
   }
   j.chest = j.chest || add(j.pelvis, mul(up, BODY.spine));
-  const headUp = trunkDir(trunk + (P.head || 0));
+  const headUp = lean(trunkDir(trunk + (P.head || 0)));
   j.up = up;
   j.fwd = fwd;
   j.headUp = headUp;
@@ -196,7 +198,7 @@ export function solve(tpl, P) {
     j.neck = add(j.chest, mul(headUp, BODY.neck));
     j.head = add(j.neck, mul(headUp, BODY.headR + 0.01));
     for (const [S, side] of [['N', -1], ['F', 1]]) {
-      j['shoulder' + S] = add(add(j.chest, [0, 0, side * BODY.shoulderZ]), mul(up, -BODY.shoulderDrop - (P.shrug || 0) * -1));
+      j['shoulder' + S] = add(add(j.chest, lean([0, 0, side * BODY.shoulderZ])), mul(up, -BODY.shoulderDrop - (P.shrug || 0) * -1));
       j['hip' + S] = add(j.pelvis, [0, 0, side * BODY.hipZ]);
     }
   };
@@ -241,6 +243,10 @@ export function solve(tpl, P) {
         j['handDir' + S] = norm(sub(target, end));
       }
       j['handTip' + S] = add(j['wrist' + S], mul(j['handDir' + S], BODY.hand));
+      // param `kb` (sagittal degrees, 0 = down, 90 = forward, 180 = up) points a kettlebell's body somewhere other
+      // than along the forearm: hanging under the hand, resting in the rack, or behind the wrist overhead.
+      const kbA = P['kb' + S] ?? P.kb;
+      if (kbA != null) j['kbDir' + S] = sag(kbA);
     }
   };
   placeArms();
@@ -388,6 +394,14 @@ export function propParts(tpl) {
   return out;
 }
 
+/** Which way a kettlebell's body lies from its handle: param `kb`, else along the forearm (tpl.kbOrient = 'arm'), else hanging. */
+export function bellDir(tpl, j, S) {
+  if (j['kbDir' + S]) return j['kbDir' + S];
+  if (tpl.kbOrient === 'arm') return norm(sub(j['grip' + S], j['wrist' + S]));
+  return [0, -1, 0];
+}
+export const BELL_OFFSET = 0.11; // handle → bell centre (metres)
+
 /** Ends of a mini-band loop: each of tpl.loop.a / .b is a joint name, 'thighN' / 'thighF' (just above the knee) or a world point. */
 export function loopEnds(tpl, j) {
   const pt = (s) => {
@@ -498,7 +512,7 @@ export function frameBox(tpl, project, phases, n = 16) {
     }
     if (parts.includes('pbM')) take([tpl.rig.hands.x, tpl.rig.hands.y + 0.05, 0]);
     if (parts.includes('goblet')) take([j.gripN[0], j.gripN[1] - 0.25, 0]);
-    if (parts.some((p) => p.startsWith('kb'))) take([j.gripN[0], j.gripN[1] - 0.22, j.gripN[2]]);
+    for (const S of ['N', 'F']) if (parts.includes('kb' + S)) take(add(j['grip' + S], mul(bellDir(tpl, j, S), 0.2)));
   }
   if (!tpl.focus) {
     for (const e of tpl.env || []) {
