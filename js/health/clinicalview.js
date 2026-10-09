@@ -5,7 +5,7 @@ import { daysBetween } from '../weight/smoothing.js';
 import { weightToDisplay, weightUnit } from '../units.js';
 import { fmtClock } from '../missions/core.js';
 import {
-  RANGES, RANGE_LABEL, NOT_MEDICAL, SCORE_NOTE, EXPLAIN, fmtKgBoth, fmtKgChange, fmtHeightBoth, fmtDur, dateText,
+  RANGES, RANGE_LABEL, notMedical, SCORE_NOTE, EXPLAIN, fmtKgBoth, fmtKgChange, fmtHeightBoth, fmtDur, dateText,
 } from './clinical.js';
 
 const round1 = (x) => Math.round(x * 10) / 10;
@@ -18,7 +18,7 @@ export function weightChartSvg(points, units, { width = 340, height = 120 } = {}
   let min = Math.min(...vals);
   let max = Math.max(...vals);
   if (max - min < 1) { const mid = (max + min) / 2; min = mid - 0.5; max = mid + 0.5; }
-  const L = 38; const R = 6; const T = 8; const B = 20;
+  const L = 58; const R = 6; const T = 8; const B = 20;
   const t0 = points[0].day;
   const span = Math.max(1, daysBetween(t0, points[points.length - 1].day));
   const x = (p) => L + (daysBetween(t0, p.day) / span) * (width - L - R);
@@ -27,7 +27,7 @@ export function weightChartSvg(points, units, { width = 340, height = 120 } = {}
   const u = weightUnit(units);
   return `<svg class="rp-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Trend weight from ${esc(dateText(t0))} to ${esc(dateText(points[points.length - 1].day))}, ${min.toFixed(1)} to ${max.toFixed(1)} ${u}">
     <line x1="${L}" y1="${T}" x2="${width - R}" y2="${T}" class="rp-grid"/><line x1="${L}" y1="${height - B}" x2="${width - R}" y2="${height - B}" class="rp-grid"/>
-    <text x="${L - 4}" y="${T + 4}" text-anchor="end">${max.toFixed(1)}</text><text x="${L - 4}" y="${height - B + 4}" text-anchor="end">${min.toFixed(1)}</text>
+    <text x="${L - 4}" y="${T + 4}" text-anchor="end">${max.toFixed(1)} ${u}</text><text x="${L - 4}" y="${height - B + 4}" text-anchor="end">${min.toFixed(1)} ${u}</text>
     <text x="${L}" y="${height - 4}">${esc(dateText(t0))}</text><text x="${width - R}" y="${height - 4}" text-anchor="end">${esc(dateText(points[points.length - 1].day))}</text>
     <path d="${d}" class="rp-line"/></svg>`;
 }
@@ -62,7 +62,7 @@ function heartHtml(h) {
 
 function sleepHtml(s) {
   const rows = [row('Average asleep', fmtDur(s.avgMin), `${s.nights} night${s.nights === 1 ? '' : 's'} recorded`), row('Nights under 6 h', `${Math.round(s.shortPct)} %`, `${s.shortNights} of ${s.nights}`)];
-  if (s.bedtime) rows.push(row('Average bedtime', fmtClock(s.bedtime.avgMin), `Varies by about ${s.bedtime.spreadMin} min`));
+  if (s.bedtime) rows.push(row('Average bedtime', fmtClock(s.bedtime.avgMin), s.bedtime.spreadMin < 10 ? 'Very regular' : `Varies by about ${s.bedtime.spreadMin} min`));
   return section('Sleep', `<ul class="rp-list">${rows.join('')}</ul>`, 'sleep');
 }
 
@@ -89,7 +89,7 @@ export function reportHtml(s, units, generated) {
     <p class="rp-dates"><b>${esc(dateText(s.from))} – ${esc(dateText(s.to))}</b> (${esc(RANGE_LABEL[s.range])})</p>
     <p class="muted">Generated ${esc(dateText(generated || s.to))}</p>
     ${who.length ? `<p>${esc(who.join(' · '))}</p>` : ''}
-    <p class="muted">${esc(NOT_MEDICAL)}</p></header>`;
+    <p class="muted">${esc(notMedical(s.sources))}</p></header>`;
   const notes = s.notes.length ? section('Notes for the doctor', `<ul class="rp-notes">${s.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul><p class="rp-explain">These come from Forge’s automatic checks of the person’s own data. They are observations, not a diagnosis.</p>`, 'notes') : '';
   return `${head}${s.weight ? weightHtml(s.weight, units) : ''}${s.heart ? heartHtml(s.heart) : ''}${s.sleep ? sleepHtml(s.sleep) : ''}${s.activity ? activityHtml(s.activity) : ''}${s.score ? scoreHtml(s.score) : ''}${notes}`;
 }

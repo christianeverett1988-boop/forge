@@ -15,7 +15,7 @@ Everything is worked out on the phone from data Forge already stores. **Nothing 
 
 | Section | What it shows | Appears when |
 |---|---|---|
-| Header | Title, date range, date generated, age, sex (male/female only) and height, and "Measured at home with consumer devices (Withings scale, Apple Watch). Not a medical record." | Always on the page. **No name or email**: the builder reads only `age`, `sex`, `heightCm` from the profile. |
+| Header | Title, date range, date generated, age, sex (male/female only) and height, and a source line built from the sources actually in range (e.g. "Measured at home: weight entered by hand. Not a medical record.") | Always on the page. **No name or email**: the builder reads only `age`, `sex`, `heightCm` from the profile. |
 | Weight and body composition | Trend weight start → end and the change per week (only with at least 7 days between the first and last weigh-in, otherwise the total change), latest body fat %, fat-free mass, visceral fat index and FFMI (with its band), and a black-and-white trend chart | any weigh-in or any of those readings in the window |
 | Heart and fitness | Resting heart rate (average and trend: Theil–Sen/Mann–Kendall from `trends.js`, "not enough readings" under 6), HRV (average and last 7 days against your usual, from the v0.13.0 `hrvVsUsual`), VO₂max (latest, merged Apple/scale as in `vo2Series`, with the age and sex band when both are known), walking heart rate and SpO₂ averages | any one of them |
 | Sleep | Average asleep time, nights recorded, share of nights under 6 h, average bedtime and its spread (standard deviation, midnight-aware: 00:30 counts as later than 23:30). Bedtime needs at least 5 start times. | any night with asleep minutes |

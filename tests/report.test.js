@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test, eq, near, assert } from './harness.js';
 import { shiftDay } from '../js/health/metrics.js';
 import {
-  buildSummary, summaryText, isEmpty, fmtKgBoth, fmtKgChange, fmtHeightBoth, fmtDur, RANGES, DEFAULT_RANGE, NOT_MEDICAL,
+  buildSummary, summaryText, isEmpty, fmtKgBoth, fmtKgChange, fmtHeightBoth, fmtDur, RANGES, DEFAULT_RANGE, notMedical,
 } from '../js/health/clinical.js';
 import { reportHtml, weightChartSvg } from '../js/health/clinicalview.js';
 import { KG_PER_LB } from '../js/units.js';
@@ -24,7 +24,7 @@ function account(n = 120) {
       sleep: { asleep_min: 420 + (i % 5) * 10, in_bed_start: bedAt(i, 23, i % 2 ? 0 : 30) },
     });
     const kg = 90 - (n - i) * 0.05;
-    series.push({ day: d, kg, trend: kg });
+    series.push({ day: d, kg, trend: kg, device: true });
     if (i % 3 === 0) measures.push({ id: d, day: d, measured_at: `${d}T07:00:00Z`, metrics: { weight_kg: kg, fat_ratio_pct: 22, fat_free_mass_kg: 70, visceral_fat: 8 } });
     if (i % 2 === 0) workouts.push({ status: 'done', started_at: `${d}T17:00:00`, exercises: [{ exercise_id: 'bb_back_squat', sets: [{ done: true, weight_kg: 100, reps: 5 }] }] });
     if (i % 7 === 0) cardio.push({ started_at: `${d}T08:00:00`, duration_min: 35 });
@@ -223,7 +223,34 @@ test('no name or email anywhere in the summary, the page or the text', () => {
   const all = JSON.stringify(s) + reportHtml(s, 'imperial', TODAY) + summaryText(s, 'imperial', TODAY);
   for (const bad of ['Pat Example', 'pat@example.com', '@example', 'Pat']) assert(!all.includes(bad), bad);
   eq(Object.keys(s.header).sort().join(','), 'age,heightCm,sex');
-  assert(all.includes(NOT_MEDICAL));
+  assert(all.includes(notMedical(s.sources)));
+});
+
+test('source line names only the sources that are in range', () => {
+  const a = account();
+  const full = build(a);
+  eq(notMedical(full.sources), 'Measured at home: Withings scale, Apple Health. Not a medical record.');
+  const hand = build({ ...EMPTY, series: a.series.map((p) => ({ ...p, device: false })) });
+  eq(notMedical(hand.sources), 'Measured at home: weight entered by hand. Not a medical record.');
+  const html = reportHtml(hand, 'imperial', TODAY) + summaryText(hand, 'imperial', TODAY);
+  assert(html.includes('weight entered by hand') && !/Withings|Apple/.test(html), 'no device is named');
+  const apple = build({ ...EMPTY, rows: a.rows });
+  eq(notMedical(apple.sources), 'Measured at home: Apple Health. Not a medical record.');
+  const old = build({ ...EMPTY, series: a.series.slice(0, 5).map((p) => ({ ...p, device: false })).concat(a.series.slice(-5)) });
+  assert(!old.sources.hand, 'hand-entered weights outside the range do not count');
+  eq(notMedical({}), 'Not a medical record.');
+});
+
+test('chart axis labels carry the unit; a steady bedtime reads "Very regular"', () => {
+  const pts = account().series.slice(-30).map((p) => ({ day: p.day, v: p.trend }));
+  assert(/>\d+\.\d lb<\/text>/.test(weightChartSvg(pts, 'imperial')));
+  assert(/>\d+\.\d kg<\/text>/.test(weightChartSvg(pts, 'metric')));
+  const s = build(account());
+  const calm = { ...s, sleep: { ...s.sleep, bedtime: { n: 30, avgMin: 1380, spreadMin: 4 } } };
+  const html = reportHtml(calm, 'imperial', TODAY);
+  assert(html.includes('Very regular') && !html.includes('about 4 min'));
+  const loose = { ...s, sleep: { ...s.sleep, bedtime: { n: 30, avgMin: 1380, spreadMin: 35 } } };
+  assert(reportHtml(loose, 'imperial', TODAY).includes('Varies by about 35 min'));
 });
 
 test('the screen and builder never reach the network or read the account email', () => {

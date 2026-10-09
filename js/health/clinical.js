@@ -16,7 +16,12 @@ import { fmtClock } from '../missions/core.js';
 export const RANGES = [30, 90, 365];
 export const DEFAULT_RANGE = 90;
 export const RANGE_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year' };
-export const NOT_MEDICAL = 'Measured at home with consumer devices (Withings scale, Apple Watch). Not a medical record.';
+const NOT_A_RECORD = 'Not a medical record.';
+/** "Measured at home: Withings scale, Apple Health. Not a medical record." Names only the sources found in range. */
+export function notMedical(sources = {}) {
+  const parts = [sources.withings ? 'Withings scale' : null, sources.apple ? 'Apple Health' : null, sources.hand ? 'weight entered by hand' : null].filter(Boolean);
+  return parts.length ? `Measured at home: ${parts.join(', ')}. ${NOT_A_RECORD}` : NOT_A_RECORD;
+}
 export const SCORE_NOTE = 'Forge’s own 0–100 score. It is not a clinical measure.';
 export const EXPLAIN = {
   hrv: 'HRV (heart rate variability) is the small variation in time between heartbeats. It is only compared with the person’s own usual.',
@@ -191,6 +196,7 @@ export function buildSummary(ctx) {
   const anomalies = detectAnomalies({ today, weights: series, series: buildSeries({ weights: series, measures, rows }), rows });
   return {
     range, from, to: today,
+    sources: sourcesIn({ series, measures, rows, from, to: today }),
     header: { age: num(profile.age) && profile.age > 0 ? profile.age : null, sex: profile.sex === 'male' || profile.sex === 'female' ? profile.sex : null, heightCm: num(profile.heightCm) },
     weight: weightSection({ series, measures, profile, from, to: today }),
     heart: heartSection({ days, measures, profile, today, from, range }),
@@ -198,6 +204,17 @@ export function buildSummary(ctx) {
     activity: activitySection({ days, workouts, cardio, from, today }),
     score: scoreSection({ rows, series, measures, workouts, cardio, profile, today, from, range }),
     notes: notesFor({ sleep, anomalies }),
+  };
+}
+
+/** Sources with something in the window: Withings (device weigh-ins or body_measures), Apple Health (health_daily rows), by hand (typed-in weights). */
+function sourcesIn({ series, measures, rows, from, to }) {
+  const w = inWin(series.filter((p) => num(p.kg) != null || num(p.trend) != null), from, to);
+  const isDevice = (p) => p.device === true || p.source === 'withings';
+  return {
+    withings: w.some(isDevice) || inWin(measures.filter((m) => m && m.day), from, to).length > 0,
+    apple: rows.some((r) => r && r.id >= from && r.id <= to),
+    hand: w.some((p) => !isDevice(p)),
   };
 }
 
@@ -213,7 +230,7 @@ export function summaryText(s, units, generated) {
   const L = [`Forge health summary · ${dateText(s.from)} – ${dateText(s.to)} (${RANGE_LABEL[s.range]})`, `Generated ${dateText(generated || s.to)}`];
   const who = [s.header.age ? `${s.header.age} years` : null, s.header.sex, fmtHeightBoth(s.header.heightCm, units)].filter(Boolean);
   if (who.length) L.push(who.join(', '));
-  L.push(NOT_MEDICAL);
+  L.push(notMedical(s.sources));
   const w = s.weight;
   if (w) {
     L.push('', 'WEIGHT AND BODY COMPOSITION');

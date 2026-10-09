@@ -24,7 +24,7 @@ export function renderReport(el) {
         <p class="muted">A one-to-two page summary for your doctor or dietitian, made on this phone. Nothing is uploaded or sent anywhere.</p>
         ${rangeSegHtml(range)}
         ${empty ? '' : `<div class="row gap rp-actions">
-          <button class="btn primary grow" data-print>${icon('download')}Print or save as PDF</button>
+          <button class="btn primary grow" data-print>${icon('download')}Print / Save PDF</button>
           <button class="btn ghost grow" data-share>${icon('share')}Share as text</button></div>`}
       </div>
       ${empty
