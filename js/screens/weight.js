@@ -105,6 +105,7 @@ export function renderWeight(el) {
       <div class="group">
         <a class="g-row" href="#/history"><span class="g-ic">${icon('list')}</span><span class="g-text"><span>History</span><small>Workouts and cardio</small></span><span class="chev">${icon('chev')}</span></a>
         <a class="g-row" href="#/awards"><span class="g-ic">${icon('trophy')}</span><span class="g-text"><span>Awards</span><small>Levels and badges</small></span><span class="chev">${icon('chev')}</span></a>
+        <a class="g-row" href="#/coach"><span class="g-ic">${icon('help')}</span><span class="g-text"><span>Ask Coach</span><small>Answers from your own data</small></span><span class="chev">${icon('chev')}</span></a>
       </div>` : `<div class="card">${emptyState({ icon: 'scale', title: 'No weigh-ins yet', text: 'Log your first weight and your trend starts here.', action: { attr: 'data-log-empty', label: 'Log weight' } })}</div>`}
 
       ${entries.length ? `

@@ -21,7 +21,12 @@ export function loadFromFatigue(fatigue) {
   return clamp(mean(top) / LOAD_FULL, 0, 1);
 }
 
-const fmtH = (min) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min`;
+export const fmtH = (min) => {
+  const t = Math.round(min);
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
+};
 
 // Plain-words explanation for each signal. dir: 'bad' | 'good' | 'ok'
 function words(key, x, base, z, units) {

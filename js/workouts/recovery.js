@@ -14,6 +14,11 @@ export const MUSCLE_LABELS = {
   adductors: 'Adductors', abductors: 'Abductors', calves: 'Calves',
 };
 
+/** The muscle groups the Body tab and Coach show and count, so "fresh" is the same number everywhere. */
+export const SHOW_MUSCLES = ['chest', 'front_delts', 'side_delts', 'rear_delts', 'lats', 'upper_back', 'traps', 'biceps', 'triceps', 'forearms', 'abs', 'obliques', 'lower_back', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
+export const FRESH_PCT = 85; // a muscle group counts as fresh from here
+export const freshCount = (rec) => SHOW_MUSCLES.filter((m) => rec[m] >= FRESH_PCT).length;
+
 const LARGE = new Set(['quads', 'hamstrings', 'glutes', 'chest', 'lats', 'upper_back', 'lower_back']);
 export const recoveryHours = (m) => (LARGE.has(m) ? 72 : 48);
 

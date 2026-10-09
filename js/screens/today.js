@@ -18,6 +18,16 @@ import { ringsHtml, animateRings } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
+import { coachData } from '../coach/data.js';
+import { availableQuestions } from '../coach/answers.js';
+
+/** "Ask Coach: <first question that has an answer>", or just "Ask Coach". */
+function coachTeaser() {
+  try {
+    const q = availableQuestions(coachData(), todayKey())[0];
+    return q ? `Ask Coach: ${q.label}` : 'Ask Coach';
+  } catch (e) { return 'Ask Coach'; }
+}
 import { topInsights, dismissInsight, reportFor, currentReportWeek, currentGoalPath } from '../health/intel.js';
 import { compactInsightsHtml, bindInsightCards } from '../health/cards.js';
 import { goalLine } from '../health/goalpath.js';
@@ -214,6 +224,9 @@ export function renderToday(el) {
       </div>
 
       ${insightsBlock()}
+
+      <a class="card row between center nav-card" href="#/coach" data-coach-card>
+        <div><p class="label">Coach</p><p>${esc(coachTeaser())}</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
 
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
