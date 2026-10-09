@@ -28,11 +28,17 @@ export const fmtH = (min) => {
   return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
 };
 
-// Plain-words explanation for each signal. dir: 'bad' | 'good' | 'ok'
+export const LOW_Z = -0.5; // below this a signal is "low" (amber)
+export const BAD_Z = -1.0; // below this it is "bad" (red)
+
+// Short phrase for a low signal, used in "Mostly normal for you: sleep a little short".
+const SHORT = { hrv: 'HRV a little low', rhr: 'resting heart rate a little high', sleep: 'sleep a little short', temp: 'wrist temperature a little off', resp: 'breathing rate a little high' };
+
+// Plain-words explanation for each signal. dir: 'bad' (z < -1) | 'low' (-1 ≤ z < -0.5) | 'ok' | 'good'
 function words(key, x, base, z, units) {
-  const bad = z < -0.5;
+  const bad = z < LOW_Z; // the wording is the same for low and bad
   const good = z > 0.5;
-  const dir = bad ? 'bad' : good ? 'good' : 'ok';
+  const dir = z < BAD_Z ? 'bad' : bad ? 'low' : good ? 'good' : 'ok';
   switch (key) {
     case 'hrv': {
       const pct = Math.round((Math.exp(x - base) - 1) * 100);
@@ -109,7 +115,7 @@ export function readiness({ rows, today, load = 0, units = 'imperial' }) {
     const s = zScore(x, hist, SD_FLOOR[key]);
     const z = clamp(sign * s.z, -3, 3);
     const raw = key === 'temp' ? c.value : x;
-    parts.push({ key, z, weight: WEIGHTS[key], value: c.value, baseline: s.mean, ...words(key, raw, s.mean, z, units) });
+    parts.push({ key, z, weight: WEIGHTS[key], value: c.value, baseline: s.mean, short: SHORT[key], ...words(key, raw, s.mean, z, units) });
   }
   if (!parts.some((p) => p.key === 'hrv' || p.key === 'rhr')) return { status: 'waiting', lastDay, ...base };
 
@@ -129,10 +135,12 @@ export function readiness({ rows, today, load = 0, units = 'imperial' }) {
     reason = penalty >= 0.3 && byZ[0].z > -0.75 ? 'You trained hard yesterday, so your muscles are still recovering' : byZ[0].text;
   } else {
     const best = byZ[byZ.length - 1];
-    reason = best.z > 0.5 ? best.text : 'Everything looks normal for you';
+    const dips = byZ.filter((p) => p.z < LOW_Z);
+    reason = best.z > 0.5 ? best.text : dips.length ? `Mostly normal for you: ${dips[0].short}` : 'Everything looks normal for you';
   }
-  const items = [...parts];
-  if (load > 0) items.push({ key: 'load', z: -penalty, weight: 0, dir: load >= 0.5 ? 'bad' : 'ok', text: load >= 0.5 ? 'Yesterday’s training was heavy' : 'Yesterday’s training was light', value: load });
+  // A Green day never shows red: a clearly-off signal on a Green day is drawn amber.
+  const items = parts.map((p) => (level === 'green' && p.dir === 'bad' ? { ...p, dir: 'low' } : p));
+  if (load > 0) items.push({ key: 'load', z: -penalty, weight: 0, dir: load >= 0.5 ? (level === 'green' ? 'low' : 'bad') : 'ok', text: load >= 0.5 ? 'Yesterday’s training was heavy' : 'Yesterday’s training was light', value: load });
   const fromDay = [cur.hrv, cur.rhr].filter(Boolean).map((c) => c.day).sort().pop();
   return { status: 'ok', level, composite, reason, parts: items, load, lastDay, fromDay, stale: fromDay < today, ...base };
 }

@@ -2,7 +2,8 @@
 // A trend counts only when it is significant (p < 0.05) AND bigger than the metric's noise floor per week.
 // Pure functions, no DOM. Formulas and thresholds are written down in docs/trends.md.
 import { shiftDay, indexDays, GET } from './metrics.js';
-import { daysBetween } from '../weight/smoothing.js';
+import { daysBetween, addDays } from '../weight/smoothing.js';
+import { rolling } from '../ui/linechart.js';
 import { metricSeries, dailySeries } from '../withings/body.js';
 
 export const WINDOWS = [7, 28, 90];
@@ -122,8 +123,21 @@ export function trendRowValue(t, weights = []) {
   return Number.isFinite(tr) ? tr : t.last.v;
 }
 
-/** The points a Trends row's sparkline draws: for weight, the smoothed trend line; otherwise the raw series. */
+/** Rolling mean that keeps only points with a full `n`-day window behind them (no partial-window hook at the left edge).
+ * Falls back to the raw points when too little is left to draw a line. */
+export function smoothFull(points, n) {
+  if (!points.length) return points;
+  const from = addDays(points[0].day, n - 1);
+  const full = rolling(points, n).filter((p) => p.day >= from);
+  return full.length >= 2 ? full : points;
+}
+
+const APPLE_KEYS = new Set(TREND_METRICS.filter((m) => m.source === 'apple').map((m) => m.key));
+
+/** The points a Trends row's sparkline draws: weight → the smoothed trend line; daily Apple Health metrics
+ * → a 7-day rolling mean (full windows only); scale readings stay raw. */
 export function trendRowSeries(t, weights = []) {
+  if (APPLE_KEYS.has(t.key)) return smoothFull(t.series, 7);
   if (t.key !== 'weight_kg') return t.series;
   const pts = weights.filter((w) => Number.isFinite(w.trend)).map((w) => ({ day: w.day, v: w.trend }));
   return pts.length ? pts : t.series;

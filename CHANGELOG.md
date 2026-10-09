@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.1 — Honest Readiness bars + smoothed Trends sparklines (2026-10-09)
+
+No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.
+
+- **Readiness bars match the verdict.** Each signal now has three steps: red (clearly off, z < −1.0), amber (a little off, −1.0 to −0.5) and green (normal or better). A Green day never draws red, and the Why? list dots follow the same colours. When a Green day has a small dip the line reads "Mostly normal for you: sleep a little short" instead of "Everything looks normal for you". The score, the level cut points and the workout changes are untouched.
+- **Smoother Trends sparklines.** HRV, resting heart rate, sleep, steps and exercise minutes on Progress → Trends are drawn as a 7-day rolling mean (full windows only), the same approach as the Longevity cards. Scale readings are unchanged. The `#/metric/<key>` charts already draw a 7-day average line over the dots, so they are unchanged.
+- The helper `smoothFull` moved to `js/health/trends.js` (still exported from `longview.js`). New tests in `tests/readiness-trends.test.js`.
+
 ## 0.14.0 — Body programs: cut kickoff, recomp, maintenance (2026-10-09)
 
 No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes; nothing to redeploy or publish.

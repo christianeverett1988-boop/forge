@@ -1,21 +1,13 @@
 // HTML for the Long term card and the Longevity cards on Progress → Score (v0.13.0). Strings only, no DOM calls.
 import { esc } from '../ui.js';
-import { rolling } from '../ui/linechart.js';
+import { smoothFull } from './trends.js';
 import { sparkSvg } from './cards.js';
 import { fmtMetric } from '../withings/body.js';
 import { RANGES, WEEKS_MIN } from './longterm.js';
-import { addDays } from '../weight/smoothing.js';
 
 export const EMPTY_LONGEVITY = 'Longevity cards appear when your watch or scale sends VO₂max, resting heart rate, HRV or body composition.';
 
-/** Rolling mean that keeps only points with a full `n`-day window behind them (no partial-window hook at the left edge).
- * Falls back to the raw points when too little is left to draw a line. */
-export function smoothFull(points, n) {
-  if (!points.length) return points;
-  const from = addDays(points[0].day, n - 1);
-  const full = rolling(points, n).filter((p) => p.day >= from);
-  return full.length >= 2 ? full : points;
-}
+export { smoothFull };
 
 const sign =(n) => (n > 0 ? '+' : n < 0 ? '−' : '');
 
