@@ -41,7 +41,6 @@ export function renderWithings(el, sub) {
 
   el.innerHTML = `
     <section class="stack">
-      <a class="link small" href="#/settings">‹ Settings</a>
       <h1>Withings</h1>
       ${state.serverError ? `<div class="notice warn">Forge can’t read Withings data yet (${esc(state.serverError)}). If you just updated, publish the new <code>firestore.rules</code> (DEPLOY.md → Withings).</div>` : ''}
 
@@ -308,7 +307,6 @@ function renderCheck(el) {
 
   el.innerHTML = `
     <section class="stack">
-      <a class="link small" href="#/withings">‹ Withings</a>
       <h1>Data check</h1>
       ${!w || !w.connected ? '<div class="notice warn">Connect Withings first.</div>' : ''}
       <div class="card stack">

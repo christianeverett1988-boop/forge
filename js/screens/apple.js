@@ -152,7 +152,6 @@ export function renderApple(el) {
   const has = !!a.connected;
   el.innerHTML = `
     <section class="stack">
-      <a class="link small" href="#/settings">‹ Settings</a>
       <h1>Apple Health</h1>
       ${state.serverError ? `<div class="notice warn">Forge can’t read Apple Health data yet (${esc(state.serverError)}). If you just updated, publish the new <code>firestore.rules</code> (DEPLOY.md).</div>` : ''}
       <p class="muted">Bring your Watch’s overnight HRV, resting heart rate, sleep and wrist temperature into Forge for Readiness and your Forge Score. Everything stays in your own Forge account.</p>

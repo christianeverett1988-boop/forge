@@ -1,5 +1,8 @@
 // Small UI helpers: escaping, toasts, bottom sheets, confirm.
 
+import { reducedMotion, DUR } from './ui/motion.js';
+import { shouldDismiss, rubberBand, dragProgress, velocityOf } from './ui/gesture.js';
+
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -16,25 +19,80 @@ export function toast(message, ms = 2600) {
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {
     el.classList.remove('show');
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => el.remove(), DUR.med + 20);
   }, ms);
 }
 
-/** Opens a bottom sheet. `render(body, close)` fills it. Returns close(). */
+let sheetCount = 0;
+
+/**
+ * Opens a bottom sheet: grabber, glass header, drag the grabber or header down to dismiss (a long drag or a
+ * quick flick closes it, otherwise it springs back), and an animated exit. `render(body, close)` fills it.
+ * Escape and a tap on the dimmed backdrop close it too. Returns close().
+ */
 export function sheet(title, render) {
   const dlg = document.createElement('dialog');
-  dlg.className = 'sheet';
+  dlg.className = 'sheet pre';
+  const titleId = `sheet-title-${++sheetCount}`;
+  dlg.setAttribute('aria-labelledby', titleId);
   dlg.innerHTML = `
+    <div class="sheet-grab" aria-hidden="true"><i></i></div>
     <div class="sheet-head">
-      <h2>${esc(title)}</h2>
-      <button class="icon-btn" data-close aria-label="Close">✕</button>
+      <h2 id="${titleId}">${esc(title)}</h2>
+      <button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body"></div>`;
   document.body.appendChild(dlg);
+  let closing = false;
   const close = () => {
-    dlg.close();
-    dlg.remove();
+    if (closing) return;
+    closing = true;
+    dlg.classList.remove('dragging');
+    dlg.style.removeProperty('--sheet-y'); // the .closing class slides it the rest of the way
+    dlg.style.removeProperty('--sheet-p');
+    dlg.classList.add('closing');
+    setTimeout(() => {
+      if (dlg.open) dlg.close();
+      dlg.remove();
+    }, DUR.med + 40);
   };
+  // Drag to dismiss (pointer events on the grabber and header; the body keeps its own scrolling).
+  if (!reducedMotion()) {
+    for (const handle of dlg.querySelectorAll('.sheet-grab, .sheet-head')) {
+      let startY = 0;
+      let offset = 0;
+      let samples = null;
+      handle.addEventListener('pointerdown', (e) => {
+        if (closing || e.target.closest('button')) return;
+        samples = [{ t: e.timeStamp, v: e.clientY }];
+        startY = e.clientY;
+        offset = 0;
+        handle.setPointerCapture(e.pointerId);
+        dlg.classList.add('dragging');
+      });
+      handle.addEventListener('pointermove', (e) => {
+        if (!samples) return;
+        samples.push({ t: e.timeStamp, v: e.clientY });
+        offset = rubberBand(e.clientY - startY);
+        dlg.style.setProperty('--sheet-y', `${offset}px`);
+        dlg.style.setProperty('--sheet-p', String(1 - dragProgress(offset, dlg.offsetHeight)));
+      });
+      const release = (e) => {
+        if (!samples) return;
+        const velocity = velocityOf(samples);
+        samples = null;
+        dlg.classList.remove('dragging');
+        if (e.type !== 'pointercancel' && shouldDismiss({ offset, velocity, size: dlg.offsetHeight })) {
+          close();
+        } else {
+          dlg.style.removeProperty('--sheet-y'); // springs back
+          dlg.style.removeProperty('--sheet-p');
+        }
+      };
+      handle.addEventListener('pointerup', release);
+      handle.addEventListener('pointercancel', release);
+    }
+  }
   dlg.querySelector('[data-close]').addEventListener('click', close);
   dlg.addEventListener('cancel', (e) => {
     e.preventDefault();
@@ -45,6 +103,8 @@ export function sheet(title, render) {
   });
   render(dlg.querySelector('.sheet-body'), close);
   dlg.showModal();
+  void dlg.offsetHeight; // lock in the off-screen start, then let it spring up
+  dlg.classList.remove('pre');
   return close;
 }
 
@@ -77,10 +137,6 @@ export function confirmSheet({ title, message, confirmLabel = 'Confirm', danger 
 /** Old API: now forwards to the PR explosion in js/ui/fx.js (queued, never stacks). */
 export function celebrate(lines) {
   import('./ui/fx.js').then((fx) => lines.forEach((label) => fx.prExplosion({ label, value: null, prev: null })));
-}
-
-export function haptic(ms = 10) {
-  if (navigator.vibrate) navigator.vibrate(ms); // iPhone Safari ignores this; the native app will add real haptics.
 }
 
 export function todayKey() {

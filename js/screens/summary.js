@@ -10,7 +10,7 @@ import { toUnit } from '../workouts/progression.js';
 import { sessionStats, versusLast } from '../workouts/session-core.js';
 import { MUSCLE_LABELS } from '../workouts/recovery.js';
 import { bodyMap } from '../ui/bodymap.js';
-import { countUp, reducedMotion } from '../ui/motion.js';
+import { countUp, reducedMotion, EASE } from '../ui/motion.js';
 import { confetti } from '../ui/fx.js';
 import { sfx, coach } from '../ui/sound.js';
 import { fmtClock } from '../timer.js';
@@ -139,7 +139,7 @@ export function renderSummary(el, id) {
     coach.workoutDone();
     confetti({ duration: 2000 });
     const t = $('[data-title]', el);
-    if (t && !reducedMotion()) t.animate([{ transform: 'scale(1.4)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.34,1.56,.64,1)', delay: 200, fill: 'backwards' });
+    if (t && !reducedMotion()) t.animate([{ transform: 'scale(1.4)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: EASE.bounce, delay: 200, fill: 'backwards' });
     countUp($('[data-c="sets"]', el), st.sets, { delay: 400 });
     countUp($('[data-c="vol"]', el), st.volume, { delay: 500, dur: 1100 });
     countUp($('[data-c="prs"]', el), prs.length, { delay: 600 });

@@ -60,8 +60,8 @@ export function renderBody(el) {
     <section class="stack">
       <h1>Body</h1>
       <div class="body-hero">
-        <div><b>${fresh}</b><span>fresh muscle groups</span></div>
-        <div><b>${days == null ? '—' : days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>
+        <div><b data-count>${fresh}</b><span>fresh muscle groups</span></div>
+        <div><b data-count>${days == null ? '—' : days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>
       </div>
       ${compositionCard()}
       <div class="card">

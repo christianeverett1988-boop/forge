@@ -1,12 +1,13 @@
-/* Forge motion system (v0.3.0). Tokens, screen transitions and reduced-motion behaviour.
-   Only transform, opacity and canvas are animated. */
+/* Forge motion system. One set of tokens (durations + curves), press states, screen transitions and
+   reduced-motion behaviour. Only transform, opacity, filter and canvas are animated. */
 :root {
   --t-fast: 120ms;
-  --t-med: 240ms;
-  --t-slow: 400ms;
+  --t-med: 280ms;
+  --t-slow: 450ms;
   --ease-out: cubic-bezier(.2, .8, .2, 1);
   --ease-in-out: cubic-bezier(.65, 0, .35, 1);
-  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-spring: cubic-bezier(.32, .72, 0, 1);   /* iOS sheet / push feel */
+  --ease-bounce: cubic-bezier(.34, 1.56, .64, 1); /* small pops */
   /* Forge palette additions */
   --ember: #FF6A2B;
   --volt: #C6FF3D;
@@ -20,43 +21,46 @@
 h1, h2, .big-title { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 
-/* Press states everywhere */
-.btn, .tool, .icon-btn, .chip-btn, .mini, .setcheck, .stepper button, .pl-nav button, .pl-ico, .next-card {
-  transition: transform var(--t-fast) var(--ease-out), opacity var(--t-fast);
+/* ---------- Press states: everything tappable dips to 0.97 and springs back ---------- */
+.btn, .tool, .icon-btn, .chip-btn, .mini, .setcheck, .stepper button, .pl-nav button, .pl-ico, .next-card,
+a.card, .list li.tap, .choice, .chip, .seg label, .progress-seg a, .tabbar a, .nb-back, .bc-tile, .link,
+.update-capsule, .ht-seg button {
+  transition: transform var(--t-med) var(--ease-spring), opacity var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
 .btn:active, .tool:active, .icon-btn:active, .chip-btn:active, .mini:active, .setcheck:active,
-.stepper button:active, .pl-nav button:active, .pl-ico:active, .next-card:active { transform: scale(.96); }
+.stepper button:active, .pl-nav button:active, .pl-ico:active, .next-card:active,
+a.card:active, .list li.tap:active, .choice:active, .chip:active, .seg label:active, .progress-seg a:active,
+.tabbar a:active, .nb-back:active, .bc-tile:active, .link:active, .update-capsule:active, .ht-seg button:active {
+  transform: scale(.97);
+  transition-duration: var(--t-fast);
+}
 
-/* ---------- View Transitions (Safari 18+): tabs slide, detail screens push / pop ---------- */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--t-med); animation-timing-function: var(--ease-out); }
-html[data-vt="push"]::view-transition-old(root) { animation-name: vt-out-left; }
-html[data-vt="push"]::view-transition-new(root) { animation-name: vt-in-right; }
-html[data-vt="pop"]::view-transition-old(root) { animation-name: vt-out-right; }
-html[data-vt="pop"]::view-transition-new(root) { animation-name: vt-in-left; }
-html[data-vt="tab-fwd"]::view-transition-old(root) { animation-name: vt-fade-out-l; }
-html[data-vt="tab-fwd"]::view-transition-new(root) { animation-name: vt-fade-in-r; }
-html[data-vt="tab-back"]::view-transition-old(root) { animation-name: vt-fade-out-r; }
-html[data-vt="tab-back"]::view-transition-new(root) { animation-name: vt-fade-in-l; }
-/* Keep the tab bar and status pill steady while screens move. */
+/* ---------- Screen changes (View Transitions, Safari 18+) ----------
+   push: the new screen slides in from the right while the old one slides back 30% and dims.
+   pop:  the reverse.  tab / fade: a plain crossfade (iOS tabs don't slide).
+   The nav bar and tab bar are pinned so only the content moves. */
+.navbar { view-transition-name: navbar; }
 .tabbar { view-transition-name: tabbar; }
-.topbar { view-transition-name: topbar; }
-::view-transition-group(pl-hero) { animation-duration: var(--t-slow); animation-timing-function: var(--ease-spring); }
+::view-transition-group(root) { animation-duration: var(--t-slow); animation-timing-function: var(--ease-spring); }
+::view-transition-image-pair(root) { isolation: isolate; }
+::view-transition-old(root), ::view-transition-new(root) { mix-blend-mode: normal; animation-duration: var(--t-med); animation-timing-function: var(--ease-out); }
+html[data-vt="push"]::view-transition-old(root) { animation: vt-push-old var(--t-slow) var(--ease-spring) both; z-index: 1; }
+html[data-vt="push"]::view-transition-new(root) { animation: vt-push-new var(--t-slow) var(--ease-spring) both; z-index: 2; box-shadow: -12px 0 32px rgba(0, 0, 0, .5); }
+html[data-vt="pop"]::view-transition-old(root) { animation: vt-pop-old var(--t-slow) var(--ease-spring) both; z-index: 2; box-shadow: -12px 0 32px rgba(0, 0, 0, .5); }
+html[data-vt="pop"]::view-transition-new(root) { animation: vt-pop-new var(--t-slow) var(--ease-spring) both; z-index: 1; }
+html[data-vt="tab"]::view-transition-old(root), html[data-vt="fade"]::view-transition-old(root) { animation: vt-fade-out var(--t-med) var(--ease-out) both; }
+html[data-vt="tab"]::view-transition-new(root), html[data-vt="fade"]::view-transition-new(root) { animation: vt-fade-in var(--t-med) var(--ease-out) both; }
+::view-transition-group(pl-hero) { animation-duration: var(--t-slow); animation-timing-function: var(--ease-bounce); }
 
-@keyframes vt-out-left { to { transform: translateX(-28%); opacity: 0; } }
-@keyframes vt-in-right { from { transform: translateX(100%); } }
-@keyframes vt-out-right { to { transform: translateX(100%); } }
-@keyframes vt-in-left { from { transform: translateX(-28%); opacity: 0; } }
-@keyframes vt-fade-out-l { to { transform: translateX(-24px); opacity: 0; } }
-@keyframes vt-fade-in-r { from { transform: translateX(24px); opacity: 0; } }
-@keyframes vt-fade-out-r { to { transform: translateX(24px); opacity: 0; } }
-@keyframes vt-fade-in-l { from { transform: translateX(-24px); opacity: 0; } }
+@keyframes vt-push-old { to { transform: translateX(-30%); filter: brightness(.6); } }
+@keyframes vt-push-new { from { transform: translateX(100%); } }
+@keyframes vt-pop-old { to { transform: translateX(100%); } }
+@keyframes vt-pop-new { from { transform: translateX(-30%); filter: brightness(.6); } }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
 
-/* ---------- Entrances with @starting-style (Safari 17.5+); no-op elsewhere ---------- */
-dialog.sheet[open] { transition: transform var(--t-med) var(--ease-out), opacity var(--t-med); }
-@starting-style { dialog.sheet[open] { transform: translateY(40px); opacity: 0; } }
-.ov { transition: opacity var(--t-med); }
-@starting-style { .ov { opacity: 0; } }
-.toast.show { transition: opacity .25s, translate .25s var(--ease-spring); }
+/* No View Transitions: the screen swaps at once, then fades in. */
+main.route-fade { animation: vt-fade-in var(--t-med) var(--ease-out); }
 
 /* ---------- Scroll-driven reveal (Safari 26+): list rows ease in as they scroll into view ---------- */
 @supports (animation-timeline: view()) {
@@ -69,21 +73,22 @@ dialog.sheet[open] { transition: transform var(--t-med) var(--ease-out), opacity
 }
 
 /* ---------- Skeleton loaders (instead of spinners) ---------- */
-.skeleton { background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 40%, var(--surface) 80%); background-size: 300% 100%; border-radius: 14px; animation: shimmer 1.4s linear infinite; }
+.skeleton { background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 40%, var(--surface) 80%); background-size: 300% 100%; border-radius: 20px; animation: shimmer 1.4s linear infinite; }
 .skeleton.h1 { height: 40px; width: 60%; margin: 24px auto 16px; }
 .skeleton.row3 { height: 90px; margin-bottom: 14px; }
 .skeleton.block { height: 260px; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
-/* ---------- Reduced motion: movement → fades. Feedback (colour, ✓, sound, text) stays. ---------- */
+/* ---------- Reduced motion: movement → fades. Feedback (colour, ✓, sound, haptics, text) stays. ---------- */
 @media (prefers-reduced-motion: reduce) {
-  html[data-vt]::view-transition-old(root) { animation: vt-fade-only-out var(--t-med) both; }
-  html[data-vt]::view-transition-new(root) { animation: vt-fade-only-in var(--t-med) both; }
-  @keyframes vt-fade-only-out { to { opacity: 0; } }
-  @keyframes vt-fade-only-in { from { opacity: 0; } }
-  .btn:active, .tool:active, .icon-btn:active, .stepper button:active { transform: none; opacity: .7; }
+  html[data-vt]::view-transition-old(root) { animation: vt-fade-out var(--t-med) both; }
+  html[data-vt]::view-transition-new(root) { animation: vt-fade-in var(--t-med) both; box-shadow: none; }
+  .btn:active, .tool:active, .icon-btn:active, .chip-btn:active, .mini:active, .setcheck:active,
+  .stepper button:active, .pl-nav button:active, .pl-ico:active, .next-card:active,
+  a.card:active, .list li.tap:active, .choice:active, .chip:active, .seg label:active, .progress-seg a:active,
+  .tabbar a:active, .nb-back:active, .bc-tile:active, .link:active, .update-capsule:active, .ht-seg button:active { transform: none; opacity: .7; }
   .skeleton { animation: none; }
   .plan-list li, .pv-list > li, .sum-list li, .list.flat li { animation: none !important; }
   .restbar { transition: opacity var(--t-med) !important; transform: none !important; }
-  dialog.sheet { animation: none; }
+  main.route-fade { animation: none; }
 }

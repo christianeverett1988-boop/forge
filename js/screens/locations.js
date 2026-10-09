@@ -6,6 +6,7 @@ import { esc, $, $$, sheet, toast, confirmSheet } from '../ui.js';
 import { EQUIPMENT_GROUPS, presetDescription, locationFromPreset, presetPickerRows } from '../workouts/equipment.js';
 import { toUnit, fromUnit } from '../workouts/progression.js';
 import { openPlateCalculator } from './tools.js';
+import { navBar, screenNav } from '../ui/navbar.js';
 
 const INVENTORY = [
   ['dumbbells_kg', 'Dumbbell pairs', 'dumbbells'],
@@ -22,12 +23,10 @@ export function renderLocations(el) {
   if (loc) return renderEditor(el, loc);
   editingId = null;
   pending = null;
+  screenNav(null);
 
   el.innerHTML = `
     <section class="stack">
-      <div class="row between center">
-        <a href="#/settings" class="link">‹ Settings</a>
-      </div>
       <h1>Locations</h1>
       <p class="muted">Workouts only use the equipment at the place you pick. Bodyweight moves work everywhere.</p>
       <ul class="list">
@@ -101,7 +100,6 @@ function renderEditor(el, loc) {
   const custom = loc.equipment.filter((k) => k.startsWith('custom:'));
   el.innerHTML = `
     <section class="stack">
-      <button class="link" data-back>‹ Locations</button>
       <label class="field"><span>Name</span><input name="name" value="${esc(loc.name)}" maxlength="40"></label>
       <label class="choice check small">
         <input type="checkbox" name="def" ${loc.is_default ? 'checked' : ''}>
@@ -132,10 +130,9 @@ function renderEditor(el, loc) {
 
   const save = (changes) => patch('locations', loc.id, changes);
 
-  $('[data-back]', el).onclick = () => {
-    editingId = null;
-    renderLocations(el);
-  };
+  // The editor is a sub-view inside this route: the nav bar shows its name and "‹ Locations" goes back to the list.
+  screenNav({ title: loc.name, backLabel: 'Locations', onBack: () => closeEditor(el) });
+  navBar({ root: el });
   $('input[name=name]', el).addEventListener('change', (e) => {
     const name = e.target.value.trim();
     if (name) save({ name });
@@ -174,9 +171,14 @@ function renderEditor(el, loc) {
       const other = state.locations.find((l) => l.id !== loc.id);
       if (other) patch('locations', other.id, { is_default: true });
     }
-    editingId = null;
-    renderLocations(el);
+    closeEditor(el);
   };
+}
+
+function closeEditor(el) {
+  editingId = null;
+  renderLocations(el);
+  navBar({ title: 'Locations', back: '#/settings', backLabel: 'Settings', root: el });
 }
 
 // ---------- weight inventory (stored in kg, shown in your units) ----------

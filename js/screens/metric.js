@@ -69,13 +69,12 @@ export function renderMetric(el, key) {
 
   el.innerHTML = `
     <section class="stack">
-      <a class="link small" href="#/body">‹ Body</a>
       <div class="row between center"><h1>${esc(def.label)}</h1><button class="btn ghost small" data-explain>What is this?</button></div>
       ${last ? `
       <div class="card stack">
         <div class="stats">
-          <div><span>Latest</span><b>${esc(fmtMetric(key, last.v, u))}</b></div>
-          <div><span>${range ? `${range}-day avg` : 'Average'}</span><b>${avgNow == null ? '—' : esc(fmtMetric(key, avgNow, u))}</b></div>
+          <div><span>Latest</span><b data-count>${esc(fmtMetric(key, last.v, u))}</b></div>
+          <div><span>${range ? `${range}-day avg` : 'Average'}</span><b data-count>${avgNow == null ? '—' : esc(fmtMetric(key, avgNow, u))}</b></div>
           <div><span>vs previous</span><b>${delta == null ? '—' : `${delta > 0 ? '+' : ''}${esc(fmtMetric(key, delta, u, { unit: false }))}`}</b></div>
         </div>
         <div class="seg small" role="radiogroup" aria-label="Range">

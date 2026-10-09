@@ -3,7 +3,7 @@
 /* Full-screen routes hide the tab bar; the player also hides the small rest bar (it has its own). */
 body.fullscreen main { padding-bottom: calc(var(--safe-bottom) + 24px); }
 body.playing #restbar { display: none; }
-body.playing .topbar { display: none; }
+body.playing .navbar { display: none; }
 
 .player {
   display: flex; flex-direction: column; gap: 8px; min-height: calc(100dvh - var(--safe-top) - 60px);
@@ -167,7 +167,7 @@ body.playing .topbar { display: none; }
 .body-hero span { color: var(--muted); font-size: 13px; font-weight: 700; }
 
 /* Progress tabs */
-.progress-seg a { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 10px; color: var(--muted); font-weight: 700; text-decoration: none; }
+.progress-seg a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 10px; color: var(--muted); font-weight: 700; text-decoration: none; }
 .progress-seg a.on { background: var(--volt); color: var(--accent-ink); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -186,8 +186,8 @@ body.playing .topbar { display: none; }
 .bm-side figcaption { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
 .bodymap { width: 100%; height: auto; display: block; max-height: 340px; }
 .bodymap .bm-b { fill: #262c34; }
-.bodymap .bm-m { fill: #333b45; stroke: #0e1116; stroke-width: 2; transition: fill .3s; }
-.bodymap .bm-on { fill: var(--bm-c); fill-opacity: var(--bm-o); animation: bm-in 700ms var(--ease-out, ease-out) both; }
+.bodymap .bm-m { fill: #333b45; stroke: #0e1116; stroke-width: 2; transition: fill var(--t-med) var(--ease-out); }
+.bodymap .bm-on { fill: var(--bm-c); fill-opacity: var(--bm-o); animation: bm-in 700ms var(--ease-out) both; }
 @keyframes bm-in { from { fill-opacity: 0; } }
 .bodymap [role="button"] { cursor: pointer; outline: none; }
 .bodymap [role="button"]:focus-visible, .bodymap [role="button"]:active { stroke: var(--volt); stroke-width: 6; }
@@ -222,7 +222,7 @@ body.playing .topbar { display: none; }
 .ht-prs b { font-size: 18px; }
 .ht-sessions li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
 .photo-loop { position: absolute; inset: 0; background: #fff; }
-.photo-loop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; animation: ph-a 3.2s ease-in-out infinite; }
+.photo-loop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; animation: ph-a 3200ms var(--ease-in-out) infinite; }
 .photo-loop img.pl-b { animation-name: ph-b; }
 @keyframes ph-a { 0%, 40% { opacity: 1; transform: scale(1); } 50%, 90% { opacity: 0; transform: scale(1.03); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes ph-b { 0%, 40% { opacity: 0; transform: scale(1.03); } 50%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
@@ -257,7 +257,7 @@ body.playing .topbar { display: none; }
 /* ---------- Awards (Progress → Awards) and summary XP ---------- */
 .aw-name { font: 900 32px/1.1 var(--num, inherit); color: var(--volt); margin: 2px 0 10px; letter-spacing: -.01em; }
 .aw-bar { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: 6px; }
-.aw-bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--p, 0)); border-radius: 999px; background: linear-gradient(90deg, var(--ember), var(--volt)); transition: transform 1.1s var(--ease-out, ease-out); }
+.aw-bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--p, 0)); border-radius: 999px; background: linear-gradient(90deg, var(--ember), var(--volt)); transition: transform 1.1s var(--ease-out); }
 .aw-levels { columns: 2; padding-left: 20px; margin: 6px 0 0; }
 .aw-levels li { break-inside: avoid; color: var(--muted); }
 .aw-levels li.on { color: var(--text); }
@@ -286,8 +286,8 @@ body.playing .topbar { display: none; }
 .bdg-locked { filter: grayscale(1) brightness(.42) contrast(.9); opacity: .7; }
 .bdg-locked .bdg-n { display: none; }
 .bdg-shine { transform: translateX(0); opacity: 0; }
-.bdg-new .bdg-shine { animation: bdg-shine 1.1s .5s cubic-bezier(.4, 0, .2, 1) 2 both; }
-.bdg-pop { animation: bdg-pop .7s cubic-bezier(.34, 1.56, .64, 1) both; }
+.bdg-new .bdg-shine { animation: bdg-shine 1100ms 500ms var(--ease-in-out) 2 both; }
+.bdg-pop { animation: bdg-pop 700ms var(--ease-bounce) both; }
 @keyframes bdg-shine { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(118px); opacity: 1; } }
 @keyframes bdg-pop { 0% { transform: scale(.3) rotate(-12deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .bdg-new .bdg-shine, .bdg-pop { animation: none; } }

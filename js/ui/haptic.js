@@ -22,6 +22,48 @@ export function hapticInput(attrs = '') {
   return `<input type="checkbox" ${hapticsOn() && supportsSwitch ? 'switch' : ''} class="haptic-input" ${attrs}>`;
 }
 
+/** A light tick where the browser has navigator.vibrate (not iPhone Safari: there only a real tap on a switch ticks). */
+export function tick() {
+  if (hapticsOn() && navigator.vibrate) navigator.vibrate(10);
+}
+
+/**
+ * Give a tappable element the invisible-switch trick: a real finger tap on the switch ticks on iOS 18+, and
+ * `fn(host)` runs once per tap. Programmatic clicks don't tick, so this only helps for direct taps.
+ */
+function addSwitch(host, fn) {
+  let input = host.querySelector(':scope > .haptic-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'haptic-input';
+    input.tabIndex = -1;
+    input.setAttribute('aria-hidden', 'true');
+    input.addEventListener('change', () => {
+      input.checked = false;
+      fn(host);
+    });
+    host.appendChild(input);
+  }
+  // Settings → Haptic tick can change at any time, so the `switch` attribute follows it.
+  if (hapticsOn() && supportsSwitch) input.setAttribute('switch', '');
+  else input.removeAttribute('switch');
+}
+
+/** Tab bar: a tap on a tab is a switch tap. `onTab(link)` decides what to do (change tab, scroll to top). */
+export function hapticTabs(nav, onTab) {
+  nav.querySelectorAll('a').forEach((a) => addSwitch(a, onTab));
+}
+
+/** Segmented controls inside root: choosing a segment ticks, then picks it exactly as a normal tap would. */
+export function hapticSegments(root) {
+  root.querySelectorAll('.seg > label').forEach((label) => addSwitch(label, () => {
+    const radio = label.querySelector('input[type=radio]');
+    if (radio && !radio.checked) radio.click();
+  }));
+  root.querySelectorAll('.progress-seg > a').forEach((a) => addSwitch(a, () => { location.hash = a.getAttribute('href'); }));
+}
+
 /** Wire a haptic button: fn runs once per real tap. */
 export function onHapticTap(input, fn) {
   if (!input) return;

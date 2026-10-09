@@ -25,7 +25,6 @@ export function renderLibrary(el) {
 
   el.innerHTML = `
     <section class="stack">
-      <a href="#/train" class="link">‹ Train</a>
       <div class="row between center"><h1>Exercises</h1><button class="btn small" data-new>+ Custom</button></div>
       <input type="search" placeholder="Search ${allExercises().length} exercises" value="${esc(q)}" data-q aria-label="Search">
       <div class="row gap">

@@ -4,12 +4,19 @@ import { state, subscribe, LOADED_KEYS } from './state.js';
 import { esc, toast } from './ui.js';
 import { APP_NAME } from '../config.js';
 import { stopRest, restRemaining } from './timer.js';
-import { viewTransition } from './ui/motion.js';
+import { viewTransition, animateCounters, resetCounters, reducedMotion } from './ui/motion.js';
 import { loadPhotoIndex } from './ui/photos.js';
+import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
+import { hapticTabs, hapticSegments } from './ui/haptic.js';
+import { attachSwipeBack } from './ui/swipeback.js';
+import { skeletonHTML } from './ui/skeleton.js';
+import { tabOf, routeDepth, transitionKind, backTarget, backLabel, TITLE_FOR, createScrollMemory } from './nav.js';
 
 const main = document.getElementById('main');
 const nav = document.getElementById('nav');
 const syncPill = document.getElementById('sync');
+const offlineBanner = document.getElementById('offline');
+const scrollMemory = createScrollMemory();
 
 // ---------- service worker + "new version" banner ----------
 function setupServiceWorker() {
@@ -48,12 +55,22 @@ function setupServiceWorker() {
   });
 }
 
-// ---------- sync status pill ----------
+// ---------- sync status (inline in the nav bar, only when it isn't "Synced") ----------
+let offlineTimer = 0;
 function renderSync() {
-  const labels = { synced: 'Synced', saving: 'Saving…', offline: 'Offline · saved on this phone' };
-  syncPill.className = `sync ${state.sync}`;
-  syncPill.textContent = labels[state.sync] || '';
-  syncPill.hidden = !state.user;
+  const labels = { saving: 'Saving…', offline: 'Offline' };
+  const label = labels[state.sync] || '';
+  syncPill.className = `nb-status ${state.sync}`;
+  syncPill.textContent = label;
+  syncPill.hidden = !state.user || !label;
+  // Offline for more than a few seconds: say what that means.
+  if (state.sync === 'offline') {
+    if (!offlineTimer) offlineTimer = setTimeout(() => { offlineBanner.hidden = false; }, 4000);
+  } else {
+    clearTimeout(offlineTimer);
+    offlineTimer = 0;
+    offlineBanner.hidden = true;
+  }
 }
 
 // ---------- routing ----------
@@ -78,17 +95,8 @@ const routes = {
   metric: (key) => import('./screens/metric.js').then((m) => m.renderMetric(main, decodeURIComponent(key || 'weight_kg'))),
   profile: () => import('./screens/onboarding.js').then((m) => m.renderOnboarding(main, { editing: true })),
 };
-// Which tab lights up for each screen.
-const TAB_FOR = {
-  session: 'train', play: 'train', summary: 'train', timer: 'train', library: 'train',
-  history: 'weight', weight: 'weight', awards: 'weight', locations: 'settings', profile: 'settings',
-  withings: 'settings', apple: 'settings', score: 'weight', metric: 'body',
-};
-// Screens that fill the whole screen (no tab bar).
+// Screens that fill the whole screen (no tab bar, no nav bar).
 const FULLSCREEN = new Set(['play', 'summary', 'profile']);
-// For screen-change animations: tabs slide sideways, detail screens push in / pop out.
-const TAB_ORDER = ['today', 'train', 'body', 'weight', 'settings'];
-const DEPTH = { today: 0, train: 0, body: 0, weight: 0, history: 0, awards: 0, score: 0, settings: 0 };
 
 const routeParts = () => (location.hash.replace(/^#\/?/, '').split('?')[0] || 'today').split('/');
 const currentRoute = () => routeParts()[0];
@@ -96,6 +104,9 @@ const allLoaded = () => LOADED_KEYS.every((k) => state.loaded[k]);
 
 let pendingRender = false;
 let lastRoute = null;
+let skeletonFor = null;
+const seenBefore = () => { try { return localStorage.getItem('forge.seen') === '1'; } catch { return false; } };
+const markSeen = (on) => { try { if (on) localStorage.setItem('forge.seen', '1'); else localStorage.removeItem('forge.seen'); } catch { /* private mode */ } };
 
 function loadErrorMessage(err) {
   const code = (err && err.code) || '';
@@ -118,12 +129,14 @@ async function render() {
 
   if (!configured) {
     nav.hidden = true;
+    hideNavBar();
     main.innerHTML = `<section class="card stack"><h1>Almost there</h1>
       <p>Paste your Firebase settings into <code>config.js</code> (see SETUP.md, step 3), then reload.</p></section>`;
     return;
   }
   if (state.user && state.loadError) {
     nav.hidden = true;
+    hideNavBar();
     main.innerHTML = `<section class="card stack"><h1>Something’s blocking your data</h1>
       <p>${loadErrorMessage(state.loadError)}</p>
       <button class="btn" data-retry>Try again</button></section>`;
@@ -131,18 +144,27 @@ async function render() {
     return;
   }
   if (state.user === undefined || (state.user && !allLoaded())) {
-    nav.hidden = true;
-    main.innerHTML = '<div class="loading" aria-label="Loading"><span></span></div>';
+    // A skeleton of the screen that's about to appear, never a spinner. Tab bar shows if you've been here before.
+    nav.hidden = !seenBefore() || FULLSCREEN.has(currentRoute());
+    hideNavBar();
+    if (skeletonFor !== currentRoute()) {
+      skeletonFor = currentRoute();
+      main.innerHTML = skeletonHTML(currentRoute());
+    }
     return;
   }
+  skeletonFor = null;
   if (!state.user) {
+    markSeen(false);
     nav.hidden = true;
+    hideNavBar();
     const m = await import('./screens/auth.js');
     m.renderAuth(main);
     return;
   }
   if (!state.profile) {
     nav.hidden = true;
+    hideNavBar();
     const m = await import('./screens/onboarding.js');
     m.renderOnboarding(main, { editing: false });
     return;
@@ -154,8 +176,9 @@ async function render() {
   if (lastRoute === 'session' && route !== 'session') import('./screens/session.js').then((m) => m.leaveSession());
   if (lastRoute === 'play' && route !== 'play') import('./screens/player.js').then((m) => m.leavePlayer());
   if (lastRoute === 'summary' && route !== 'summary') import('./ui/fx.js').then((m) => m.clearParticles());
+  if (lastRoute !== route) screenNav(null); // sub-view nav (e.g. a Locations editor) never outlives its screen
   lastRoute = route;
-  const tab = TAB_FOR[route] || route;
+  const tab = tabOf(route);
   nav.hidden = FULLSCREEN.has(route);
   document.body.classList.toggle('fullscreen', FULLSCREEN.has(route));
   nav.querySelectorAll('a').forEach((link) => {
@@ -165,10 +188,17 @@ async function render() {
   });
   try {
     await routes[route](...routeParts().slice(1));
+    markSeen(true);
+    if (FULLSCREEN.has(route)) hideNavBar();
+    else navBar({ title: TITLE_FOR[route], back: backTarget(routeParts()), backLabel: backLabel(routeParts()) });
+    hapticTabs(nav, onTab);
+    hapticSegments(main);
+    animateCounters(main);
     // A brand-new account sees the how-to tour once, on Today, right after onboarding.
     if (route === 'today' && state.profile.tour === 'pending') import('./tour/tour.js').then((m) => m.maybeStartTour());
   } catch (e) {
     console.error(e);
+    hideNavBar();
     main.innerHTML = `<section class="card"><h1>Something broke</h1><p class="muted">${esc(e.message)}</p></section>`;
   }
 }
@@ -202,21 +232,66 @@ subscribe((patch) => {
   render();
 });
 
-let prevRoute = currentRoute();
-window.addEventListener('hashchange', () => {
-  const to = currentRoute();
-  const from = prevRoute;
-  prevRoute = to;
-  let kind = 'fade';
-  const dFrom = DEPTH[from] ?? 1;
-  const dTo = DEPTH[to] ?? 1;
-  if (dTo > dFrom) kind = 'push';
-  else if (dTo < dFrom) kind = 'pop';
-  else if (dTo === 0) kind = TAB_ORDER.indexOf(TAB_FOR[to] || to) >= TAB_ORDER.indexOf(TAB_FOR[from] || from) ? 'tab-fwd' : 'tab-back';
+// ---------- screen changes ----------
+let prevParts = routeParts();
+let swipePop = null; // set while an edge swipe is finishing: the screen already slid away, so don't animate again
+
+function afterRoute(parts) {
+  const route = parts[0] || 'today';
+  window.scrollTo(0, scrollMemory.restore(route)); // tab roots remember where you were; detail screens start at the top
+}
+
+window.addEventListener('hashchange', async () => {
+  const from = prevParts;
+  const to = routeParts();
+  prevParts = to;
+  scrollMemory.save(from[0] || 'today', window.scrollY);
+  if (from[0] !== to[0] || from[1] !== to[1]) resetCounters();
+  if (swipePop) {
+    const done = swipePop;
+    swipePop = null;
+    await render();
+    afterRoute(to);
+    done();
+    return;
+  }
+  const kind = transitionKind(from, to);
   viewTransition(async () => {
     await render();
-    window.scrollTo(0, 0);
-  }, kind);
+    afterRoute(to);
+  }, reducedMotion() ? 'fade' : kind);
+});
+
+// Tapping a tab: switch to it; tapping the tab you're on scrolls to the top, or pops a detail screen back to its root.
+function onTab(link) {
+  const href = link.getAttribute('href');
+  const target = href.slice(2);
+  if (target === tabOf(currentRoute())) {
+    if (routeDepth(routeParts()) === 0) {
+      scrollMemory.forget(currentRoute());
+      window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+      return;
+    }
+    scrollMemory.forget(target);
+  }
+  location.hash = href;
+}
+nav.addEventListener('click', (e) => {
+  const a = e.target.closest('a');
+  if (!a || e.target.classList.contains('haptic-input')) return;
+  e.preventDefault();
+  onTab(a);
+});
+
+attachSwipeBack({
+  el: main,
+  canSwipe: () => routeDepth(routeParts()) > 0 && !FULLSCREEN.has(currentRoute()),
+  onPop: ({ crossfade = false } = {}) => new Promise((resolve) => {
+    // Reduced motion: nothing slid away, so let the normal route change crossfade.
+    if (!crossfade) swipePop = resolve;
+    else resolve();
+    location.hash = backTarget(routeParts());
+  }),
 });
 window.addEventListener('forge:error', (e) => toast(e.detail, 4000));
 

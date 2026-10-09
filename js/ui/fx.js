@@ -5,8 +5,9 @@
 // Rules: under ~900 ms (PR ~1.6 s, tap to dismiss), never blocks input (pointer-events: none except the PR
 // card), only transform/opacity/canvas are animated, and the frame loop sleeps when nothing is moving.
 // Reduced motion: no sparks, shake or scaling: a colour flash, the ✓, sound and text only.
-import { onFrame, reducedMotion } from './motion.js';
+import { onFrame, reducedMotion, EASE } from './motion.js';
 import { sfx, coach } from './sound.js';
+import { tick } from './haptic.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const COLORS = { ember: '#FF6A2B', volt: '#C6FF3D', gold: '#FFC94D', white: '#FFFFFF', hot: '#FFB547' };
@@ -133,10 +134,10 @@ export function aura(x, y, { size = 260, colors = [COLORS.ember, COLORS.volt], s
   el.style.background = `radial-gradient(circle, ${a}cc 0%, ${a}66 28%, ${b}33 55%, transparent 70%)`;
   document.body.appendChild(el);
   const anim = reducedMotion()
-    ? el.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 360, easing: 'ease-out' })
+    ? el.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 360, easing: EASE.out })
     : el.animate(
         [{ transform: 'scale(.35)', opacity: 0.95 }, { transform: `scale(${scale * 0.8})`, opacity: 0.75, offset: 0.4 }, { transform: `scale(${scale})`, opacity: 0 }],
-        { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)' }
+        { duration: dur, easing: EASE.out }
       );
   anim.onfinish = () => el.remove();
 }
@@ -149,14 +150,14 @@ export function floatText(text, x, y, cls = '') {
   el.style.top = `${y}px`;
   document.body.appendChild(el);
   const move = reducedMotion() ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: 'translate(-50%, 0) scale(.9)', opacity: 0 }, { transform: 'translate(-50%, -18px) scale(1.05)', opacity: 1, offset: 0.2 }, { transform: 'translate(-50%, -52px) scale(1)', opacity: 0 }];
-  el.animate(move, { duration: 800, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = () => el.remove();
+  el.animate(move, { duration: 800, easing: EASE.out }).onfinish = () => el.remove();
 }
 
 export function shake(el, px = 3) {
   if (!el || reducedMotion()) return;
   el.animate(
     [{ transform: 'translateX(0)' }, { transform: `translateX(${-px}px)` }, { transform: `translateX(${px}px)` }, { transform: `translateX(${-px / 2}px)` }, { transform: 'translateX(0)' }],
-    { duration: 150, easing: 'linear' }
+    { duration: 150, easing: EASE.out }
   );
 }
 
@@ -167,12 +168,12 @@ export function pop(el) {
     el.animate([{ filter: 'brightness(1.6)' }, { filter: 'brightness(1)' }], { duration: 300 });
     return;
   }
-  el.animate([{ transform: 'scale(1)' }, { transform: 'scale(.92)', offset: 0.25 }, { transform: 'scale(1.06)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+  el.animate([{ transform: 'scale(1)' }, { transform: 'scale(.92)', offset: 0.25 }, { transform: 'scale(1.06)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 320, easing: EASE.bounce });
 }
 
 export function flash(el, color = COLORS.ember) {
   if (!el) return;
-  el.animate([{ boxShadow: `0 0 0 0 ${color}00` }, { boxShadow: `0 0 0 6px ${color}aa` }, { boxShadow: `0 0 0 14px ${color}00` }], { duration: 520, easing: 'ease-out' });
+  el.animate([{ boxShadow: `0 0 0 0 ${color}00` }, { boxShadow: `0 0 0 6px ${color}aa` }, { boxShadow: `0 0 0 14px ${color}00` }], { duration: 520, easing: EASE.out });
 }
 
 /**
@@ -221,6 +222,7 @@ export function prExplosion(prs, { origin } = {}) {
   return enqueue(() => new Promise((resolve) => {
     const [x, y] = origin ? centerOf(origin) : [innerWidth / 2, innerHeight * 0.42];
     sfx.pr();
+    tick();
     coach.pr();
     const layer = document.createElement('div');
     layer.className = 'fx-pr';
@@ -241,7 +243,7 @@ export function prExplosion(prs, { origin } = {}) {
     document.body.appendChild(layer);
     const card = layer.querySelector('.pr-card2');
     if (!reducedMotion()) {
-      card.animate([{ transform: 'scale(1.6) rotate(-4deg)', opacity: 0 }, { transform: 'scale(.96) rotate(1deg)', opacity: 1, offset: 0.6 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      card.animate([{ transform: 'scale(1.6) rotate(-4deg)', opacity: 0 }, { transform: 'scale(.96) rotate(1deg)', opacity: 1, offset: 0.6 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { duration: 300, easing: EASE.bounce });
       aura(x, y, { gold: true, size: 380, scale: 2.4, dur: 700 });
       burst(x, y, { count: 60 + list.length * 15, colors: [COLORS.gold, COLORS.white, COLORS.hot], speed: 10, life: 55 });
       setTimeout(() => burst(innerWidth / 2, innerHeight * 0.38, { count: 50, colors: [COLORS.gold, COLORS.white], speed: 8, life: 50 }), 350);
@@ -280,6 +282,7 @@ export function prExplosion(prs, { origin } = {}) {
 export function levelUp({ level, name }) {
   return enqueue(() => new Promise((resolve) => {
     sfx.pr();
+    tick();
     const layer = document.createElement('div');
     layer.className = 'lvl-up';
     layer.setAttribute('role', 'status');
@@ -287,7 +290,7 @@ export function levelUp({ level, name }) {
     document.body.appendChild(layer);
     const card = layer.firstChild;
     if (!reducedMotion()) {
-      card.animate([{ transform: 'scale(1.5)', opacity: 0 }, { transform: 'scale(.97)', opacity: 1, offset: 0.6 }, { transform: 'scale(1)', opacity: 1 }], { duration: 360, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      card.animate([{ transform: 'scale(1.5)', opacity: 0 }, { transform: 'scale(.97)', opacity: 1, offset: 0.6 }, { transform: 'scale(1)', opacity: 1 }], { duration: 360, easing: EASE.bounce });
       aura(innerWidth / 2, innerHeight / 2, { gold: true, size: 360, scale: 2.2, dur: 700 });
       burst(innerWidth / 2, innerHeight / 2, { count: 80, colors: [COLORS.gold, COLORS.volt, COLORS.white], speed: 10, life: 60 });
     }

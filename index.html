@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://www.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://us-east1-forge-web-f2351.cloudfunctions.net; img-src 'self' data: blob: https://www.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <meta name="theme-color" content="#0d0f12">
+  <!-- Dark only until the light theme lands (Part B), so both variants are the dark colour. -->
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: light)">
   <meta name="color-scheme" content="dark">
+  <style>html,body{background:#0a0a0b;color:#f5f5f7;margin:0;color-scheme:dark}</style>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,6 +19,7 @@
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/motion.css">
   <link rel="stylesheet" href="css/player.css">
   <link rel="stylesheet" href="css/health.css">
@@ -24,19 +28,29 @@
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js">
 </head>
 <body>
-  <button id="update" class="update-banner" hidden>New version ready — tap to refresh</button>
-  <div class="topbar">
-    <span id="sync" class="sync" role="status" hidden></span>
-  </div>
+  <button id="update" class="update-capsule" hidden><span>Update available</span><b>Reload</b></button>
+  <header id="navbar" class="navbar" hidden>
+    <button class="nb-back" type="button" aria-label="Back" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Back</span>
+    </button>
+    <p class="nb-title" aria-hidden="true"></p>
+    <span id="sync" class="nb-status" role="status" hidden></span>
+  </header>
+  <div id="offline" class="offline-banner" role="status" hidden>You’re offline. Changes are saved on this phone.</div>
   <main id="main" tabindex="-1">
-    <div class="loading" aria-label="Loading"><span></span></div>
+    <div class="skel-screen" aria-label="Loading">
+      <div class="skeleton sk-title"></div>
+      <div class="skeleton sk-card"></div>
+      <div class="skeleton sk-card short"></div>
+      <div class="skeleton sk-card"></div>
+    </div>
   </main>
   <nav id="nav" class="tabbar" hidden aria-label="Main">
-    <a href="#/today"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg><span>Today</span></a>
-    <a href="#/train"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg><span>Train</span></a>
-    <a href="#/body"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2.2"/><path d="M12 7.5v6M8 9.5l4-1 4 1M9.5 21l2.5-7.5L14.5 21"/></svg><span>Body</span></a>
-    <a href="#/weight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/></svg><span>Progress</span></a>
-    <a href="#/settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Settings</span></a>
+    <a href="#/today"><svg class="ic-off" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.8"/></svg><svg class="ic-on" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm0 5.7a3.8 3.8 0 110 7.6 3.8 3.8 0 010-7.6z"/></svg><span>Today</span></a>
+    <a href="#/train"><svg class="ic-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg><svg class="ic-on" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="9" width="3" height="6" rx="1.2"/><rect x="5" y="5.5" width="3.4" height="13" rx="1.4"/><rect x="15.6" y="5.5" width="3.4" height="13" rx="1.4"/><rect x="19" y="9" width="3" height="6" rx="1.2"/><rect x="8" y="11" width="8" height="2"/></svg><span>Train</span></a>
+    <a href="#/body"><svg class="ic-off" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.8" r="2.3"/><path d="M12 8.5v5.5M7.5 10.5l4.5-1.5 4.5 1.5M9.3 21l2.7-7 2.7 7"/></svg><svg class="ic-on" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.8" r="2.8"/><path d="M12 8.5v5.5M7.5 10.5l4.5-1.5 4.5 1.5M9.3 21l2.7-7 2.7 7" fill="none" stroke="currentColor" stroke-width="2.8"/></svg><span>Body</span></a>
+    <a href="#/weight"><svg class="ic-off" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="12" width="4" height="8" rx="1.2"/><rect x="10" y="4" width="4" height="16" rx="1.2"/><rect x="16.5" y="8.5" width="4" height="11.5" rx="1.2"/></svg><svg class="ic-on" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11.5" width="5" height="9" rx="1.5"/><rect x="9.5" y="3.5" width="5" height="17" rx="1.5"/><rect x="16" y="8" width="5" height="12.5" rx="1.5"/></svg><span>Progress</span></a>
+    <a href="#/settings"><svg class="ic-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 12h2M12 12h8M4 17h9M19 17h1"/><circle cx="16" cy="7" r="2.3"/><circle cx="9" cy="12" r="2.3"/><circle cx="16" cy="17" r="2.3"/></svg><svg class="ic-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 12h2M12 12h8M4 17h9M19 17h1" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="7" r="3"/><circle cx="9" cy="12" r="3"/><circle cx="16" cy="17" r="3"/></svg><span>Settings</span></a>
   </nav>
   <noscript>This app needs JavaScript.</noscript>
   <script type="module" src="js/app.js"></script>
