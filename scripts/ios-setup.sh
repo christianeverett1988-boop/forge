@@ -67,7 +67,15 @@ ok "Node.js $(node -v)"
 
 # ---- 4. Install, build, sync ----
 say "Installing and building (the first time takes a few minutes; it needs the internet)"
-run "Installing the app’s tools" npm ci --no-audit --no-fund
+if [ -f node_modules/.package-lock.json ] && node -e '
+const a = require("./package-lock.json").packages, b = require("./node_modules/.package-lock.json").packages;
+const bad = Object.keys(b).some((k) => !a[k] || a[k].version !== b[k].version);
+const miss = Object.keys(a).some((k) => k && !b[k] && !a[k].optional && !a[k].peer);
+process.exit(bad || miss ? 1 : 0);' 2> /dev/null; then
+  ok "The app’s tools are already installed"
+else
+  run "Installing the app’s tools" npm ci --no-audit --no-fund
+fi
 run "Building the app’s copy of Forge and downloading Firebase" npm run native:build
 if [ ! -d ios ]; then
   run "Creating the Xcode project (first time only)" npx cap add ios

@@ -136,6 +136,7 @@ const SHELL = [
   './js/screens/withings.js',
   './js/screens/metric.js',
   './js/ui/linechart.js',
+  './js/native/autoread.js',
   './js/native/bridge.js',
   './js/native/health.js',
   './data/metrics.json',

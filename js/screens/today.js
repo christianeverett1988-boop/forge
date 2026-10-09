@@ -19,6 +19,7 @@ import { currentReadiness, currentScore, readinessOverridden, overrideReadiness 
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
 import { isNative } from '../native/bridge.js';
+import { lastNativeRead } from '../native/autoread.js';
 import { programLine, completionCards, afterCompletionCards } from '../body-programs/ui.js';
 import { missionsCard, afterMissionsRender, badgeCelebrationCards, afterBadgeCelebrations } from '../missions/ui.js';
 import { coachData } from '../coach/data.js';
@@ -82,7 +83,7 @@ function readinessCard() {
     return `<a class="card stack nav-card" href="#/apple" data-readiness><p class="label">Readiness</p>
       <p>Getting to know your normal: <b data-count>${have} of ${r.needed} days</b>.</p>
       <div class="ready-progress"><i style="width:${Math.round((have / r.needed) * 100)}%"></i></div>
-      <p class="small muted">${isNative() ? 'Tap here and choose Connect Apple Health: it reads your history right away.' : 'Import your Health export in Settings → Apple Health to get there today.'}</p></a>`;
+      <p class="small muted">${isNative() ? (lastNativeRead(state.user && state.user.uid) ? `Forge has your history. Readiness fills in as your Watch records more nights: ${Math.max(0, r.needed - have)} to go.` : 'Tap here and choose Connect Apple Health: it reads your history right away.') : 'Import your Health export in Settings → Apple Health to get there today.'}</p></a>`;
   }
   if (r.status === 'waiting') {
     return `<a class="card stack nav-card" href="#/apple" data-readiness><p class="label">Readiness</p>

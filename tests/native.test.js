@@ -4,6 +4,7 @@ import { test, eq, assert, near } from './harness.js';
 import { isNative, plugin, haptic, syncRestNotification, openExternal, hideSplash, setupKeyboard, REST_NOTIFICATION_ID } from '../js/native/bridge.js';
 import { localStamp, sampleToRecord, sleepRecords, totalToRecord, daysFromHealth, healthPlugin, READ_TYPES } from '../js/native/health.js';
 import { cdnRefs, localise, COPY } from '../scripts/build-www.mjs';
+import { autoReadMode, hasOvernight } from '../js/native/autoread.js';
 
 function fakeShell({ names = ['Haptics', 'LocalNotifications', 'Browser', 'StatusBar'], permission = 'prompt' } = {}) {
   const calls = [];
@@ -170,4 +171,27 @@ test('splash and keyboard: the splash comes down on request, the keyboard key ba
   assert(k.includes('setAccessoryBarVisible') && k.includes('addListener'), k.join());
   eq(calls.find((c) => c[1] === 'setAccessoryBarVisible')[2].isVisible, true);
   web();
+});
+
+test('morning auto-read: reads when today has no overnight data (every 20 min), then falls back to the 6 h rule', () => {
+  const at = (h, m, d = 10) => new Date(2026, 9, d, h, m);
+  const today = '2026-10-10';
+  const none = [{ id: '2026-10-09', hrv_sdnn_ms: 50 }];
+  const last = at(23, 0, 9).getTime();
+  eq(autoReadMode({ now: at(6, 30), last, today, rows: none }), 'steady'); // 11 PM read is 7.5 h old
+  const tried = at(6, 30).getTime(); // that read happened; the app records it as the morning try too
+  eq(autoReadMode({ now: at(6, 35), last: tried, today, rows: none, morningAt: tried }), null);
+  eq(autoReadMode({ now: at(6, 55), last: tried, today, rows: none, morningAt: tried }), 'morning');
+  // the morning rule on its own: last read 2 AM (under 6 h), no data today
+  eq(autoReadMode({ now: at(6, 30), last: at(2, 0).getTime(), today, rows: none }), 'morning');
+  // a failed morning read backs off 30 minutes
+  eq(autoReadMode({ now: at(6, 55), last: tried, today, rows: none, morningAt: tried, morningFailedAt: tried }), null);
+  eq(autoReadMode({ now: at(7, 1), last: tried, today, rows: none, morningAt: tried, morningFailedAt: tried }), 'morning');
+  // before 4:00 the morning rule stays quiet
+  eq(autoReadMode({ now: at(3, 30), last: at(0, 30).getTime(), today, rows: none }), null);
+  // today's data is in: only the 6 h rule
+  const got = [{ id: today, sleep: { asleep_min: 420 } }];
+  assert(hasOvernight(got, today));
+  eq(autoReadMode({ now: at(7, 30), last: at(6, 59).getTime(), today, rows: got }), null);
+  eq(autoReadMode({ now: at(13, 5), last: at(6, 59).getTime(), today, rows: got }), 'steady');
 });

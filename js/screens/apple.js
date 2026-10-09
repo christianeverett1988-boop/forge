@@ -10,6 +10,7 @@ import { shiftDay } from '../health/metrics.js';
 import { NEEDED_DAYS } from '../health/readiness.js';
 import { icon } from '../ui/icons.js';
 import { isNative } from '../native/bridge.js';
+import { autoReadMode, nativeReadKey, lastNativeRead } from '../native/autoread.js';
 
 const call = async (...args) => (await import('../functions.js')).call(...args);
 const INGEST_URL = `https://us-east1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/healthIngest`;
@@ -28,11 +29,10 @@ const ago = (iso) => {
 const dayText = (d) => (d ? formatDay(d, { weekday: 'short', month: 'short', day: 'numeric' }) : '—');
 
 // ---------- iPhone app: read HealthKit directly (js/native/health.js) ----------
-const NATIVE_KEY = () => `forge.healthkit.last.${(state.user && state.user.uid) || ''}`; // per account on a shared phone
-const AUTO_EVERY_MS = 6 * 3600 * 1000;
+const NATIVE_KEY = () => nativeReadKey(state.user && state.user.uid);
 let nativeState = null; // { text } while reading
 const NOT_IN_HEALTHKIT = ['walkhr', 'workouts']; // not read from HealthKit (Forge has its own workouts; the plugin has no walking heart rate)
-const lastNative = () => { try { return Number(localStorage.getItem(NATIVE_KEY())) || 0; } catch { return 0; } };
+const lastNative = () => lastNativeRead(state.user && state.user.uid);
 
 /**
  * Read Apple Health on this phone and save the daily summaries. The first time it reaches back IMPORT_DAYS days;
@@ -56,14 +56,23 @@ export async function nativeHealthSync({ onText = () => {} } = {}) {
 }
 
 let autoFailedAt = 0;
+let morningAt = 0;
+let morningFailedAt = 0;
 /**
- * Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old.
- * Not while you're reading by hand, and after a failure not again for 6 h (the button still works).
+ * Called by the app on open and when it comes back to the front: a quiet read if the last one is 6 h old, or, after
+ * 4:00, if today's overnight data hasn't arrived yet (at most every 20 min; js/native/autoread.js). Not while you're
+ * reading by hand. The Today cards update by themselves when health_daily changes.
  */
 export async function autoHealthSync() {
   if (!isNative() || !state.user || nativeState || !lastNative()) return 0;
-  if (Date.now() - lastNative() < AUTO_EVERY_MS || Date.now() - autoFailedAt < AUTO_EVERY_MS) return 0;
-  try { return await nativeHealthSync(); } catch { autoFailedAt = Date.now(); return 0; }
+  const now = new Date();
+  const mode = autoReadMode({ now, last: lastNative(), today: todayKey(), rows: state.health_daily, failedAt: autoFailedAt, morningAt, morningFailedAt });
+  if (!mode) return 0;
+  morningAt = now.getTime(); // any auto read counts as the morning try, so the 20 minutes start now
+  try { return await nativeHealthSync(); } catch {
+    if (mode === 'morning') morningFailedAt = Date.now(); else autoFailedAt = Date.now();
+    return 0;
+  }
 }
 
 function nativeCard() {
@@ -92,6 +101,22 @@ async function runNative(el) {
   renderApple(el);
 }
 
+const ACRONYMS = new Set(['HRV']);
+const lowerLabel = (l) => (ACRONYMS.has(l) ? l : l.toLowerCase());
+const WATCH_ONLY = new Set(['Wrist temperature', 'Cardio fitness']);
+const joinWords = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] || '');
+
+/** Short bold line, then the iOS path on its own line; the Watch sentence only if one of those kinds is missing. */
+function missingNotice(labels) {
+  const names = joinWords(labels.map(lowerLabel));
+  const watch = labels.filter((l) => WATCH_ONLY.has(l));
+  return `<div class="notice small stack" data-missing>
+      <b>Nothing yet for ${esc(names)}</b>
+      <span>Settings → Health → Data Access &amp; Devices → Forge → <b>Turn On All</b></span>
+      <span>Then tap Read Apple Health now.${watch.length ? ` ${esc(joinWords(watch.map(lowerLabel)).replace(/^./, (c) => c.toUpperCase()))} also ${watch.length > 1 ? 'need' : 'needs'} an Apple Watch that records ${watch.length > 1 ? 'them' : 'it'}.` : ''}</span>
+    </div>`;
+}
+
 function statusCard() {
   const today = todayKey();
   const st = fieldStatus(state.health_daily, today);
@@ -113,7 +138,7 @@ function statusCard() {
       <p class="small muted" style="margin-top:6px">${have >= NEEDED_DAYS ? 'Readiness has enough history.' : `Readiness needs ${NEEDED_DAYS} days of HRV, resting heart rate or sleep. You have ${have}.`}</p>
     </div>
     ${(a.rejected_last || []).length ? `<div class="notice warn small" data-rejected>${esc(rejectedText(a.rejected_last))}</div>` : ''}
-    ${missing.length ? `<div class="notice small" data-missing><b>No ${esc(missing.join(', ').toLowerCase())} from Apple Health yet.</b> If iOS didn’t share ${missing.length > 1 ? 'them' : 'it'}: on your iPhone open Settings → Health → Data Access &amp; Devices → Forge → <b>Turn On All</b>, then tap Read Apple Health now. Wrist temperature and cardio fitness also need an Apple Watch that records them.</div>` : ''}
+    ${missing.length ? missingNotice(missing) : ''}
     <div class="field-grid">${chips}</div>
   </div>`;
 }
