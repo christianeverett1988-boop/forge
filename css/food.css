@@ -30,24 +30,31 @@
 .food-scroll { max-height: 44vh; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--s-3); }
 .food-results:empty { display: none; }
 
-/* USDA results (v0.15.5): one line each for the name, and for brand + kcal + serving. Nothing wraps or splits. */
+/* USDA results (v0.15.5): the name wraps to at most two lines (generic names differ at the end); brand + kcal + serving stay on one. */
 .food-online { display: flex; flex-direction: column; gap: var(--s-2); }
 .food-online[hidden], .food-online-head[hidden] { display: none; }
 .food-online-head { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); letter-spacing: .01em; }
 .food-online-note { margin: 0; min-height: 20px; }
 .food-online-note:empty { display: none; }
 .food-row { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.food-row > b, .food-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.food-row > b, .clamp2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.food-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .food-sub { display: flex; gap: 0; font-size: 13px; line-height: 1.35; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .food-sub > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .food-sub > span + span::before { content: " · "; white-space: pre; }
-.food-sub > .food-brand { flex: 0 1 40%; }
+.food-sub > .food-brand { flex: 0 1 auto; max-width: 45%; }
 .food-sub > .food-kcal { flex: none; overflow: visible; }
 .food-sub > .food-serv { flex: 1 1 0; }
-.food-skel { min-height: 60px; padding: 0; }
-.food-skel .skeleton { display: block; width: 100%; height: 60px; border-radius: 0; }
+.food-skel { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--s-2); min-height: 60px; cursor: default; }
+.food-skel .skeleton { display: block; border-radius: var(--r-sm, 6px); }
+.food-skel-name { width: 70%; height: 16px; }
+.food-skel-sub { width: 45%; height: 12px; }
 .food-online .stale { opacity: .5; transition: opacity .15s ease; }
-.food-dock-head > b, [data-sel-name] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.food-dock-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.food-dock-title[hidden], [data-sel-brand][hidden], .chips--wrap[hidden] { display: none; }
+.food-dock-title > small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chips--wrap { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.chips--wrap .chip-btn { padding: var(--s-2) var(--s-2); line-height: 1.2; }
 
 /* Portion picker for a USDA food: ½ 1 1½ 2, or an amount in servings / oz / g. */
 .portion { display: flex; flex-direction: column; gap: var(--s-2); }

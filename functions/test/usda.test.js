@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { fakeDb } from './fake-db.js';
 import { setSink } from '../src/log.js';
 import {
-  validateInput, tidyCase, normalizeFood, per100Of, rankFoods, dedupe, looksLikeBrandQuery, searchFoods, createCache,
+  validateInput, tidyCase, normalizeFood, measuresOf, deleteFoodSearchData, per100Of, rankFoods, dedupe, looksLikeBrandQuery, searchFoods, createCache,
   meterSearch, RATE_PER_HOUR, MAX_RESULTS, FoodSearchError,
 } from '../src/usda.js';
 
@@ -73,7 +73,7 @@ test('normalizeFood: per 100 g, per serving, brand on its own field', () => {
   const y = normalizeFood(YOGURT);
   assert.deepEqual(y, {
     fdcId: 2001, name: 'Greek Yogurt, Vanilla', brand: 'Chobani', dataType: 'Branded',
-    serving: { g: 150, text: '1 container (150 g)', real: true },
+    serving: { g: 150, text: '1 container (150 g)', real: true }, measures: [],
     per100: { kcal: 80, protein_g: 11.3, carbs_g: 8, fat_g: 0 },
     perServing: { kcal: 120, protein_g: 17, carbs_g: 12, fat_g: 0 }, // 80 × 1.5, 11.3 × 1.5 = 16.95 → 17
   });
@@ -141,7 +141,7 @@ test('searchFoods: merges both calls, ranks, caps at 25, sends the key in a head
     assert.equal(c.init.headers['X-Api-Key'], 'KEY123');
   }
   assert.deepEqual(f.calls.map((c) => JSON.parse(c.init.body).dataType).sort(), [['Branded'], ['Foundation', 'SR Legacy', 'Survey (FNDDS)']].sort());
-  assert.deepEqual(Object.keys(out.foods[0]).sort(), ['brand', 'dataType', 'fdcId', 'name', 'per100', 'perServing', 'serving']);
+  assert.deepEqual(Object.keys(out.foods[0]).sort(), ['brand', 'dataType', 'fdcId', 'measures', 'name', 'per100', 'perServing', 'serving']);
 });
 
 test('searchFoods: identical queries come from the cache for a few minutes', async () => {
@@ -202,4 +202,57 @@ test('the source never logs or throws the key, the URL or the query', async () =
   const src = readFileSync(new URL('../src/usda.js', import.meta.url), 'utf8');
   assert.ok(!/console\./.test(src), 'no console output in usda.js');
   assert.ok(!/log\([^)]*(query|apiKey|FDC_URL)/.test(src), 'log() never gets the query, key or URL');
+});
+
+// A Survey (FNDDS) hit as the search returns it: household measures with gram weights.
+const FNDDS = {
+  fdcId: 782345, description: 'Rice, white, cooked', dataType: 'Survey (FNDDS)', foodNutrients: nut(130, 2.7, 28.2, 0.3),
+  foodMeasures: [
+    { disseminationText: 'Quantity not specified', gramWeight: 158, rank: 99 },
+    { disseminationText: '1 cup', gramWeight: 158, rank: 1 },
+    { disseminationText: '1 tablespoon', gramWeight: 10, rank: 2 },
+    { disseminationText: '1 oz', gramWeight: 28.35, rank: 3 },
+    { disseminationText: '1 CUP', gramWeight: 158, rank: 4 },
+    { disseminationText: '1 serving, restaurant size', gramWeight: 300, rank: 5 },
+    { disseminationText: '1 bowl', gramWeight: 0, rank: 6 },
+    { disseminationText: '1 large scoop', gramWeight: 90, rank: 7 },
+    { disseminationText: '1 small scoop', gramWeight: 45, rank: 8 },
+  ],
+};
+
+test('household measures: Survey foods get "1 cup (158 g)" as the serving and up to 4 sensible measures', () => {
+  const f = normalizeFood(FNDDS);
+  assert.deepEqual(f.serving, { g: 158, text: '1 cup (158 g)', real: true });
+  assert.deepEqual(f.measures, [
+    { text: '1 cup', g: 158 }, { text: '1 tablespoon', g: 10 }, { text: '1 serving, restaurant size', g: 300 }, { text: '1 large scoop', g: 90 },
+  ]);
+  assert.equal(f.perServing.kcal, 205);
+  const b = normalizeFood(BANANA);
+  assert.deepEqual(b.serving, { g: 100, text: '100 g', real: false });
+  assert.deepEqual(b.measures, []);
+  assert.equal(normalizeFood({ ...YOGURT, foodMeasures: FNDDS.foodMeasures }).serving.text, '1 container (150 g)');
+  assert.deepEqual(measuresOf({ foodMeasures: 'nope' }), []);
+});
+
+test('brand is cut at 40 with a real ellipsis and no trailing space', () => {
+  const f = normalizeFood({ ...YOGURT, brandName: undefined, brandOwner: 'KRAFT HEINZ FOODS COMPANY INTERNATIONAL HOLDINGS' });
+  assert.ok(f.brand.length <= 40 && f.brand.endsWith('…') && !/\s…$/.test(f.brand), f.brand);
+  assert.equal(normalizeFood({ ...YOGURT, brandName: 'Perdue' }).brand, 'Perdue');
+});
+
+test('delete everything removes the food-search counter, and is fine when there is none', async () => {
+  const db = fakeDb();
+  const { P } = await import('../src/paths.js');
+  await meterSearch({ db, uid: 'u1', now: 1000 });
+  assert.ok(db.dump(P.foodSearch('u1')));
+  await deleteFoodSearchData({ db, uid: 'u1' });
+  assert.equal(db.dump(P.foodSearch('u1')), undefined);
+  await deleteFoodSearchData({ db, uid: 'u1' }); // already gone
+  const { disconnect } = await import('../src/maintenance.js');
+  await meterSearch({ db, uid: 'u2', now: 1000 });
+  await disconnect({ db, api: {}, uid: 'u2', webhookUrl: 'x', deleteData: true, deleteApple: true });
+  assert.equal(db.dump(P.foodSearch('u2')), undefined);
+  await meterSearch({ db, uid: 'u3', now: 1000 });
+  await disconnect({ db, api: {}, uid: 'u3', webhookUrl: 'x', deleteData: true });
+  assert.ok(db.dump(P.foodSearch('u3')), 'the Withings-only dialog leaves it');
 });

@@ -68,19 +68,23 @@ export function portionText(p, { mode, servings, grams, unit }) {
 
 /** A USDA search row from the server → a Log food item. food_id keeps the fdcId so recents work. */
 export function usdaItem(row) {
-  const name = row.brand ? `${row.name} (${row.brand})` : row.name;
+  const name = row.name.length > 80 ? `${row.name.slice(0, 79).trimEnd()}…` : row.name; // the clean title; the brand is its own field
   return {
-    key: `usda:${row.fdcId}`, kind: 'usda', name: name.length > 80 ? `${name.slice(0, 79).trimEnd()}…` : name,
-    title: row.name, brand: row.brand || '', dataType: row.dataType,
+    key: `usda:${row.fdcId}`, kind: 'usda', name,
+    title: name, brand: row.brand || '', dataType: row.dataType,
     kcal: row.perServing.kcal, protein_g: row.perServing.protein_g, carbs_g: row.perServing.carbs_g, fat_g: row.perServing.fat_g,
     serving: row.serving.text, food_id: `usda:${row.fdcId}`,
-    usda: { per100: row.per100, serving: row.serving },
+    usda: { per100: row.per100, serving: row.serving, measures: Array.isArray(row.measures) ? row.measures : [] },
   };
 }
 
-/** The item as it should be logged for a portion: macros for those grams, one "serving", and the portion text. */
+/** A household measure from the server ({ text: "1 cup", g: 158 }) as a serving: "1 cup (158 g)". */
+export const measureServing = (m) => ({ g: m.g, text: `${m.text} (${Math.round(m.g)} g)`, real: true });
+
+/** The item as it should be logged for a portion: macros for those grams, one "serving", and the portion text.
+ *  `portion.serving` (a chosen household measure) replaces the item's own serving. */
 export function portionItem(item, portion) {
-  const p = item.usda;
+  const p = portion.serving ? { ...item.usda, serving: portion.serving } : item.usda;
   const grams = portion.mode === 'weight' ? portion.grams : servingsToGrams(p, portion.servings);
   return { ...item, ...macrosFor(p, grams), portion: portionText(p, { ...portion, grams }) };
 }

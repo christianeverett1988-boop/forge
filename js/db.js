@@ -176,9 +176,13 @@ export async function deleteAllUserData() {
   // server: the app can't delete those itself. Skipped only if you never had any.
   const count = (col) => getDocs(collection(db, 'users', uid(), col)).then((x) => x.size, () => 0); // rules not published yet → none
   const serverData = (await Promise.all(READ_ONLY_COLLECTIONS.map(count))).some((n) => n > 0);
-  if (serverData) {
+  // The same call also removes private/food_search (USDA search counter), which only the server can delete, so it
+  // runs for everyone. With no server data it is best effort: not reaching the server mustn't block deleting the rest.
+  try {
     const { call } = await import('./functions.js');
-    await call('withingsDisconnect', { deleteData: true, deleteApple: true }); // Withings data and Apple Health data
+    await call('withingsDisconnect', { deleteData: true, deleteApple: true }); // Withings data, Apple Health data, food search
+  } catch (e) {
+    if (serverData) throw e;
   }
   for (const col of COLLECTIONS) {
     const snap = await getDocs(collection(db, 'users', uid(), col)).catch((e) => {

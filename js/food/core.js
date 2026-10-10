@@ -81,6 +81,7 @@ export function logFields({ item, servings = 1, meal, day }) {
     carbs_g: r1(num(item.carbs_g)), fat_g: r1(num(item.fat_g)), servings: s,
   };
   if (item.food_id) out.food_id = item.food_id;
+  if (item.brand) out.brand = String(item.brand).slice(0, 40);
   if (item.portion) out.portion = String(item.portion).slice(0, LIMITS.serving); // "5.3 oz (150 g)": what one serving of this entry is
   return out;
 }

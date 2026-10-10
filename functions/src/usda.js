@@ -83,8 +83,32 @@ function householdText(food, grams) {
 }
 
 /**
- * One FDC hit → { fdcId, name, brand, dataType, serving: {g, text, real}, per100, perServing }.
- * Serving: USDA's grams (or ml, treated as grams) when it has them; otherwise 100 g and real: false.
+ * USDA's household measures for a hit (Survey/FNDDS foods carry `foodMeasures`): up to 4 of { text: "1 cup", g: 140 },
+ * in USDA's own order, without "Quantity not specified", bare gram/ounce measures, repeats or silly weights.
+ */
+export function measuresOf(food) {
+  const list = Array.isArray(food.foodMeasures) ? food.foodMeasures : [];
+  const seen = new Set();
+  const out = [];
+  const ranked = list.filter((m) => m && typeof m === 'object').map((m, i) => ({ m, i }))
+    .sort((a, b) => (Number.isFinite(a.m.rank) && Number.isFinite(b.m.rank) ? a.m.rank - b.m.rank : 0) || a.i - b.i);
+  for (const { m } of ranked) {
+    const text = String(m.disseminationText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const g = m.gramWeight;
+    if (!text || text.length > 30 || typeof g !== 'number' || !(g > 0) || g > 2000) continue;
+    if (/not specified|^n\/?a$/.test(text) || /^(1 )?(g|gram|grams|oz|ounce|ounces)$/.test(text)) continue;
+    if (seen.has(text)) continue;
+    seen.add(text);
+    out.push({ text, g: r1(g) });
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+/**
+ * One FDC hit → { fdcId, name, brand, dataType, serving: {g, text, real}, measures, per100, perServing }.
+ * Serving: USDA's grams (or ml, treated as grams) when it has them; else the first household measure ("1 cup (140 g)");
+ * otherwise 100 g and real: false.
  * null for anything unusable (no id, no name, no energy).
  */
 export function normalizeFood(food) {
@@ -94,13 +118,22 @@ export function normalizeFood(food) {
   let name = tidyCase(food.description);
   if (!name) return null;
   if (name.length > 70) name = `${name.slice(0, 69).trimEnd()}…`;
-  const brand = tidyCase(food.brandName || food.brandOwner || '').slice(0, 40);
+  let brand = tidyCase(food.brandName || food.brandOwner || '');
+  if (brand.length > 40) brand = `${brand.slice(0, 39).trimEnd()}…`;
   const unit = String(food.servingSizeUnit || '').toLowerCase();
   const size = food.servingSize;
   const real = typeof size === 'number' && size > 0 && size <= 2000 && ['g', 'grm', 'ml', 'mlt'].includes(unit);
-  const g = real ? r1(size) : 100;
-  const text = real ? householdText(food, g) || `${Math.round(g)} ${unit.startsWith('m') ? 'ml' : 'g'}` : '100 g';
-  return { fdcId: food.fdcId, name, brand, dataType: String(food.dataType || ''), serving: { g, text, real }, per100, perServing: scale(per100, g) };
+  const measures = measuresOf(food);
+  let serving;
+  if (real) {
+    const g = r1(size);
+    serving = { g, text: householdText(food, g) || `${Math.round(g)} ${unit.startsWith('m') ? 'ml' : 'g'}`, real: true };
+  } else if (measures.length) {
+    serving = { g: measures[0].g, text: `${measures[0].text} (${Math.round(measures[0].g)} g)`, real: true };
+  } else {
+    serving = { g: 100, text: '100 g', real: false };
+  }
+  return { fdcId: food.fdcId, name, brand, dataType: String(food.dataType || ''), serving, measures, per100, perServing: scale(per100, serving.g) };
 }
 
 /** Does the query name a brand? Two or more branded hits whose brand has a query word (3+ letters, whole word). */
@@ -135,6 +168,11 @@ export function dedupe(foods) {
     seen.add(key);
     return true;
   });
+}
+
+/** "Delete everything": the search counter is the one thing foodSearch keeps. Already gone is fine. */
+export async function deleteFoodSearchData({ db, uid }) {
+  try { await db.doc(P.foodSearch(uid)).delete(); } catch (e) { if (e && (e.code === 5 || e.code === 'not-found')) return; throw e; }
 }
 
 export function createCache({ ttl = CACHE_MS, max = 200 } = {}) {

@@ -14,6 +14,7 @@ import { incrementalSync, reconcile90 } from './sync.js';
 import { backfillTaskId, enqueueOnce } from './tasks.js';
 import { log } from './log.js';
 import { deleteAppleData } from './health.js';
+import { deleteFoodSearchData } from './usda.js';
 
 export async function maintainUser({ db, api, enqueue, uid, webhookUrl, now = () => Date.now() }) {
   const out = { uid, ok: true };
@@ -122,7 +123,10 @@ export async function disconnect({ db, api, uid, webhookUrl, deleteData = false,
     await db.doc(P.status(uid)).set({ connected: false, disconnected_at: new Date(now()).toISOString(), subscription_ok: null }, { merge: true });
   }
   // Apple Health data is separate from Withings: it goes only when asked (Delete everything, or its own button).
-  if (deleteApple) deleted += (await deleteAppleData({ db, uid })).deleted;
+  if (deleteApple) {
+    deleted += (await deleteAppleData({ db, uid })).deleted;
+    await deleteFoodSearchData({ db, uid }); // the food-search counter lives in private/, which the app can't delete
+  }
   return { revoked, deleted };
 }
 

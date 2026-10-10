@@ -2,7 +2,7 @@
 //  - local (My foods and your recent entries, on this phone, no network): answers instantly.
 //  - remote (USDA FoodData Central through the foodSearch Cloud Function): answers a moment later, debounced, and
 //    can fail without hurting anything. A remote provider has `remote: true` and throws an error with
-//    `kind: 'offline' | 'unavailable'` when it can't answer.
+//    `kind: 'offline' | 'limited' | 'unavailable'` when it can't answer.
 //
 // An item: { key, kind: 'mine' | 'recent' | 'usda', name, kcal, protein_g, carbs_g, fat_g, serving, food_id?, portion? }
 // kcal and macros are per serving. A logged USDA food keeps food_id "usda:<fdcId>" and the portion text.
@@ -22,7 +22,7 @@ export function recentItems(logs, limit = 30) {
     seen.add(id);
     out.push({
       key: `recent:${id}`, kind: 'recent', name: l.name, kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g,
-      serving: l.portion || '', ...(l.food_id ? { food_id: l.food_id } : {}),
+      serving: l.portion || '', ...(l.brand ? { brand: l.brand } : {}), ...(l.food_id ? { food_id: l.food_id } : {}),
     });
     if (out.length >= limit) break;
   }
@@ -70,7 +70,9 @@ async function searchUsda(query) {
     const { call } = await import('../functions.js');
     const res = await call('foodSearch', { query }, { timeout: 9000 });
     return (res && Array.isArray(res.foods) ? res.foods : []).map(usdaItem);
-  } catch {
+  } catch (e) {
+    // The server's own "That's a lot of searches…" is a friendly line, not an outage: pass it through.
+    if (e && e.code === 'resource-exhausted' && e.message) throw Object.assign(new Error(e.message), { kind: 'limited' });
     throw Object.assign(new Error('unavailable'), { kind: isOffline() ? 'offline' : 'unavailable' });
   }
 }
@@ -88,14 +90,17 @@ export async function search(query, ctx) {
 
 export const MIN_ONLINE_CHARS = 2;
 
-/** The slow part → { state: 'ok' | 'offline' | 'unavailable', items }. One failing provider never hides another's rows. */
+/** The slow part → { state: 'ok' | 'offline' | 'limited' | 'unavailable', items, message? }. One failing provider never hides another's rows.
+ *  'limited' carries the server's friendly line in `message`. */
 export async function searchRemote(query, providers = PROVIDERS) {
   const remotes = providers.filter((p) => p.remote);
   const runs = await Promise.allSettled(remotes.map((p) => p.search(query)));
   const items = runs.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
   const failed = runs.filter((r) => r.status === 'rejected');
   if (failed.length && failed.length === runs.length) {
-    return { state: failed[0].reason && failed[0].reason.kind === 'offline' ? 'offline' : 'unavailable', items: [] };
+    const why = failed[0].reason || {};
+    if (why.kind === 'limited') return { state: 'limited', message: String(why.message || ''), items: [] };
+    return { state: why.kind === 'offline' ? 'offline' : 'unavailable', items: [] };
   }
   return { state: 'ok', items };
 }

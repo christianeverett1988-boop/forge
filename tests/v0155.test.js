@@ -4,7 +4,7 @@ import { test, eq, near, assert } from './harness.js';
 import { readFileSync } from 'node:fs';
 import { search, searchRemote, searchLocal, createOnlineSearch, recentItems, PROVIDERS } from '../js/food/search.js';
 import {
-  OZ_G, gramsToOz, ozToGrams, gramsFromAmount, macrosFor, servingsLabel, amountLabel, portionText, usdaItem, portionItem, servingsToGrams, gramsToServings,
+  OZ_G, measureServing, gramsToOz, ozToGrams, gramsFromAmount, macrosFor, servingsLabel, amountLabel, portionText, usdaItem, portionItem, servingsToGrams, gramsToServings,
 } from '../js/food/portion.js';
 import { logFields, LIMITS } from '../js/food/core.js';
 
@@ -27,13 +27,15 @@ test('usdaItem: name with brand, per-serving numbers, a serving line and food_id
   eq(it.kind, 'usda');
   eq(it.key, 'usda:2001');
   eq(it.food_id, 'usda:2001');
-  eq(it.name, 'Greek Yogurt, Vanilla (Chobani)');
+  eq(it.name, 'Greek Yogurt, Vanilla', 'the stored name is the clean title; the brand is its own field');
   eq(it.title, 'Greek Yogurt, Vanilla');
   eq(it.brand, 'Chobani');
   eq(it.kcal, 120);
   eq(it.serving, '1 container (150 g)');
   eq(usdaItem(BANANA).name, 'Bananas, raw');
-  assert(usdaItem({ ...ROW, name: 'x'.repeat(75), brand: 'Brand'.repeat(6) }).name.length <= 80, 'fits the 80-character name limit');
+  const long = usdaItem({ ...ROW, name: 'x'.repeat(90), brand: 'Brand'.repeat(10) });
+  assert(long.name.length <= 80 && long.name.endsWith('…'), 'fits the 80-character name limit');
+  eq(logFields({ item: long, servings: 1, meal: 'lunch', day: '2026-10-10' }).brand.length, 40, 'brand capped at 40 in the log entry');
 });
 
 test('provider merge: local rows come back instantly and never wait for (or break on) the online provider', async () => {
@@ -191,7 +193,9 @@ test('portionItem → logFields: the entry holds the macros for the chosen porti
   eq(f.servings, 1);
   eq(f.food_id, 'usda:2001');
   eq(f.portion, '4 oz (113 g)');
-  eq(f.name, 'Greek Yogurt, Vanilla (Chobani)');
+  eq(f.name, 'Greek Yogurt, Vanilla');
+  eq(f.brand, 'Chobani');
+  eq(logFields({ item: { name: 'Oats', kcal: 300 }, servings: 1, meal: 'lunch', day: '2026-10-10' }).brand, undefined);
   // Small amounts aren't squeezed by the 0.25-servings floor: 20 g is logged as 1 "serving" of 20 g.
   const tiny = portionItem(usdaItem({ ...ROW, serving: { g: 100, text: '100 g', real: false } }), { mode: 'weight', unit: 'g', grams: 20 });
   eq(logFields({ item: tiny, servings: 1, meal: 'lunch', day: '2026-10-10' }).kcal, 16);
@@ -203,13 +207,71 @@ test('portionItem → logFields: the entry holds the macros for the chosen porti
   eq(logFields({ item: { name: 'Oats', kcal: 300 }, servings: 1, meal: 'lunch', day: '2026-10-10' }).portion, undefined);
 });
 
+const RICE = {
+  fdcId: 782345, name: 'Rice, white, cooked', brand: '', dataType: 'Survey (FNDDS)',
+  serving: { g: 158, text: '1 cup (158 g)', real: true }, measures: [{ text: '1 cup', g: 158 }, { text: '1 tablespoon', g: 10 }],
+  per100: { kcal: 130, protein_g: 2.7, carbs_g: 28.2, fat_g: 0.3 }, perServing: { kcal: 205, protein_g: 4.3, carbs_g: 44.6, fat_g: 0.5 },
+};
+
+test('household measures: a chosen measure becomes the serving, and the portion text and macros follow it', () => {
+  const item = usdaItem(RICE);
+  eq(item.serving, '1 cup (158 g)');
+  eq(item.usda.measures.length, 2);
+  eq(usdaItem(BANANA).usda.measures.length, 0, 'no measures from the server → empty, 100 g stays');
+  const tbsp = measureServing(RICE.measures[1]);
+  eq(tbsp.text, '1 tablespoon (10 g)');
+  const two = portionItem(item, { mode: 'servings', servings: 2, serving: tbsp });
+  eq(two.portion, '2 × 1 tablespoon (10 g)');
+  eq(two.kcal, 26); // 130 × 0.2
+  eq(portionItem(item, { mode: 'servings', servings: 1 }).portion, '1 cup (158 g)');
+});
+
+test('server messages: "a lot of searches" is shown as itself, a real outage keeps the generic line', async () => {
+  const limited = fakeRemote(async () => { throw Object.assign(new Error('That’s a lot of searches. Try again in a little while.'), { kind: 'limited' }); });
+  const r = await searchRemote('banana', [limited]);
+  eq(r.state, 'limited');
+  eq(r.message, 'That’s a lot of searches. Try again in a little while.');
+  eq(r.items.length, 0);
+  const down = fakeRemote(async () => { throw Object.assign(new Error('unavailable'), { kind: 'unavailable' }); });
+  eq((await searchRemote('banana', [down])).state, 'unavailable');
+  const src = readFileSync(new URL('../js/screens/food.js', import.meta.url), 'utf8');
+  assert(src.includes("u.state === 'limited' && u.message ? u.message"), 'the sheet shows the server line');
+  const fn = readFileSync(new URL('../js/functions.js', import.meta.url), 'utf8');
+  assert(fn.includes("replace('functions/', '') })"), 'call() keeps the error code so the search can tell limited from down');
+  const se = readFileSync(new URL('../js/food/search.js', import.meta.url), 'utf8');
+  assert(se.includes("e.code === 'resource-exhausted'"));
+});
+
+test('brand: recents keep it, the meal row and the result row show it first, kcal gets a thousands separator, the toast is one short line', () => {
+  const logs = [{ id: 'l1', day: '2026-10-09', meal: 'lunch', name: 'Chicken Strips', brand: 'Tyson', kcal: 1250, protein_g: 80, carbs_g: 5, fat_g: 9, servings: 1, food_id: 'usda:9', created_at: '2026-10-09T12:00:00Z' }];
+  eq(recentItems(logs)[0].brand, 'Tyson');
+  const src = readFileSync(new URL('../js/screens/food.js', import.meta.url), 'utf8');
+  assert(src.includes('const bits = e.brand ? [e.brand] : [];'), 'meal row: brand first on the grey line');
+  assert(src.includes("Math.round(e.kcal * n).toLocaleString('en-US')"), '1,250 kcal in the meal list');
+  assert(!/toLocaleString\(\)/.test(src), 'every kcal on this screen uses en-US');
+  assert(src.includes('data-sel-brand') && src.includes('class="clamp2" data-sel-name'), 'dock: title (2 lines) with the brand under it');
+  assert(!/toast\(`Added \$\{fields\.name\}/.test(src), 'the toast no longer carries the long name');
+  assert(src.includes("toast(`Added to ${MEAL_LABEL[fields.meal].toLowerCase()} · "), 'one short line');
+});
+
+test('Delete everything reaches the server even with no Withings or Apple data (food search counter)', () => {
+  const db = readFileSync(new URL('../js/db.js', import.meta.url), 'utf8');
+  const body = db.slice(db.indexOf('export async function deleteAllUserData'));
+  assert(!/if \(serverData\) \{\s*const \{ call \}/.test(body), 'the server call is no longer skipped when there is no server data');
+  assert(body.includes("call('withingsDisconnect', { deleteData: true, deleteApple: true })"));
+  assert(body.includes('if (serverData) throw e'), 'a failure only blocks the delete when real server data needs it');
+});
+
 test('the sheet is wired: debounce, skeleton, portion picker, tabular numbers and one-line rows', () => {
   const src = readFileSync(new URL('../js/screens/food.js', import.meta.url), 'utf8');
   for (const s of ['createOnlineSearch', 'data-online-list', 'food-skel', 'data-portion', 'data-amount', 'data-serv-choice', "units() === 'metric'", 'portionItem']) assert(src.includes(s), s);
   const css = readFileSync(new URL('../css/food.css', import.meta.url), 'utf8');
   assert(/\.food-sub > \.food-kcal \{[^}]*flex: none/.test(css), 'kcal never shrinks or splits');
-  assert(/\.food-brand \{[^}]*flex: 0 1 40%/.test(css), 'brand ellipsizes first');
-  assert(/\.food-row > b[^{]*\{[^}]*text-overflow: ellipsis/.test(css), 'name stays on one line');
+  assert(/\.food-brand \{[^}]*flex: 0 1 auto;[^}]*max-width: 45%/.test(css), 'brand sizes to its content, ellipsizes past 45%');
+  assert(!/\.food-brand \{[^}]*flex: 0 1 40%/.test(css), 'no fixed 40% brand slot (it left a gap after short brands)');
+  assert(/\.food-row > b[^{]*\{[^}]*-webkit-line-clamp: 2/.test(css), 'name wraps to two lines');
+  assert(/\.food-sub \{[^}]*white-space: nowrap/.test(css), 'sub line stays on one line');
+  assert(/\.food-skel-name/.test(css) && /\.food-skel-sub/.test(css), 'skeleton rows are two bars');
   assert(/font-variant-numeric: tabular-nums/.test(css));
   const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
   assert(rules.includes("(!('food_id' in d) || d.food_id is string)"), 'food_id (usda:<fdcId>) is already allowed, so no rules change');
