@@ -17,13 +17,18 @@ export const TOUR_STEPS = [
   },
   {
     id: 'rings', route: 'today', target: '.rings-card',
-    title: 'Your week at a glance',
-    body: 'These rings fill up as you work out this week. Fill them all to hit your weekly goal.',
+    title: 'Your rings',
+    body: 'The three outer rings are your week of training: workouts, sets and recovery. The two inner rings are today’s food: calories and protein. Aim to hit your protein and stay near your calories. Going over turns the calorie ring orange.',
   },
   {
     id: 'workout', route: 'today', target: '[data-tour="workout"]',
     title: 'Today’s workout',
     body: 'Forge picks a workout for you each day. Tap Start to begin, or See plan to look at it first.',
+  },
+  {
+    id: 'food', route: 'today', target: '[data-tour="food"]',
+    title: 'Log your food',
+    body: 'Your calories and protein for today live here. Tap Log food to add a meal in a couple of taps, or See meals to look at what you’ve eaten.',
   },
   {
     id: 'weight', route: 'today', target: '.weight-card [data-log]',

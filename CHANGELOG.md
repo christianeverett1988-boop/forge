@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.15.2 — Camera fix for the iPhone app, and Food gets a real home on Today (2026-10-09)
+
+Part 1 of the audit in issue #57. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.
+
+- **Camera fix (iPhone app):** `Info.plist` now has `NSCameraUsageDescription`. Without it iOS closes the app the moment "Take photo" opens the camera. The words: "Forge uses the camera for your progress photos and meal photos. Photos stay on this iPhone unless you choose to analyse a meal." No `NSPhotoLibraryAddUsageDescription`: nothing saves straight into Photos (exports, the zip and the time-lapse go through the share sheet or a download), so a test now pins that it stays absent until a flow needs it. **Christian: run Refresh Forge once** to get this on your phone.
+- **Food card moved up:** it now sits right under the workout card instead of at the very bottom. A calories ring with protein inside it, "1,850 of 2,200 kcal", kcal left (or over), protein, **Log food** (one tap to the sheet) and **See meals**.
+- **Calories and protein on the Today rings:** two new rings (today's calories vs target, today's protein vs target) join Training, Weekly sets and Recovery. The five rings are thinner so they fit the same circle. They never burst.
+- **Tour:** a new "Log your food" step spotlights the real Food card (9 steps).
+- **Food colours:** calories and protein have their own colours (`--food-kcal`, `--food-protein`), shared by the Today rings and the Food card. Orange (`--warn`) now means "over" only.
+- **Going over looks different:** past the calorie target the ring turns orange with the extra drawn as a darker second lap, and the note reads "1,310 kcal over" in orange (Food card and Today legend).
+- **No split numbers:** a number and its unit never wrap apart; protein sits on its own line on the Food card.
+- **Tour and label:** the rings step now explains the outer three (your week) and inner two (today's food); the card label is "Training and food".
+- **Legend wrapping:** the over amount is its own orange legend line ("1,310 kcal over"), and each Weekly sets count stays with its label, with the "·" kept at the end of the line above, so no line starts with a dot.
+- **Second lap timing:** the darker over-target lap now draws after the first lap closes (1s delay); instant under reduced motion.
+- Tests: Info.plist keys, the food rings, the over state in the Today rings and the Food card, the tour step.
+
 ## 0.15.1 — One-click weekly refresh for the iPhone app (2026-10-09)
 
 A free Apple ID signs the iPhone app for 7 days only. This makes the weekly re-install one double-click, and Forge tells you when it's due. The web app is unchanged. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.

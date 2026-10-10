@@ -30,6 +30,10 @@
   --ember: #ff6a2b;
   --gold: #ffc94d;
   --info: #6cb4ff;
+  /* Food: calories and protein rings (Today and the Food card). --warn is only for going over. */
+  --food-kcal: #ff7ac6;
+  --food-protein: #a58bff;
+  --warn-deep: #b86e00;
   --good-tint: rgba(91, 228, 155, .14);
   --warn-tint: rgba(255, 181, 71, .14);
   --danger-tint: rgba(255, 93, 108, .14);
@@ -95,6 +99,9 @@
     --ember: #c8460a;
     --gold: #946500;
     --info: #1b64c4;
+    --food-kcal: #b3237a;
+    --food-protein: #5b3fd0;
+    --warn-deep: #5e3400;
     --good-tint: rgba(18, 135, 90, .12);
     --warn-tint: rgba(160, 90, 0, .12);
     --danger-tint: rgba(201, 40, 58, .1);

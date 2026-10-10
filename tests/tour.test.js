@@ -16,14 +16,14 @@ function account(profile) {
   return a;
 }
 
-test('tour: 6–8 steps, each with a title and plain words; the real-element steps name a screen', () => {
-  assert(TOUR_STEPS.length >= 6 && TOUR_STEPS.length <= 8, `${TOUR_STEPS.length} steps`);
+test('tour: 6–9 steps, each with a title and plain words; the real-element steps name a screen', () => {
+  assert(TOUR_STEPS.length >= 6 && TOUR_STEPS.length <= 9, `${TOUR_STEPS.length} steps`);
   for (const s of TOUR_STEPS) {
     assert(s.title && s.body, s.id);
     assert(!s.target || s.route, `${s.id} has a target but no route`);
   }
   const ids = TOUR_STEPS.map((s) => s.id).join();
-  for (const id of ['rings', 'workout', 'weight', 'train', 'start', 'progress', 'settings']) assert(ids.includes(id), `covers ${id}`);
+  for (const id of ['rings', 'workout', 'food', 'weight', 'train', 'start', 'progress', 'settings']) assert(ids.includes(id), `covers ${id}`);
   assert(/reps in reserve/i.test(TOUR_STEPS.find((s) => s.id === 'start').body), 'RIR explained in one line');
   assert(/one Forge account/.test(TOUR_STEPS.find((s) => s.id === 'weight').body), 'says the scale links to one account and to log by hand');
 });
