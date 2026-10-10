@@ -19,7 +19,7 @@ export function photoSettingsHtml() {
             ${DOW_NAMES.map((n, i) => `<option value="${i}" ${dow === i ? 'selected' : ''}>${n}</option>`).join('')}
           </select></label>
         <a class="g-row" href="#/photos"><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Open progress photos</span><small data-photo-usage>&nbsp;</small></span><span class="chev">${icon('chev')}</span></a>
-        <button class="g-row" data-photo-export><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export all photos (zip)</span><small>Your backup. Save it to Files or iCloud Drive.</small></span></button>
+        <button class="g-row" data-photo-export><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export all photos (zip)</span><small>Your backup. Save it to Files or iCloud Drive.</small></span></button>
         <button class="g-row g-danger" data-photo-wipe><span class="g-ic">${icon('trash')}</span><span class="g-text"><span>Delete all photos on this phone</span></span></button>
       </div>
       <p class="sec-foot">Photos stay on this iPhone only. They aren’t backed up by Forge. ${photoLossLine(isNative())}</p>`;
@@ -45,8 +45,9 @@ export async function bindPhotoSettings(el) {
     const { photos } = await mySessions();
     if (!photos.length) return toast('No photos to export yet');
     btn.disabled = true;
-    const label = btn.innerHTML;
-    btn.textContent = 'Building your backup…';
+    const lab = $('.g-text > span', btn);
+    const label = lab.textContent;
+    lab.textContent = 'Building your backup…';
     try {
       const sorted = [...photos].sort((a, b) => (a.day + a.pose < b.day + b.pose ? -1 : 1));
       const entries = [];
@@ -60,7 +61,7 @@ export async function bindPhotoSettings(el) {
       toast('Couldn’t build the backup. Try again.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = label;
+      lab.textContent = label;
     }
   };
 

@@ -98,13 +98,13 @@ export function renderSettings(el) {
 
       <p class="sec-title">Your data</p>
       <div class="group">
-        ${nav('#/report', 'heart', 'Health summary for your doctor', 'Print or save a PDF')}
-        <button class="g-row" data-export-json><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export everything (JSON)</span></span></button>
-        <button class="g-row" data-export-csv><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
-        <button class="g-row" data-export-workouts><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>
-        <button class="g-row" data-export-cardio><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export cardio (CSV)</span></span></button>
-        <button class="g-row" data-export-food><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export food log (CSV)</span></span></button>
-        <button class="g-row" data-export-body><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export body measurements (CSV)</span></span></button>
+        ${nav('#/report', 'heart', 'Health summary for your doctor', isNative() ? 'Print or share a PDF' : 'Print or save a PDF')}
+        <button class="g-row" data-export-json><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export everything (JSON)</span></span></button>
+        <button class="g-row" data-export-csv><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
+        <button class="g-row" data-export-workouts><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>
+        <button class="g-row" data-export-cardio><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export cardio (CSV)</span></span></button>
+        <button class="g-row" data-export-food><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export food log (CSV)</span></span></button>
+        <button class="g-row" data-export-body><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export body measurements (CSV)</span></span></button>
       </div>
       <p class="sec-foot">Your data is stored in your own Firebase project. If you connect Withings, Forge reads your scale data from Withings; nothing is sent to any other service.</p>
 
@@ -186,14 +186,15 @@ export function renderSettings(el) {
 
   const run = (fn) => async (ev) => {
     const btn = ev && ev.currentTarget;
-    const label = btn && btn.innerHTML;
-    if (btn) { btn.disabled = true; if (isNative()) btn.textContent = 'Getting it ready…'; }
+    const lab = btn && btn.querySelector('.g-text > span');
+    const label = lab && lab.textContent;
+    if (btn) { btn.disabled = true; if (isNative() && lab) lab.textContent = 'Getting it ready…'; }
     try {
       await fn();
     } catch (e) {
       toast(e.message || 'Export failed');
     } finally {
-      if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = label; }
+      if (btn && btn.isConnected) { btn.disabled = false; if (lab) lab.textContent = label; }
     }
   };
   $('[data-export-json]', el).onclick = run(exportJSON);

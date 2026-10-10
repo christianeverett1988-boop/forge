@@ -46,7 +46,7 @@ export function renderReport(el) {
       print.textContent = 'Making the PDF…';
       try {
         await new Promise((r) => setTimeout(r, 30)); // let the label draw first
-        await shareNative(summaryPdf(summaryText(s, u, today)), `forge-health-summary-${today}.pdf`, 'Forge health summary');
+        await shareNative(summaryPdf(s, u, today), `forge-health-summary-${today}.pdf`, 'Forge health summary');
       } catch (e) {
         toast(e.message || 'Couldn’t open the share sheet. Try again.');
       } finally {

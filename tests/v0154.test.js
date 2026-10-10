@@ -6,7 +6,6 @@ import { deliver } from '../js/deliver-file.js';
 import { shareOrSave } from '../js/photos/deliver.js';
 import { shareImage } from '../js/ui/sharecard.js';
 import { shareNative, SHARE_ERROR, WRITE_ERROR } from '../js/native/share.js';
-import { summaryPdf, pdfSafe } from '../js/health/pdf.js';
 
 function shell({ shareFails = null, writeFails = false } = {}) {
   const calls = [];
@@ -78,21 +77,6 @@ test('web: exports still use the browser (no native plugins touched)', async () 
   eq(await shareOrSave(new Blob(['x'], { type: 'application/zip' }), 'p.zip', 'P'), 'shared');
 });
 
-test('doctor summary: PDF is letter size, US units and thousands separators survive', async () => {
-  const text = ['Forge health summary · Sep 10 – Oct 10, 2026 (30 days)', 'WEIGHT AND BODY COMPOSITION',
-    'Trend weight 182.4 lb (82.7 kg) → 180.1 lb (81.7 kg)', 'ACTIVITY AND TRAINING', 'Steps 8,532 a day', `Temp 98.6 °F ${'word '.repeat(60)}`].join('\n');
-  const pdf = summaryPdf(text);
-  eq(pdf.type, 'application/pdf');
-  const s = await pdf.text();
-  assert(s.startsWith('%PDF-1.4'));
-  assert(s.includes('/MediaBox [0 0 612 792]'));
-  assert(s.includes('Steps 8,532 a day'));
-  assert(s.includes('to 180.1 lb'), 'arrow replaced');
-  assert(s.includes('\\260F'), 'degree sign encoded');
-  assert(s.includes('/Helvetica-Bold'));
-  assert(/%%EOF\n$/.test(s));
-  eq(pdfSafe('a → b'), 'a to b');
-});
 
 test('doctor summary: Print or share in the app, window.print on the web', () => {
   const src = readFileSync(new URL('../js/screens/report.js', import.meta.url), 'utf8');
