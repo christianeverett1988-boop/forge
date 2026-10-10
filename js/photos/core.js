@@ -201,3 +201,13 @@ export function fmtBytes(n) {
   if (n < 1024 * 1024) return `${Math.max(0, Math.round(n / 1024))} KB`;
   return `${(n / (1024 * 1024)).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
 }
+
+/** The "can't save" notice text, built without stray spaces. */
+export const photosUnavailableLine = (native) => (native
+  ? 'Photos can’t be saved on this iPhone right now.'
+  : 'Photos can’t be saved in this browser right now (private browsing turns storage off). Open Forge from your Home Screen app instead.');
+
+/** The "where do my photos live" sentence. In the iPhone app there is no Safari data to clear: say what really deletes them. */
+export const photoLossLine = (native) => (native
+  ? 'If you delete the Forge app, they’re gone. Export a zip to keep them.'
+  : 'If you delete the app or clear Safari data, they’re gone.');

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.3 — Findable photos, a shorter Today, a fuller tour, small fixes (2026-10-10)
+
+Part 2 of the audit in issue #57 (items 4, 6, 7, 8 and one rings polish fix). No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. **Christian: run Refresh Forge once** to get this on your phone (the web app updates by itself).
+
+- **Progress photos are easy to find:** Progress → Weight has a "Progress photos" row at the top of the Awards / Coach list (also when you have no weigh-ins yet). On Body, the photos card now sits right under the two numbers at the top, above Body composition.
+- **Honest about storage:** if this phone can't save photos, the Body card says "Photos can’t be saved here" instead of vanishing.
+- **Native wording:** in the iPhone app the photo notes say "If you delete the Forge app, they’re gone. Export a zip to keep them." The web keeps the Safari wording.
+- **Shorter Today:** Daily targets moved into the Food card (protein, carbs, fat, and "Why these numbers?" folded away). Coach is one line under Readiness. Order: Readiness, Coach, rings, workout, Food, missions, weight, then Program, Score, Weekly report (still Sun/Mon), photo reminder and insights. The rings card has a permanent **This week** link next to Awards.
+- **Tour:** 11 steps. New: "Ask Coach" (Today) and "Body: what’s recovered" (recovery map, and where the photos card is). The Food step spotlights the Food card and mentions the targets. Accounts that already existed see a one-time "New: Food and photos" card on Today with **Show me** and **Not now**; either answer settles it for good (saved as `tour_offer` on the profile). New accounts get the full tour instead, and no offer.
+- **Small fixes:** Train location chips stay on one line with an ellipsis (a long name never wraps to two lines). A new user's Body screen says "No workouts yet" instead of a bare dash. Body Profile works out fat mass from weight × body fat % when the scale only sends the percentage (Withings Body Comp). The iPhone app no longer shows "0 of 175 saved for offline" and hides the demo-photo download, because those photos are already inside the app.
+- **Rings draw once per visit:** when data refreshes while you're on Today, the arcs glide on from where they were instead of emptying and refilling. Reduced motion is unchanged (no animation).
+- Tests: Today order and the targets inside the Food card, tour step count/targets/offer, ratio-only fat mass, chip ellipsis, native photo copy, empty-storage state, rings start offsets.
+
 ## 0.15.2 — Camera fix for the iPhone app, and Food gets a real home on Today (2026-10-09)
 
 Part 1 of the audit in issue #57. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.

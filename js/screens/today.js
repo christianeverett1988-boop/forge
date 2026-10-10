@@ -14,7 +14,8 @@ import { playerRoute, previewPlan, startPlan } from './train.js';
 import { todayRings } from '../workouts/rings.js';
 import { weekOf } from '../workouts/awards.js';
 import { exerciseById } from '../workouts/library.js';
-import { ringsHtml, animateRings, foodSummary, foodRingSvg } from '../ui/rings.js';
+import { ringsHtml, animateRings, snapshotRings, foodSummary, foodRingSvg, macroTilesHtml } from '../ui/rings.js';
+import { tourOfferDue } from '../tour/steps.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
@@ -62,7 +63,29 @@ function foodCard(t) {
         <p class="small muted">${esc(sum.protein)}</p>
       </div>
     </div>
-    <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div></div>`;
+    ${macroTilesHtml(tot, t)}
+    <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div>
+    <details class="food-why">
+      <summary>Why these numbers?</summary>
+      <ul class="reasons">${t.reasoning.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+      <p class="small muted">Safe floor: ${n(t.floor)} kcal/day. ${esc(FLOOR_SOURCE)}</p>
+      <p class="small muted">Targets update automatically as your weight trend changes.</p>
+    </details></div>`;
+}
+
+/** One line under Readiness: opens Coach. Kept to a single line so Today stays short. */
+function coachLine() {
+  return `<a class="card coach-line nav-card" href="#/coach" data-coach-card>
+    <span class="coach-line-ic" aria-hidden="true">${icon('help')}</span><span class="coach-line-text">${esc(coachTeaser())}</span><span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
+}
+
+/** Once, after an update that adds screens: offer the tour to people who have already seen it. */
+function tourOfferCard() {
+  if (!tourOfferDue(state.profile)) return '';
+  return `<div class="card stack tour-offer" data-tour-offer>
+    <p class="label">New: Food and photos</p>
+    <p class="small">Log meals from Today, find your progress photos, and ask Coach. Want a one-minute look?</p>
+    <div class="row gap"><button class="btn grow" data-tour-offer-show>Show me</button><button class="btn ghost grow" data-tour-offer-no>Not now</button></div></div>`;
 }
 
 function workoutCard() {
@@ -191,6 +214,7 @@ export function renderToday(el) {
   const deload = !!program && deloadInfo(program, state.profile.experience).deload;
   const rings = todayRings({ workouts: state.workouts, cardio: state.cardio || [], profile: state.profile, exerciseById, deload, food: foodToday(t) });
 
+  const ringsBefore = snapshotRings($('.rings-card', el)); // a data refresh redraws Today: the arcs glide on from here
   el.innerHTML = `
     <section class="stack">
       <header class="today-head">
@@ -212,10 +236,15 @@ export function renderToday(el) {
 
       ${t.flags.map((f) => `<div class="notice ${f.level}">${esc(f.message)}</div>`).join('')}
 
+      ${tourOfferCard()}
+
       ${readinessCard()}
 
+      ${coachLine()}
+
       <div class="card rings-card">
-        <div class="row between center"><p class="label">Training and food</p><a class="link small" href="#/awards">Awards ${icon('chev', { size: 14 })}</a></div>
+        <div class="row between center"><p class="label">Training and food</p>
+          <span class="row gap"><a class="link small" href="#/weekly" data-this-week>This week</a><a class="link small" href="#/awards">Awards ${icon('chev', { size: 14 })}</a></span></div>
         ${ringsHtml(rings)}
       </div>
 
@@ -224,14 +253,6 @@ export function renderToday(el) {
       ${foodCard(t)}
 
       ${missionsCard()}
-
-      ${programLine()}
-
-      ${scoreCard()}
-
-      ${weeklyCard()}
-
-      <div data-photo-reminder></div>
 
       <div class="card weight-card">
         <div class="row between center">
@@ -249,28 +270,15 @@ export function renderToday(el) {
         </div>
       </div>
 
-      <div class="card">
-        <p class="label">Daily targets</p>
-        <div class="target-hero">
-          <div class="hero-num"><span data-count>${t.calories.toLocaleString()}</span> <small>kcal</small></div>
-          <div class="macros">
-            <div><b>${t.proteinG} g</b><span>Protein</span></div>
-            <div><b>${t.carbG} g</b><span>Carbs</span></div>
-            <div><b>${t.fatG} g</b><span>Fat</span></div>
-          </div>
-        </div>
-        <details>
-          <summary>Why these numbers?</summary>
-          <ul class="reasons">${t.reasoning.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
-          <p class="small muted">Safe floor: ${t.floor} kcal/day. ${esc(FLOOR_SOURCE)}</p>
-          <p class="small muted">Targets update automatically as your weight trend changes.</p>
-        </details>
-      </div>
+      ${programLine()}
+
+      ${scoreCard()}
+
+      ${weeklyCard()}
+
+      <div data-photo-reminder></div>
 
       ${insightsBlock()}
-
-      <a class="card row between center nav-card" href="#/coach" data-coach-card>
-        <div><p class="label">Coach</p><p>${esc(coachTeaser())}</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
 
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;
@@ -307,7 +315,12 @@ export function renderToday(el) {
   import('../photos/cards.js').then((m) => m.mountPhotoReminder($('[data-photo-reminder]', el)));
   const sc = $('[data-score]', el);
   if (sc) animateScoreRings(sc);
-  animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()));
+  animateRings($('.rings-card', el), rings, weekOf(new Date().toISOString()), ringsBefore);
+  const offerShow = $('[data-tour-offer-show]', el);
+  if (offerShow) {
+    offerShow.onclick = () => import('../tour/tour.js').then((m) => { m.dismissTourOffer(); m.startTour({ replay: true }); });
+    $('[data-tour-offer-no]', el).onclick = () => import('../tour/tour.js').then((m) => m.dismissTourOffer());
+  }
   const start = $('[data-start]', el);
   if (start) start.onclick = () => {
     const plan = previewPlan();

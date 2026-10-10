@@ -2,7 +2,8 @@
 import { $, sheet, toast } from '../ui.js';
 import { icon } from '../ui/icons.js';
 import { myStore, mySessions } from './access.js';
-import { DOW_NAMES, fmtBytes, exportName, poseLabel } from './core.js';
+import { DOW_NAMES, fmtBytes, exportName, poseLabel, photoLossLine } from './core.js';
+import { isNative } from '../native/bridge.js';
 import { getRemindDow, setRemindDow } from './cards.js';
 import { zipStore } from './zipwriter.js';
 import { deliverSheet } from './deliver.js';
@@ -21,7 +22,7 @@ export function photoSettingsHtml() {
         <button class="g-row" data-photo-export><span class="g-ic">${icon('download')}</span><span class="g-text"><span>Export all photos (zip)</span><small>Your backup. Save it to Files or iCloud Drive.</small></span></button>
         <button class="g-row g-danger" data-photo-wipe><span class="g-ic">${icon('trash')}</span><span class="g-text"><span>Delete all photos on this phone</span></span></button>
       </div>
-      <p class="sec-foot">Photos stay on this iPhone only. They aren’t backed up by Forge. If you delete the app or clear Safari data, they’re gone.</p>`;
+      <p class="sec-foot">Photos stay on this iPhone only. They aren’t backed up by Forge. ${photoLossLine(isNative())}</p>`;
 }
 
 export async function bindPhotoSettings(el) {

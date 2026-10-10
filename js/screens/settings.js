@@ -166,7 +166,7 @@ export function renderSettings(el) {
   const paintPhotos = async () => {
     const st = await photoStatus();
     const box = $('[data-photos]', el);
-    if (!box || !st.total) return;
+    if (!box || !st.total || st.bundled) return; // in the iPhone app the photos are already inside the app
     box.hidden = false;
     $('[data-photo-status]', el).textContent = `· ${st.saved} of ${st.total} saved for offline${st.saved >= st.total ? '' : ` · ≈ ${st.mb.toFixed(1)} MB to download`}`;
     const btn = $('[data-photo-dl]', el);

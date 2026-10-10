@@ -2,6 +2,8 @@
 // scripts/fetch-demo-photos.mjs. Shown as the "Photos" view in the How-To sheet and as the demo for
 // exercises without a silhouette. Offline: today's photos are cached when a workout starts, any photo is
 // cached the first time it's shown, and Settings can download them all. Never precached in the app shell.
+import { isNative } from '../native/bridge.js';
+
 export const MEDIA_CACHE = 'media-ex-v1'; // keep in sync with sw.js
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -75,6 +77,8 @@ export async function photoStatus() {
   const ids = Object.keys(index.ids);
   const bytes = Object.values(index.ids).reduce((a, b) => a + b, 0);
   let saved = 0;
+  // The iPhone app ships media/ inside the app, so there is nothing to download.
+  if (isNative()) return { total: ids.length, saved: ids.length, mb: 0, bundled: true };
   if ('caches' in window && ids.length) {
     try {
       const cache = await caches.open(MEDIA_CACHE);

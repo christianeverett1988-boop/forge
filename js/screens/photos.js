@@ -4,7 +4,8 @@ import { esc, $, $$, sheet, toast, confirmSheet, formatDay, todayKey } from '../
 import { icon, emptyState } from '../ui/icons.js';
 import { units as getUnits } from '../state.js';
 import { daysBetween } from '../weight/smoothing.js';
-import { POSES, fmtBytes, poseLabel } from '../photos/core.js';
+import { POSES, fmtBytes, poseLabel, photoLossLine, photosUnavailableLine } from '../photos/core.js';
+import { isNative } from '../native/bridge.js';
 import { myStore, mySessions } from '../photos/access.js';
 import { bodyOn, fmtKg, photoUrl, revokeAll } from '../photos/metrics.js';
 import { openCapture } from '../photos/capture.js';
@@ -40,7 +41,7 @@ export async function renderPhotos(el, sub) {
   el.innerHTML = `
     <section class="stack">
       <h1>Progress photos</h1>
-      ${!ok ? `<div class="notice warn">Photos can’t be saved in this browser right now (private browsing turns storage off). Open Forge from your Home Screen app instead.</div>` : ''}
+      ${!ok ? `<div class="notice warn">${esc(photosUnavailableLine(isNative()))}</div>` : ''}
       ${sessions.length ? `
         <button class="btn primary" data-take>${icon('camera')}Take photos</button>
         <div class="row gap">
@@ -52,7 +53,7 @@ export async function renderPhotos(el, sub) {
         : `<div class="card">${emptyState({ icon: 'camera', title: 'Track how you look, not just what you weigh', text: 'The scale can’t show everything. Take a few photos each week and watch the change. They stay on this phone.', action: ok ? { attr: 'data-take', label: 'Take first photos' } : null })}</div>`}
       <div class="card stack small">
         <p class="label">Privacy</p>
-        <p>Photos stay on this iPhone only. They aren’t backed up by Forge. If you delete the app or clear Safari data, they’re gone.</p>
+        <p>Photos stay on this iPhone only. They aren’t backed up by Forge. ${photoLossLine(isNative())}</p>
         <p class="muted">${photos.length ? `${photos.length} ${photos.length === 1 ? 'photo' : 'photos'} · ${fmtBytes(bytes)} on this phone. ` : ''}Back them up from Settings → Progress photos.</p>
       </div>
     </section>`;

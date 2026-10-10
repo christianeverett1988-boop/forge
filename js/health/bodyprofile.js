@@ -25,6 +25,9 @@ export function indices(m, heightM) {
   const w = m.weight_kg;
   let fat = m.fat_mass_kg;
   let ffm = m.fat_free_mass_kg;
+  // Some scales (Withings Body Comp) send only body fat %: fat mass = weight × ratio.
+  const pct = m.fat_ratio_pct;
+  if (!Number.isFinite(fat) && !Number.isFinite(ffm) && Number.isFinite(w) && Number.isFinite(pct) && pct > 0 && pct < 100) fat = w * (pct / 100);
   if (!Number.isFinite(fat) && Number.isFinite(ffm) && Number.isFinite(w)) fat = w - ffm;
   if (!Number.isFinite(ffm) && Number.isFinite(fat) && Number.isFinite(w)) ffm = w - fat;
   if (!Number.isFinite(fat) || !Number.isFinite(ffm)) return null;

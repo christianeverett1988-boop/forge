@@ -21,6 +21,15 @@ export const overLap = (value) => (value > 1 ? Math.min(1, value - 1) : 0);
 const NB = ' '; // numbers never part from their units
 const num = (v) => Math.round(v).toLocaleString('en-US');
 
+/** Eaten / target for protein, carbs and fat, with a small label so nobody reads a target as what they ate. */
+export function macroTilesHtml(tot, t) {
+  const tiles = [['Protein', tot.protein_g, t.proteinG], ['Carbs', tot.carbs_g, t.carbG], ['Fat', tot.fat_g, t.fatG]];
+  const aria = tiles.map(([l, e, g]) => `${l} ${num(e)} of ${num(g)} grams`).join(', ');
+  return `<div role="group" aria-label="Today of target: ${aria}">
+    <p class="food-targets-label" aria-hidden="true">Today of target</p>
+    <div class="food-targets" data-food-targets>${tiles.map(([l, e, g]) => `<div><b data-eaten>${num(e)}</b><small data-target>/ ${num(g)}${NB}g</small><span>${l}</span></div>`).join('')}</div></div>`;
+}
+
 /** The Food card's text lines: { note, over, protein }. Same wording rules as the Today rings legend. */
 export function foodSummary(tot, t) {
   const left = Math.round(t.calories - tot.kcal);
@@ -81,12 +90,45 @@ function remember(week, closed) {
   try { localStorage.setItem(SEEN, JSON.stringify({ week, closed: [...closed] })); } catch { /* private mode: celebrate again, no harm */ }
 }
 
-/** Animate the arcs from empty, then burst any earned ring closed for the first time this week. */
-export function animateRings(root, rings, week) {
+/** Where each arc is right now (dash offsets by data-ring key), read before a screen redraws so the new arcs can start there. */
+export function snapshotRings(root) {
+  const from = new Map();
+  if (!root) return from;
+  root.querySelectorAll('[data-ring]').forEach((a) => {
+    const v = parseFloat(getComputedStyle(a).strokeDashoffset);
+    if (Number.isFinite(v)) from.set(a.dataset.ring, v);
+  });
+  return from;
+}
+
+/** The offset an arc starts its draw from: where it was (a redraw), or empty (the first draw of the visit). */
+export const startOffset = (from, key, circumference) => (from && from.has(key) ? from.get(key) : circumference);
+
+/**
+ * Animate the arcs, then burst any earned ring closed for the first time this week.
+ * `from` (snapshotRings of the previous draw on this screen) makes a data refresh glide from where the arcs
+ * were; without it (the first draw of a visit) they fill from empty.
+ */
+export function animateRings(root, rings, week, from = null) {
   const still = reducedMotion();
   if (!still) {
-    root.classList.add('rings-pre');
-    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('rings-pre')));
+    if (from && from.size) {
+      const arcs = [...root.querySelectorAll('[data-ring]')];
+      const targets = arcs.map((a) => a.style.getPropertyValue('--off'));
+      arcs.forEach((a) => {
+        a.style.transition = 'none';
+        a.style.setProperty('--off', String(startOffset(from, a.dataset.ring, parseFloat(a.style.getPropertyValue('--c')))));
+      });
+      void root.getBoundingClientRect(); // commit the start position
+      requestAnimationFrame(() => arcs.forEach((a, i) => {
+        a.style.transition = '';
+        a.style.transitionDelay = '0s';
+        a.style.setProperty('--off', targets[i]);
+      }));
+    } else {
+      root.classList.add('rings-pre');
+      requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('rings-pre')));
+    }
   }
   const seen = closedBefore(week);
   const fresh = rings.filter((r) => !NO_BURST.has(r.key) && r.value >= 1 && !seen.has(r.key));
