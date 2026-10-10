@@ -86,6 +86,57 @@ if (standalone) {
   });
 }
 
+if (standalone) {
+  test("layout: Change today's workout: the sheet, its steps and the Undo toast fit at every size", async () => {
+    if (skipReason()) return;
+    browser = browser || await launch();
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const found = new Map();
+    const note = (msg, at) => found.set(msg, [...(found.get(msg) || []), at]);
+    for (const c of [...SIZES.map(([w, h]) => ({ w, h, dark: true, long: false })), { w: 375, h: 667, dark: false, long: true }]) {
+      await browser.viewport(c.w, c.h, c.dark);
+      await browser.open('train', seed({ long: c.long }));
+      const at = `${c.w}${c.dark ? 'd' : 'l'}${c.long ? 'L' : ''}`;
+      const btn = await browser.eval("(() => { const b = document.querySelector('[data-change]'); if (!b) return null; return { h: b.getBoundingClientRect().height, t: b.innerText.trim() }; })()");
+      if (!btn) { note('no Change button on Train', at); continue; }
+      if (btn.h < 44 || btn.t !== 'Change') note(`Change button is ${btn.h}px tall and reads "${btn.t}"`, at);
+      const step = async (label, js) => {
+        await browser.eval(js);
+        await wait(450);
+        // Check the sheet on its own: hide the screen behind it so its buttons don't count as overlapping the sheet's.
+        const behind = (v) => browser.eval(`['main', 'nav', 'navbar'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.visibility = '${v}'; })`);
+        await behind('hidden');
+        let probs = await browser.eval(`(${detect})(${JSON.stringify({ largeText: false })})`);
+        await behind('');
+        if (c.long && label === 'place') probs = probs.filter((x) => !/Downtown|Hotel/.test(x)); // a place name wider than the row is the user's own text
+        if (!(await browser.eval("!!document.querySelector('dialog.sheet[open]')"))) probs.push('sheet is not open');
+        for (const pr of probs) note(`${label}: ${pr}`, at);
+        if (shots) await browser.screenshot(`${shots}/change-${label}-${c.w}x${c.h}-${c.dark ? 'dark' : 'light'}${c.long ? '-long' : ''}.png`);
+      };
+      const sh = "document.querySelector('dialog.sheet ";
+      await step('sheet', "document.querySelector('[data-change]').click()");
+      await step('focus', `${sh}[data-o=focus]').click()`);
+      await step('length', `${sh}[data-back]').click(); ${sh}[data-o=length]').click()`);
+      await step('place', `${sh}[data-back]').click(); ${sh}[data-o=place]').click()`);
+      // pick a length: the sheet closes, the Undo toast appears and fits
+      await browser.eval(`${sh}[data-back]').click(); ${sh}[data-o=length]').click(); ${sh}[data-v=\\"20\\"]').click()`);
+      await wait(700);
+      const tb = await browser.eval("(() => { const t = document.querySelector('.toast'); const b = t && t.querySelector('.toast-act'); if (!b) return null; const r = t.getBoundingClientRect(); const a = b.getBoundingClientRect(); return { inside: r.left >= 0 && r.right <= innerWidth, h: a.height, w: a.width }; })()");
+      if (!tb) note('no Undo toast after a change', at);
+      else {
+        if (!tb.inside || tb.h < 44 || tb.w < 44) note(`Undo toast does not fit: ${JSON.stringify(tb)}`, at);
+        if (shots) await browser.screenshot(`${shots}/change-toast-${c.w}x${c.h}-${c.dark ? 'dark' : 'light'}${c.long ? '-long' : ''}.png`);
+        await browser.eval("document.querySelector('.toast-act').click()");
+        await wait(400);
+        await browser.eval("document.querySelector('[data-change]').click()");
+        await wait(450);
+        if (await browser.eval("!!document.querySelector('dialog.sheet [data-o=reset]')")) note('Undo did not bring back the recommended workout', at);
+      }
+    }
+    assert(found.size === 0, `\n        ${[...found].map(([p, at]) => `${p}  [${at.join(' ')}]`).join('\n        ')}`);
+  });
+}
+
 if (!standalone) {
   // Inside tests/run.js the other suites replace globals (fetch, document...), so the browser run happens in its own process.
   test('layout: every screen, 320 to 440 wide, dark and light, large text (headless Chromium)', async () => {

@@ -204,3 +204,9 @@ html.native select, html.native .card.nav-card, html.native .g-row, html.native 
 html.native img { -webkit-user-drag: none; }
 /* Fields and the Shortcut token stay selectable and editable. */
 html.native input, html.native textarea, html.native .token-box { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* Toast with an action (Undo): message stays on one line, the button is a 44 px tap target. */
+.toast .toast-msg { min-width: 0; text-align: left; text-wrap: balance; }
+.toast .toast-act { flex: none; min-height: 44px; min-width: 44px; margin: -12px -10px -12px 4px; padding: 0 14px; border-radius: var(--r-pill);
+  color: var(--accent-text); font: inherit; font-weight: 700; background: transparent; }
+.toast .toast-act:active { background: var(--surface-3); }

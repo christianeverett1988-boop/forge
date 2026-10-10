@@ -170,7 +170,10 @@ export function generateWorkout(opts) {
     // Readiness (js/health/readiness.js): { level: 'green'|'amber'|'red', override?: true }. Amber takes a set
     // off every accessory; Red makes it a light day unless you override.
     readiness = null,
+    // A one-day session length in minutes (Change → Shorter or longer); otherwise the profile's.
+    sessionMin: sessionMinOpt = null,
   } = opts;
+  const sessionMin = sessionMinOpt || profile.sessionMin || 60;
   const experience = profile.experience || 'beginner';
   const notes = [];
   const prog = PROGRAMS[programKey] || PROGRAMS.smart;
@@ -287,7 +290,7 @@ export function generateWorkout(opts) {
   }
 
   // Fit the session length: drop accessories from the end until it fits.
-  const budget = (profile.sessionMin || 60) - 5;
+  const budget = sessionMin - 5;
   const total = () => items.reduce((m, it) => m + minutesFor(exercises.find((e) => e.id === it.exercise_id), it.target.sets, it.role, it.target), 0);
   while (total() > budget) {
     const idx = items.map((it) => it.role).lastIndexOf('accessory');
@@ -296,7 +299,7 @@ export function generateWorkout(opts) {
   }
 
   // Short sessions: pair accessories into supersets.
-  if ((profile.sessionMin || 60) <= 45) {
+  if (sessionMin <= 45) {
     const acc = items.filter((it) => it.role === 'accessory' && !exercises.find((e) => e.id === it.exercise_id).timed);
     for (let i = 0; i + 1 < acc.length; i += 2) {
       const g = String.fromCharCode(65 + i / 2);

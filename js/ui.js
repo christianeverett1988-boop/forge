@@ -16,18 +16,33 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /** A glass capsule above the tab bar. toast('Saved', 2600, { icon: 'check' }) adds an icon; the text is never HTML. */
-export function toast(message, ms = 2600, { icon: name = '' } = {}) {
+export function toast(message, ms = 2600, { icon: name = '', action = null } = {}) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
   if (name) el.insertAdjacentHTML('afterbegin', icon(name));
-  el.append(document.createTextNode(message));
+  const msg = document.createElement('span');
+  msg.className = 'toast-msg';
+  msg.textContent = message;
+  el.append(msg);
+  let hide = () => {};
+  if (action) {
+    // { label, onClick }: a button in the capsule (Undo). Tapping it runs once and dismisses the toast.
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-act';
+    b.textContent = action.label;
+    b.addEventListener('click', () => { b.disabled = true; hide(); action.onClick(); }, { once: true });
+    el.append(b);
+  }
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
-  setTimeout(() => {
+  let timer = setTimeout(() => hide(), ms);
+  hide = () => {
+    clearTimeout(timer);
     el.classList.remove('show');
     setTimeout(() => el.remove(), DUR.med + 20);
-  }, ms);
+  };
 }
 
 let sheetCount = 0;

@@ -334,3 +334,11 @@ body.playing .navbar { display: none; }
 .pl-sugg { display: none; }
 .pl-hero-w.suggested b { color: color-mix(in srgb, var(--volt) 55%, var(--muted)); }
 .pl-hero-w.suggested .pl-sugg { display: inline; align-self: center; font-size: calc(11px * var(--ts)); font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 3px 7px; }
+
+/* Change today's workout: a brief highlight on rows that just changed, and the sheet's back link */
+.pv-ex.flash { animation: pv-flash 1.6s var(--ease-out) 1; border-radius: var(--r-md); }
+@keyframes pv-flash { 0%, 35% { background: var(--accent-tint); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .pv-ex.flash { animation: none; } }
+.ch-back { align-self: flex-start; min-height: 44px; padding-inline: 0; }
+.pick:disabled { opacity: .55; cursor: default; }
+.pick:disabled .chev { display: none; }
