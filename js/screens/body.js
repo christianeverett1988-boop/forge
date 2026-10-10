@@ -47,14 +47,17 @@ function compositionCard() {
     (stale && daysBetween(lc.last.day, today) > OLD_READING_DAYS ? old : fresh).push({ key: m.key, tile });
   });
   const tiles = fresh.map((t) => t.tile).join('');
-  const olderTiles = old.length ? `<details class="learn-more bc-older" data-bc-older><summary>Show older (${old.length})</summary><div class="bc-grid">${old.map((t) => t.tile).join('')}</div></details>` : '';
-  const hasHr = [...fresh, ...old].some((t) => t.key === 'heart_pulse_bpm');
+  // The Standing HR note sits next to the HR tile: under the grid when it is fresh, inside "Show older" when it is tucked away.
+  const hrNote = '<p class="small muted" data-bc-hr>Standing HR is the heart rate your scale measures while you stand. It is usually higher than your resting heart rate.</p>';
+  const hrFresh = fresh.some((t) => t.key === 'heart_pulse_bpm');
+  const hrOld = old.some((t) => t.key === 'heart_pulse_bpm');
+  const olderTiles = old.length ? `<details class="learn-more bc-older" data-bc-older><summary>Show older (${old.length})</summary><div class="bc-grid">${old.map((t) => t.tile).join('')}</div>${hrOld ? hrNote : ''}</details>` : '';
   const last = [...docs].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))[0];
   return `<div class="card">
     <div class="row between"><p class="label">Body composition</p><span class="small muted">${last ? new Date(last.measured_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span></div>
     ${gap ? `<p class="notice info small" data-bc-gap>Your last ${gap === 1 ? 'weigh-in' : `${gap} weigh-ins`} had no body composition. Stand barefoot with dry feet on the electrodes and keep still until the scale finishes.</p>` : ''}
     <div class="bc-grid">${tiles}</div>${olderTiles}
-    ${hasHr ? '<p class="small muted" data-bc-hr>Standing HR is the heart rate your scale measures while you stand. It is usually higher than your resting heart rate.</p>' : ''}
+    ${hrFresh ? hrNote : ''}
     <p class="small muted">From your scale. Tap any number for its chart and what it means.</p>
   </div>`;
 }

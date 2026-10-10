@@ -80,3 +80,25 @@ test('player leftovers: "Undo set" on one line; the short-phone How-To strip nam
   assert(j.includes('<button data-undo>Undo set</button>') && j.includes('pl-demo-cap'));
   assert(/max-height: 600px\) \{[\s\S]*\.pl-demo-cap \{ display: block/.test(src('css/player.css')));
 });
+
+test('Standing HR note: under the grid when the HR tile is fresh, inside "Show older" when it is tucked away', () => {
+  const b = src('js/screens/body.js');
+  assert(b.includes("${hrOld ? hrNote : ''}</details>"), 'older HR: note inside the details');
+  assert(b.includes("${hrFresh ? hrNote : ''}"), 'fresh HR: note under the grid');
+  assert(!b.includes('hasHr'), 'no note without a visible tile');
+});
+
+test('Goal path chart: "Goal 181 lb" sits at the left end of the goal line, away from the projection', async () => {
+  const { goalPathSvg } = await import('../js/health/cards.js');
+  const series = [];
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(Date.UTC(2026, 8, 13 + i)).toISOString().slice(0, 10);
+    series.push({ day: d, trend: 84 - i * 0.05 });
+  }
+  for (const goalKg of [82, 86]) {
+    const path = { status: 'ok', etaDay: '2026-12-20', earlyDay: '2026-12-01', lateDay: '2027-01-20' };
+    const svg = goalPathSvg(path, series, '2026-10-10', goalKg, 'imperial');
+    assert(/<text x="44" [^>]*text-anchor="start">Goal \d+ lb<\/text>/.test(svg), `label at left for goal ${goalKg}`);
+    assert(!/>goal \d/.test(svg));
+  }
+});
