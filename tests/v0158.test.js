@@ -33,8 +33,8 @@ test('Change: result states and plain-words messages', () => {
   eq(swapMessage(some), '1 of 3 swapped');
   eq(swapMessage(swapResult(['a'], ['b'])), '1 exercise swapped');
   eq(noSwapReason('Home gym', 'Upper'), 'No other moves fit Home gym for Upper. Try a different focus or location.');
-  eq(lengthMessage('Lower', 30), 'Now: Lower · 30 min');
-  eq(lengthMessage('Lower', null), 'Now: Lower');
+  eq(lengthMessage('Lower', 30), 'Lower · 30 min');
+  eq(lengthMessage('Lower', null), 'Lower');
   eq(LENGTHS, [20, 30, 45, 60]);
 });
 
@@ -73,9 +73,32 @@ test('Change: the generator takes a one-day session length without touching the 
   const usual = run();
   const short = run({ sessionMin: 20 });
   assert(usual.exercises.length > 0, 'fixture builds a workout');
-  assert(short.est_minutes <= usual.est_minutes, 'a shorter session is not longer');
-  assert(short.exercises.length <= usual.exercises.length);
+  assert(short.est_minutes < usual.est_minutes, 'a shorter session is actually shorter');
   eq(profile.sessionMin, 60, 'profile unchanged');
+});
+
+test('Change: every day type fits the chosen length (home and gym), and 20 < 30 < 45 when the library allows', async () => {
+  const { generateWorkout } = await import('../js/workouts/generator.js');
+  const { HOME_PRESET, YMCA_PRESET } = await import('../js/workouts/equipment.js');
+  const { allExercises } = await import('../js/workouts/library.js');
+  const { DAY_TYPES } = await import('../js/workouts/programs.js');
+  const profile = { experience: 'intermediate', sessionMin: 45, trainingDays: 4, injuries: [] };
+  for (const [place, equipment] of [['home', HOME_PRESET], ['gym', YMCA_PRESET]]) {
+    for (const dayType of Object.keys(DAY_TYPES)) {
+      const est = {};
+      for (const sessionMin of LENGTHS) {
+        const w = generateWorkout({
+          programKey: 'smart', dayType, location: { equipment: [...equipment], weight_inventory: {} }, profile, unit: 'lb', exercises: allExercises(), sessionMin: sessionMin === 45 ? null : sessionMin,
+        });
+        if (!w.exercises.length) continue; // the place has nothing for this day type
+        assert(w.est_minutes <= sessionMin + 2, `${place} ${dayType} at ${sessionMin} min comes out ${w.est_minutes} min`);
+        est[sessionMin] = w.est_minutes;
+      }
+      for (const [short, long] of [[20, 30], [30, 45]]) {
+        if (est[short] != null && est[long] != null && est[long] > short + 2) assert(est[short] < est[long], `${place} ${dayType}: ${short} min (${est[short]}) is not shorter than ${long} min (${est[long]})`);
+      }
+    }
+  }
 });
 
 test('Change: the button, sheet and Undo are wired; the old Switch and day select are gone', () => {

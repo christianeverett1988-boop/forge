@@ -137,6 +137,65 @@ if (standalone) {
   });
 }
 
+if (standalone) {
+  test('layout: every Change toast message is one line, Undo is plain text, and Undo after a new location keeps earlier swaps', async () => {
+    if (skipReason()) return;
+    browser = browser || await launch();
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const found = new Map();
+    const note = (msg, at) => found.set(msg, [...(found.get(msg) || []), at]);
+    const sh = "document.querySelector('dialog.sheet ";
+    const names = () => browser.eval("[...document.querySelectorAll('.preview .pv-ex b')].map((b) => b.textContent).join('|')");
+    const open = async () => { await browser.eval("document.querySelector('[data-change]').click()"); await wait(450); };
+    const toastInfo = () => browser.eval(`(() => {
+      const t = [...document.querySelectorAll('.toast')].pop(); const m = t && t.querySelector('.toast-msg'); const b = t && t.querySelector('.toast-act');
+      if (!m) return null;
+      const rg = document.createRange(); rg.selectNodeContents(m);
+      const lines = new Set([...rg.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top / 6))).size;
+      return { text: m.textContent, lines, cut: m.scrollWidth > m.clientWidth + 1, border: getComputedStyle(b).borderTopWidth, inside: t.getBoundingClientRect().left >= 0 && t.getBoundingClientRect().right <= innerWidth };
+    })()`);
+    // run one option, check the toast it leaves, then Undo it
+    const probe = async (what, js, at, { cutOk = false } = {}) => {
+      await open();
+      await browser.eval(js);
+      await wait(700);
+      const t = await toastInfo();
+      if (!t) { note(`${what}: no toast`, at); return; }
+      if (t.lines !== 1) note(`${what}: toast "${t.text}" takes ${t.lines} lines`, at);
+      if (t.cut && !cutOk) note(`${what}: toast "${t.text}" is cut off`, at);
+      if (t.border !== '0px') note(`${what}: Undo has a ${t.border} border`, at);
+      if (!t.inside) note(`${what}: toast runs off-screen`, at);
+      await browser.eval("[...document.querySelectorAll('.toast-act')].pop().click()");
+      await wait(500);
+    };
+    for (const c of [...SIZES.map(([w, h]) => ({ w, h, long: false })), { w: 320, h: 568, long: true }, { w: 440, h: 956, long: true }]) {
+      await browser.viewport(c.w, c.h, true);
+      await browser.open('train', seed({ long: c.long }));
+      const at = `${c.w}${c.long ? 'L' : ''}`;
+      await probe('new exercises', `${sh}[data-o=new]').click()`, at);
+      const values = await (async () => { await open(); await browser.eval(`${sh}[data-o=focus]').click()`); await wait(450); const v = await browser.eval(`[...document.querySelectorAll('dialog.sheet [data-v]')].map((b) => b.dataset.v)`); await browser.eval(`${sh}[data-back]').click(); document.querySelector('dialog.sheet [data-close]').click()`); await wait(500); return v; })();
+      const labels = await browser.eval("document.querySelector('.preview .big-title').textContent");
+      if (!labels) note('no focus title', at);
+      for (const v of values.filter((x) => x)) await probe(`focus ${v}`, `${sh}[data-o=focus]').click(); ${sh}[data-v=\\"${v}\\"]').click()`, at);
+      for (const n of [20, 30, 60]) await probe(`${n} min`, `${sh}[data-o=length]').click(); ${sh}[data-v=\\"${n}\\"]').click()`, at);
+      await probe('place', `${sh}[data-o=place]').click(); ${sh}[data-v=\\"l2\\"]').click()`, at, { cutOk: c.long });
+      // swap → change location → Undo: the swapped exercises must still be showing
+      const rec = await names();
+      await open(); await browser.eval(`${sh}[data-o=new]').click()`); await wait(700);
+      const swapped = await names();
+      await browser.eval("[...document.querySelectorAll('.toast-act')].pop().click()"); await wait(300); // undo of the swap, to start clean...
+      await open(); await browser.eval(`${sh}[data-o=new]').click()`); await wait(700); // ...and swap again
+      if ((await names()) !== swapped) note('New exercises is not repeatable', at);
+      await open(); await browser.eval(`${sh}[data-o=place]').click(); ${sh}[data-v=\\"l2\\"]').click()`); await wait(700);
+      await browser.eval("[...document.querySelectorAll('.toast-act')].pop().click()"); await wait(900);
+      const after = await names();
+      if (after !== swapped) note(`Undo after a new location lost the swap (${after} vs ${swapped})`, at);
+      if (swapped === rec) note('New exercises changed nothing in the fixture', at);
+    }
+    assert(found.size === 0, `\n        ${[...found].map(([p, at]) => `${p}  [${at.join(' ')}]`).join('\n        ')}`);
+  });
+}
+
 if (!standalone) {
   // Inside tests/run.js the other suites replace globals (fetch, document...), so the browser run happens in its own process.
   test('layout: every screen, 320 to 440 wide, dark and light, large text (headless Chromium)', async () => {

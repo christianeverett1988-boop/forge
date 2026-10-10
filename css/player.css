@@ -339,6 +339,6 @@ body.playing .navbar { display: none; }
 .pv-ex.flash { animation: pv-flash 1.6s var(--ease-out) 1; border-radius: var(--r-md); }
 @keyframes pv-flash { 0%, 35% { background: var(--accent-tint); } 100% { background: transparent; } }
 @media (prefers-reduced-motion: reduce) { .pv-ex.flash { animation: none; } }
-.ch-back { align-self: flex-start; min-height: 44px; padding-inline: 0; }
+.pick small.one { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pick:disabled { opacity: .55; cursor: default; }
 .pick:disabled .chev { display: none; }

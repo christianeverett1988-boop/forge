@@ -60,6 +60,7 @@ export function sheet(title, render) {
   dlg.innerHTML = `
     <div class="sheet-grab" aria-hidden="true"><i></i></div>
     <div class="sheet-head">
+      <button class="icon-btn sh-back" data-back aria-label="Back" hidden>${icon('back', { size: 20 })}</button>
       <h2 id="${titleId}">${esc(title)}</h2>
       <button class="icon-btn" data-close aria-label="Close">${icon('close', { size: 18 })}</button>
     </div>
@@ -126,7 +127,22 @@ export function sheet(title, render) {
     if (e.target === dlg) close(); // tap on the dimmed backdrop
   });
   forget = registerSheet(close);
-  render(dlg.querySelector('.sheet-body'), close);
+  // Multi-step sheets: head.setStep('Session length', goBack) swaps the title and shows a back chevron; setStep(title, null) goes home.
+  const head = {
+    setStep(text, onBack = null) {
+      dlg.querySelector('h2').textContent = text;
+      const b = dlg.querySelector('.sh-back');
+      b.hidden = !onBack;
+      b.onclick = onBack;
+      const bodyEl = dlg.querySelector('.sheet-body');
+      if (!reducedMotion()) {
+        bodyEl.classList.remove('step-in', 'step-back');
+        void bodyEl.offsetWidth;
+        bodyEl.classList.add(onBack ? 'step-in' : 'step-back');
+      }
+    },
+  };
+  render(dlg.querySelector('.sheet-body'), close, head);
   dlg.showModal();
   void dlg.offsetHeight; // lock in the off-screen start, then let it spring up
   dlg.classList.remove('pre');

@@ -64,4 +64,4 @@ export function swapMessage({ changed, total, state }) {
 /** Why "New exercises" is greyed out, or '' when it can run. */
 export const noSwapReason = (locName, focusLabel) => `No other moves fit ${locName} for ${focusLabel}. Try a different focus or location.`;
 
-export const lengthMessage = (focusLabel, min) => `Now: ${focusLabel}${min ? ` · ${min} min` : ''}`;
+export const lengthMessage = (focusLabel, min) => `${focusLabel}${min ? ` · ${min} min` : ''}`;
