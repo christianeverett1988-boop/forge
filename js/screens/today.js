@@ -109,7 +109,8 @@ function workoutCard() {
   if (!plan || !plan.exercises.length) return '';
   return `<div class="card" data-tour="workout"><div class="row between center card-head"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p><a class="card-link" href="#/train">See plan${icon('chev', { size: 14 })}</a></div>
     <div class="row between center gap"><div class="grow-min"><p class="big-title">${esc(plan.label)}</p>
-    <p class="small muted">${plan.exercises.length} exercises · about ${plan.est_minutes} min · ${esc(plan.location.name)}</p></div><button class="btn" data-start>Start</button></div>
+    <p class="small muted">${plan.exercises.length} exercises · ${plan.est_minutes} min</p>
+    <p class="small muted one-line" data-layout-ok data-workout-place>${esc(plan.location.name)}</p></div><button class="btn small" data-start>Start</button></div>
     ${plan.readiness ? `<p class="small ${plan.readiness === 'red' ? 'warn' : 'muted'}">Readiness ${plan.readiness}: ${plan.readiness === 'red' ? 'a lighter day' : 'one less set on accessories'}</p>` : ''}
   </div>`;
 }
@@ -197,7 +198,7 @@ export function renderToday(el) {
   const change = trendChange(series, 7);
   const goal = state.profile.goal;
   const goalKg = state.profile.targetWeightKg;
-  const fmtGoalDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) });
+  const fmtGoalDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) }).replace(/ /g, ' '); // keep a date together
   const goalSentence = goalKg ? goalLine(currentGoalPath(), fmtGoalDay) : ''; // same fit as the Goal path card
 
   // Arrow color: green when the trend moves the way your goal wants.
@@ -263,10 +264,8 @@ export function renderToday(el) {
           </div>
           ${sparklineSVG(series)}
         </div>
-        <div class="row between center gap">
-          ${goalSentence ? `<p class="small muted grow-min" data-goal-line>${esc(goalSentence)}</p>` : '<span></span>'}
-          <button class="btn small" data-log>Log weight</button>
-        </div>
+        ${goalSentence ? `<p class="small muted" data-goal-line>${esc(goalSentence)}</p>` : ''}
+        <div class="row end"><button class="btn small" data-log>Log weight</button></div>
       </div>
 
       ${programLine()}

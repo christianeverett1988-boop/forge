@@ -6,7 +6,7 @@ import { weightToDisplay, weightUnit, formatWeight } from '../units.js';
 import { FFMI_BANDS, FMI_BANDS } from './bodyprofile.js';
 import { icon, emptyState } from '../ui/icons.js';
 
-const fmtDate = (key, withYear = false) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) });
+const fmtDate = (key, withYear = false) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) }).replace(/ /g, ' '); // a date never splits across lines
 
 // ---- insight cards ----
 

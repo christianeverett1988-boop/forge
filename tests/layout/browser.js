@@ -1,15 +1,21 @@
 // A tiny headless-Chromium driver (Chrome DevTools Protocol over the built-in WebSocket) plus a static server.
 // No npm dependencies. findChrome() returns null when there is no browser, and the layout test then skips.
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, extname, normalize } from 'node:path';
+import { join, extname, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STUBS } from './stubs.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg' };
+
+/** Why the layout test can't run here, or '' when it can (needs Chrome and a global WebSocket, Node 22+). */
+export function skipReason() {
+  if (typeof WebSocket === 'undefined') return 'Node 22+ needed for the layout test (no global WebSocket)';
+  return findChrome() ? '' : 'no Chrome/Chromium found; set CHROME=/path';
+}
 
 export function findChrome() {
   const c = [process.env.CHROME, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser',
@@ -123,6 +129,7 @@ export async function launch() {
     },
     async screenshot(path) {
       const { data } = await send('Page.captureScreenshot', { format: 'png' });
+      mkdirSync(dirname(path), { recursive: true });
       (await import('node:fs')).writeFileSync(path, Buffer.from(data, 'base64'));
     },
     async close() {

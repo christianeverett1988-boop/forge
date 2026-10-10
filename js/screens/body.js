@@ -48,7 +48,7 @@ function compositionCard() {
   });
   const tiles = fresh.map((t) => t.tile).join('');
   const olderTiles = old.length ? `<details class="learn-more bc-older" data-bc-older><summary>Show older (${old.length})</summary><div class="bc-grid">${old.map((t) => t.tile).join('')}</div></details>` : '';
-  const hasHr = fresh.some((t) => t.key === 'heart_pulse_bpm');
+  const hasHr = [...fresh, ...old].some((t) => t.key === 'heart_pulse_bpm');
   const last = [...docs].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))[0];
   return `<div class="card">
     <div class="row between"><p class="label">Body composition</p><span class="small muted">${last ? new Date(last.measured_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span></div>

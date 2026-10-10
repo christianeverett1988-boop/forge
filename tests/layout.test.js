@@ -4,7 +4,7 @@
 //   LAYOUT_ROUTES=today,body node tests/layout.test.js   → only those screens
 //   LAYOUT_SHOTS=/tmp/shots                              → also save a PNG of every render
 import { test, assert } from './harness.js';
-import { findChrome, launch } from './layout/browser.js';
+import { skipReason, launch } from './layout/browser.js';
 import { detect } from './layout/detect.js';
 import { seed } from './layout/seed.js';
 
@@ -30,7 +30,7 @@ const standalone = !!(process.argv[1] && process.argv[1].endsWith("layout.test.j
 for (const route of standalone ? ROUTES : []) {
   if (only && !only.includes(route)) continue;
   test(`layout: ${route} has no wraps, clips, small tap targets or overflow`, async () => {
-    if (!findChrome()) { console.log('      (skipped: no Chrome/Chromium found; set CHROME=/path)'); return; }
+    if (skipReason()) { console.log('      (skipped: ' + skipReason() + ')'); return; }
     browser = browser || await launch();
     const found = new Map();
     for (const c of CASES) {
@@ -54,7 +54,7 @@ for (const route of standalone ? ROUTES : []) {
 
 for (const route of standalone ? ['today', 'train', 'body', 'weight', 'settings'] : []) {
   test(`layout: ${route}: the nav bar collapses once the large title scrolls under it, and not before`, async () => {
-    if (!findChrome()) return;
+    if (skipReason()) return;
     browser = browser || await launch();
     await browser.viewport(390, 844, true);
     await browser.open(route, seed());
@@ -66,10 +66,30 @@ for (const route of standalone ? ['today', 'train', 'body', 'weight', 'settings'
   });
 }
 
+if (standalone) {
+  test('layout: the Log weight label is one piece, and the workout place sits on its own line', async () => {
+    if (skipReason()) return;
+    browser = browser || await launch();
+    for (const [w, label] of [[320, '+ Log'], [375, '+ Log weight']]) {
+      await browser.viewport(w, 667, true);
+      await browser.open('weight', seed());
+      const got = await browser.eval("(document.querySelector('[data-log]') || {}).innerText");
+      assert(got === label, `weight button reads "${got}" at ${w}, wanted "${label}"`);
+    }
+    for (const long of [false, true]) {
+      await browser.viewport(320, 568, true);
+      await browser.open('today', seed({ long }));
+      const r = await browser.eval("(() => { const p = document.querySelector('[data-workout-place]'); if (!p) return null; const m = p.previousElementSibling; return { place: p.getBoundingClientRect().height < 30, dot: /·\\s*$/.test(m.innerText), lines: (() => { const rg = document.createRange(); rg.selectNodeContents(m); return new Set([...rg.getClientRects()].map((q) => Math.round(q.top / 6))).size; })() }; })()");
+      if (!r) continue; // seed has no planned workout today
+      assert(r.place && !r.dot && r.lines === 1, `workout meta/place wrapped badly at 320: ${JSON.stringify(r)}`);
+    }
+  });
+}
+
 if (!standalone) {
   // Inside tests/run.js the other suites replace globals (fetch, document...), so the browser run happens in its own process.
   test('layout: every screen, 320 to 440 wide, dark and light, large text (headless Chromium)', async () => {
-    if (!findChrome()) { console.log('      (skipped: no Chrome/Chromium found; set CHROME=/path)'); return; }
+    if (skipReason()) { console.log('      (skipped: ' + skipReason() + ')'); return; }
     if (process.argv.includes('--no-layout')) { console.log('      (skipped: --no-layout)'); return; }
     const { spawnSync } = await import('node:child_process');
     const r = spawnSync(process.execPath, [new URL(import.meta.url).pathname], { encoding: 'utf8', timeout: 540000 });
