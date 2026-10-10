@@ -244,6 +244,35 @@ if (standalone) {
   });
 }
 
+if (standalone) {
+  test('layout: Log food dock: each macro value stays with its unit at 320 and 390, normal and large text', async () => {
+    if (skipReason()) return;
+    browser = browser || await launch();
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const found = new Map();
+    const note = (msg, at) => found.set(msg, [...(found.get(msg) || []), at]);
+    for (const [w, h] of [[320, 568], [390, 844]]) {
+      for (const ts of [1, 1.35]) {
+        await browser.viewport(w, h, true);
+        await browser.open('food', seed({ over: true }));
+        if (ts !== 1) { await browser.eval(`document.documentElement.style.setProperty('--ts', '${ts}')`); await wait(300); }
+        await browser.eval("document.querySelector('[data-log-food]').click()"); await wait(600);
+        await browser.eval("document.querySelector('dialog.sheet [data-results] li[data-i]').click()"); await wait(500);
+        const r = await browser.eval(`(() => {
+          const line = document.querySelector('dialog.sheet [data-sel-line]'); if (!line) return null;
+          const lines = (e) => { const rg = document.createRange(); rg.selectNodeContents(e); const c = [...rg.getClientRects()].filter((q) => q.width > 0).map((q) => (q.top + q.bottom) / 2).sort((x, y) => x - y); return c.filter((q, i) => i === 0 || q - c[i - 1] > 6).length; };
+          return { parts: [...line.querySelectorAll('.nb')].map((n) => [n.textContent, lines(n)]), cut: line.scrollWidth > line.clientWidth + 1 };
+        })()`);
+        const at = `${w}${ts !== 1 ? 'T' : ''}`;
+        if (!r || !r.parts.length) { note('dock macro line missing', at); continue; }
+        for (const [t, n] of r.parts) if (n !== 1) note(`"${t}" splits across lines`, at);
+        if (r.cut) note('macro line is cut off', at);
+      }
+    }
+    assert(found.size === 0, `\n        ${[...found].map(([p, at]) => `${p}  [${at.join(' ')}]`).join('\n        ')}`);
+  });
+}
+
 test('layout: close the browser', async () => {
   if (browser) await browser.close();
   browser = null;

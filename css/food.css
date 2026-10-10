@@ -120,3 +120,6 @@
   .food-minor .meter-row > .row.between { flex-direction: row; flex-wrap: wrap; align-items: baseline; }
   .food-minor .meter-row > .row.between > span:last-child { flex: 1 1 auto; justify-content: flex-end; }
 }
+
+/* Log food dock macro line: each value stays with its unit; the line only breaks between macros. */
+.macro-line .nb { white-space: nowrap; }
