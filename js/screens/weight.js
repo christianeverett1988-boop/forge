@@ -101,9 +101,9 @@ export function renderWeight(el) {
         ${weightChartSVG(series, { units: u, goalKg, projection, rangeDays: range || null })}
         <p class="small muted legend"><span class="key dot"></span>weigh-ins <span class="key line"></span>trend ${goalKg ? '<span class="key dash"></span>goal' : ''}</p>
       </div>
+      <div class="group"><a class="g-row" href="#/photos" data-photos-row><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Progress photos</span><small>Weekly photos, compare, time-lapse</small></span><span class="chev">${icon('chev')}</span></a></div>
       ${goalPathCard()}
       <div class="group">
-        <a class="g-row" href="#/photos" data-photos-row><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Progress photos</span><small>Weekly photos, compare, time-lapse</small></span><span class="chev">${icon('chev')}</span></a>
         <a class="g-row" href="#/history"><span class="g-ic">${icon('list')}</span><span class="g-text"><span>History</span><small>Workouts and cardio</small></span><span class="chev">${icon('chev')}</span></a>
         <a class="g-row" href="#/awards"><span class="g-ic">${icon('trophy')}</span><span class="g-text"><span>Awards</span><small>Levels and badges</small></span><span class="chev">${icon('chev')}</span></a>
         <a class="g-row" href="#/coach"><span class="g-ic">${icon('help')}</span><span class="g-text"><span>Ask Coach</span><small>Answers from your own data</small></span><span class="chev">${icon('chev')}</span></a>

@@ -58,7 +58,7 @@ export const TOUR_STEPS = [
   {
     id: 'progress', route: 'weight', target: '.tabbar a[href="#/weight"]',
     title: 'Progress',
-    body: 'Here you’ll find your weight chart, your past workouts, your personal records, and the badges and XP you earn.',
+    body: 'Here you’ll find your weight chart, your past workouts, your personal records, your progress photos, and the badges and XP you earn.',
   },
   {
     id: 'settings', route: 'settings', target: '[data-tour="settings-profile"]',

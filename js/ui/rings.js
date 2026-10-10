@@ -21,6 +21,15 @@ export const overLap = (value) => (value > 1 ? Math.min(1, value - 1) : 0);
 const NB = ' '; // numbers never part from their units
 const num = (v) => Math.round(v).toLocaleString('en-US');
 
+/** Eaten / target for protein, carbs and fat, with a small label so nobody reads a target as what they ate. */
+export function macroTilesHtml(tot, t) {
+  const tiles = [['Protein', tot.protein_g, t.proteinG], ['Carbs', tot.carbs_g, t.carbG], ['Fat', tot.fat_g, t.fatG]];
+  const aria = tiles.map(([l, e, g]) => `${l} ${num(e)} of ${num(g)} grams`).join(', ');
+  return `<div role="group" aria-label="Today of target: ${aria}">
+    <p class="food-targets-label" aria-hidden="true">Today of target</p>
+    <div class="food-targets" data-food-targets>${tiles.map(([l, e, g]) => `<div><b>${num(e)} / ${num(g)} g</b><span>${l}</span></div>`).join('')}</div></div>`;
+}
+
 /** The Food card's text lines: { note, over, protein }. Same wording rules as the Today rings legend. */
 export function foodSummary(tot, t) {
   const left = Math.round(t.calories - tot.kcal);

@@ -14,7 +14,7 @@ import { playerRoute, previewPlan, startPlan } from './train.js';
 import { todayRings } from '../workouts/rings.js';
 import { weekOf } from '../workouts/awards.js';
 import { exerciseById } from '../workouts/library.js';
-import { ringsHtml, animateRings, snapshotRings, foodSummary, foodRingSvg } from '../ui/rings.js';
+import { ringsHtml, animateRings, snapshotRings, foodSummary, foodRingSvg, macroTilesHtml } from '../ui/rings.js';
 import { tourOfferDue } from '../tour/steps.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
@@ -63,11 +63,7 @@ function foodCard(t) {
         <p class="small muted">${esc(sum.protein)}</p>
       </div>
     </div>
-    <div class="food-targets" data-food-targets>
-      <div><b>${n(t.proteinG)} g</b><span>Protein</span></div>
-      <div><b>${n(t.carbG)} g</b><span>Carbs</span></div>
-      <div><b>${n(t.fatG)} g</b><span>Fat</span></div>
-    </div>
+    ${macroTilesHtml(tot, t)}
     <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div>
     <details class="food-why">
       <summary>Why these numbers?</summary>

@@ -4,7 +4,7 @@ import { esc, $, $$, sheet, toast, confirmSheet, formatDay, todayKey } from '../
 import { icon, emptyState } from '../ui/icons.js';
 import { units as getUnits } from '../state.js';
 import { daysBetween } from '../weight/smoothing.js';
-import { POSES, fmtBytes, poseLabel, photoLossLine } from '../photos/core.js';
+import { POSES, fmtBytes, poseLabel, photoLossLine, photosUnavailableLine } from '../photos/core.js';
 import { isNative } from '../native/bridge.js';
 import { myStore, mySessions } from '../photos/access.js';
 import { bodyOn, fmtKg, photoUrl, revokeAll } from '../photos/metrics.js';
@@ -41,7 +41,7 @@ export async function renderPhotos(el, sub) {
   el.innerHTML = `
     <section class="stack">
       <h1>Progress photos</h1>
-      ${!ok ? `<div class="notice warn">Photos can’t be saved in this browser right now ${isNative() ? '.' : ' (private browsing turns storage off). Open Forge from your Home Screen app instead.'}</div>` : ''}
+      ${!ok ? `<div class="notice warn">${esc(photosUnavailableLine(isNative()))}</div>` : ''}
       ${sessions.length ? `
         <button class="btn primary" data-take>${icon('camera')}Take photos</button>
         <div class="row gap">

@@ -4,10 +4,10 @@
 import { readFileSync } from 'node:fs';
 import { test, eq, assert, near } from './harness.js';
 import { indices, bodyProfile } from '../js/health/bodyprofile.js';
-import { photoLossLine } from '../js/photos/core.js';
+import { photoLossLine, photosUnavailableLine } from '../js/photos/core.js';
 import { photosUnavailableHtml } from '../js/photos/cards.js';
 import { TOUR_STEPS, TOUR_OFFER, tourFieldsForSave, tourSeenFields, tourOfferFields, tourOfferDue } from '../js/tour/steps.js';
-import { startOffset } from '../js/ui/rings.js';
+import { startOffset, macroTilesHtml } from '../js/ui/rings.js';
 
 const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const idx = (s, needle) => { const i = s.indexOf(needle); assert(i >= 0, `missing ${needle}`); return i; };
@@ -26,7 +26,7 @@ test('Today: order is Readiness, Coach line, rings, workout, Food, missions, wei
 test('Today: targets are inside the Food card; Coach is a single line; "This week" sits next to Awards', () => {
   const t = src('js/screens/today.js');
   const food = t.slice(idx(t, 'function foodCard'), idx(t, 'function coachLine'));
-  assert(food.includes('data-food-targets') && food.includes('Why these numbers?') && food.includes('t.carbG') && food.includes('t.fatG'), 'macro targets and the why live in the Food card');
+  assert(food.includes('macroTilesHtml(tot, t)') && food.includes('Why these numbers?') && src('js/ui/rings.js').includes('data-food-targets'), 'macro targets and the why live in the Food card');
   assert(food.includes('data-tour="food"'), 'tour still spotlights the Food card');
   const rings = t.slice(idx(t, 'class="card rings-card"'), idx(t, '${ringsHtml(rings)}'));
   assert(rings.indexOf('href="#/weekly"') > 0 && rings.indexOf('href="#/weekly"') < rings.indexOf('href="#/awards"'), 'This week link before Awards');
@@ -126,6 +126,27 @@ test('Train: location chips stay on one line with an ellipsis', () => {
 test('Settings: the iPhone app hides the demo-photo download (media/ is bundled)', () => {
   assert(src('js/ui/photos.js').includes('bundled: true') && src('js/ui/photos.js').includes('isNative()'), 'photoStatus knows');
   assert(src('js/screens/settings.js').includes('st.bundled'), 'settings hides it');
+});
+
+test('Today: macro tiles show eaten / target under a "Today of target" label, with thousands separators', () => {
+  const h = macroTilesHtml({ protein_g: 110.4, carbs_g: 1234, fat_g: 0 }, { proteinG: 181, carbG: 1500, fatG: 58 });
+  assert(h.includes('Today of target'), 'label');
+  assert(h.includes('110 / 181 g') && h.includes('1,234 / 1,500 g') && h.includes('0 / 58 g'), 'eaten / target');
+  assert(h.includes('Carbs 1,234 of 1,500 grams'), 'aria matches');
+});
+
+test('Photos: the "can’t save" line has no stray spaces and names the right place', () => {
+  const web = photosUnavailableLine(false);
+  const app = photosUnavailableLine(true);
+  eq(app, 'Photos can’t be saved on this iPhone right now.');
+  assert(web.includes('in this browser right now (private') && !web.includes('  ') && !web.includes(' .'), 'web wording');
+  assert(!app.includes('browser') && !app.includes('  ') && !app.includes(' .'), 'native wording');
+});
+
+test('Progress photos row sits above the goal card, and the Progress tour step mentions photos', () => {
+  const w = src('js/screens/weight.js');
+  assert(idx(w, 'data-photos-row') < idx(w, '${goalPathCard()}'), 'row above goal card');
+  assert(TOUR_STEPS.find((s) => s.id === 'progress').body.includes('progress photos'), 'tour text');
 });
 
 test('rings: a refresh starts from where the arcs were; the first draw starts empty', () => {
