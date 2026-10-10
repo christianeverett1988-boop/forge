@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.15.5 — USDA food search (2026-10-10)
+## 0.15.9 — USDA food search (2026-10-10)
 
-Part 4 of the audit in issue #57. **This PR waits for a deploy: Christian runs `firebase deploy --only functions:foodSearch` (the `USDA_API_KEY` secret is already saved) and then merges.** `firestore.rules` is unchanged (the `usda:<fdcId>` id fits the existing `food_id` string, and the portion text is an extra field the rules already allow), and so are `firebase.json` and `config.js`. The web app updates by itself; the iPhone app needs one Refresh Forge run.
+Part 4 of the audit in issue #57. **The functions (`foodSearch`, and the `withingsDisconnect` change) are already deployed.** `firestore.rules` is unchanged (the `usda:<fdcId>` id fits the existing `food_id` string, and the portion text is an extra field the rules already allow), and so are `firebase.json` and `config.js`. The web app updates by itself; the iPhone app needs one Refresh Forge run.
 
 - **Real foods in Log food:** type "banana" or "chobani" and USDA FoodData Central rows appear under your own foods and recents. Yours show instantly; USDA rows follow about 300 ms after you stop typing, under a skeleton, and the list doesn't jump (old rows dim until the new ones arrive).
 - **Rows:** name, brand, "1,250 kcal" and a serving line ("1 cup (240 g)" or "100 g"). The name wraps to two lines; brand, calories and serving stay on one line (a long brand shortens first, the calories never split).
@@ -25,6 +25,61 @@ Part 4 of the audit in issue #57. **This PR waits for a deploy: Christian runs `
   - "Food search is busy. Try again in a minute." is shown as written.
   - Privacy without a bypass: Delete everything removes `private/food_search` only after its hour window has passed, so it can't reset the 120 an hour limit.
 - **Server (`foodSearch`):** needs sign-in, 2–60 characters, 120 searches an hour per person, the key in a header (never in a URL), a 6 s timeout, a 5-minute in-memory cache. Whole foods rank first for "chicken breast"; brand-named queries ("quest bar") rank branded first. Near-duplicates are dropped, 25 results at most. The key, the request and what you typed are never logged.
+
+## 0.15.8 — Fit-and-finish, part 3: "Change today's workout" (2026-10-10)
+
+Issue #64, item 25. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes, and #65's branch is untouched. Update-on-resume (26) and the iPhone Duo layouts (27–31) are not in this release.
+
+- **Change replaces Switch:** the button says "Change" (⇄ icon, 44 px, aria-label "Change today's workout") and opens a bottom sheet. Nothing changes until you pick an option, and each option says what it does:
+  - **New exercises:** same focus, different moves. Your hand-picked ⋯ → Replace exercises stay unless you tick "Also replace the ones I picked". Greyed out with the reason when nothing else fits ("No other moves fit Home gym for Upper. Try a different focus or location."). If only some can change, the toast says "2 of 6 swapped".
+  - **Train a different focus:** a second step with "Recommended: …" first, then the focuses (the custom days for a custom program). This replaces the "Or train a different day" menu on the card.
+  - **Session length:** 20, 30, 45 or 60 min for today only. New per-day override through `planToday` → `generateWorkout({ sessionMin })`; the profile is never written.
+  - **Different location:** only when you have 2+ locations.
+  - **Back to recommended:** only when something was changed.
+- **Undo:** every change shows a toast with an Undo button that restores the exact previous workout (swapped exercises, picks, rest timers, focus, length and location). Rest-timer choices move along with their slot when an exercise is swapped. Swapped rows get a brief highlight (none with reduced motion). Haptics on native.
+- **Toast:** `toast(message, ms, { action: { label, onClick } })`; the action is a 44 px button.
+- Hidden while a workout is in progress, as before. Works offline (all local).
+- Tests: `tests/v0158.test.js` (option logic, snapshot/Undo, rest carry-over, per-day length) and a layout case that opens the sheet, each step and the Undo toast at 320, 375, 390 and 440 wide (plus light mode and long location names).
+- **Review round 1:** 20 and 30 min now really shorten the workout: after accessories, sets on the later lifts are trimmed toward 2, then lifts are dropped from the end (the first always stays); 20 min also gets a 3-minute warm-up with one lighter-set ramp. Every day type fits its length (+2 min) at home and at the gym. Undo after "Different location" keeps earlier swaps, picks and rest timers. The Undo toast is one line (long place names ellipsize) with a plain accent "Undo". The sheet's rows name the focus, the other focuses, the current length and the other places; the focus list no longer repeats the recommended day; each step is the sheet's title with a back chevron in the header (slides in; no motion with reduced motion); length rows preview the real result ("3 exercises · your usual"), disabled with a reason when a length can't be met.
+- Not done: the optional "Log weight beside the goal line" tweak. The goal sentence can fill the whole row, so it stays on its own row rather than squeeze at 320.
+
+## 0.15.7 — Fit-and-finish, part 2: large text, stale readings, Today and a layout test (2026-10-10)
+
+Issue #64, second pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 25–31 (Change sheet, update-on-resume, iPhone Duo) are **not** in this release. If #65 (v0.15.5) merges after this one, rebase and fix the CHANGELOG order.
+
+- **Large text (item 16):** every font size and line height up to 28 px now scales with iOS Settings → Text Size (up to 135%) through one `--ts` variable (`js/ui/textsize.js`). Buttons wrap their label instead of clipping, and a pair of buttons stacks when both don't fit on a row.
+- **Nav bar (21):** stronger glass (about 84–88% opaque, plus the blur) so text scrolling under it is never half-readable; "What is this?" uses the shared `.learn-more` disclosure; the large title collapses exactly when the heading itself passes under the bar.
+- **Body composition (20):** a reading older than your latest weigh-in says "2 days ago" or "Sep 23" in quiet grey (no orange) on one line; readings older than 90 days sit behind "Show older (n)"; Standing HR is explained under the tiles.
+- **Progress photos card (22):** lime accent card with a filled camera disc, "See your change, not just the scale" and a "Take photos" pill. With photos it shows "Last set …" and "Next check-in in N days".
+- **Today (density):** "See meals", "See plan" and "See chart" moved into the card headers; Start sits beside the workout title; Log food sits beside the Food ring; Log weight sits on the goal row; one insight instead of two; 12 px between cards; a smaller Score ring.
+- **Rings legend:** the ring column is 16 px narrower so "Weekly sets" fits at 375.
+- **Player:** the footer says "Undo set" so it stays on one line at 320 px; on very short phones the How-To strip names the main muscle (for example "Chest") instead of being an empty bar.
+- **Small labels:** Body tile says "fresh muscles"; Settings rows "Export all (JSON)", "Export body data (CSV)", "Replay the how-to tour", "Delete all photos".
+- **Standing layout test (`tests/layout.test.js`):** boots the real app in headless Chromium (no npm packages, Firebase stubbed, synthetic account) and renders Today, Train, Body, Weight, Trends, Timer, History, Settings, Apple Health, Food, Awards, Locations and Library at 320×568, 375×667, 390×844 and 440×956, dark and light, plus long-name/4-digit-calorie data and a 130% text-size case. It fails on text that wraps in a chip, pill, button or label, clipped text or ellipsis, tap targets under 44 px, sideways overflow, content under the tab bar and layout shift. It runs inside `node tests/run.js` (skipped with a note when no Chrome is installed; `--no-layout` skips it) and in CI. Run one screen with `node tests/layout.test.js --routes=today --size=375 --shots=tests/.shots`.
+- Tests: `tests/v0157.test.js` pins the stale-reading captions, the text scale, the photos card, the Today markup and the CSS rules.
+- **Review round 1:** workout meta is "4 exercises · 41 min" with the place on its own ellipsised line; goal sentence gets a full-width line with dates kept together (Today and Body goal path); "+ Log weight" is one flex item; "Plates" tile; buttons wrap only between words (`overflow-wrap: break-word`); layout test skips on Node below 22 and creates the `--shots` folder; Standing HR note shows whenever an HR tile exists.
+- **Review round 2:** the Standing HR note renders inside "Show older" when the HR tile is there, and under the grid when it is fresh; the goal-path chart label is "Goal 181 lb" at the left end of the goal line so the projection never covers it.
+
+## 0.15.6 — Fit-and-finish, part 1: chips, steppers and Body (2026-10-10)
+
+Issue #64, first pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 16, 20, 22, 25, 26 and 27–31 (large text, stale body readings, photos card accent, the Change sheet, update-on-resume, iPhone Duo layouts) are **not** in this release.
+
+- **Root cause fixed:** `css/food.css` no longer redefines the global `.chips`, `.chip-btn` and `.stepper`. Food uses `.meal-chips` and `.serv-stepper`. This un-squeezes the Train location chips and the exercise rest chips, and restores the player's weight/reps steppers (56 px −/+ with the value centred).
+- **Chips** size to their text; wrapped segmented controls (Interval timer presets) really wrap instead of overlapping.
+- **Tap targets:** segmented controls are 44 px tall; "In the tank" is one row of label + 6 buttons, 44 px tall.
+- **Player rest:** −15 s / Skip rest / +15 s sit in a 3-column grid and stay on one line.
+- **Today:** the Coach line may take two balanced lines instead of being cut off; the rings legend uses short titles ("Calories", "Protein") and Weekly sets as three rows with no "·".
+- **Train:** the preview card drops the duplicate location pill. **Health summary:** buttons say "Save PDF" and "Share text" and stack on narrow phones.
+- **Apple Health setup:** field tiles in one column under 400 px; copy-chip identifiers no longer split mid-word.
+- **Tour:** one focus ring on Next; a compact card on short phones.
+- **Body:** Recovery is the first card under the tiles, and the "fresh muscle groups" tile scrolls to it and pulses once (instant with reduced motion). The empty workout tile is "0 / Start your first workout" and links to Train. "Body profile" is sentence case. The photos slot reserves space so the page doesn't jump. Programs "Recommended" uses accent tokens.
+- **Insights:** "Steps are trending up"; the body states the change over the window with units (e.g. "+2,520 steps/day vs 4 weeks ago", "−1 h/night").
+- Pages scroll with `scroll-padding-top` so jumps don't land under the nav bar.
+- Tests: `tests/v0156.test.js` pins the CSS/markup rules and the insight maths.
+- **Review round 1:** "In the tank" label sits above a row of six equal 44 px buttons; the Progress switcher is 44 px; Interval timer presets are one row of five equal segments with short labels (full names stay in the aria-label); Apple copy chips break identifiers only after `_`, with "Copy" in a fixed column; insight numbers use one decimal for weight, "ml/kg/min" for VO₂max, "2 h 34 min/night" for long sleep changes and a real minus sign; Body shows "Today / last workout" and the two tappable tiles get a chevron and press feedback; the tour's Next keeps one offset keyboard focus ring.
+- **Review round 2:** "Done set" is pinned to the bottom of the player (with the "Next:" line), and the exercise picture and big rep number shrink a little on short phones. The "In the tank" buttons and timer presets fit on 320 px screens. Body tiles stay equal width ("Today" scales to fit). The tour's Next button only gets a focus ring for keyboard users; after a tap, focus goes to the card. Insights read "−0.6% body fat", "−1.5 on the visceral fat index" and "−6 bpm", and never show a zero change.
+- **Review round 3:** on short phones (700 px tall or less) the exercise picture is 72 px and the rep number 56 px, so the "In the tank" row clears the pinned "Done set"; the "Next:" line stays on one row (long names get an ellipsis); the first-time hint balances its lines and keeps "Do 12." and "14 times" together; the second Body tile's value is plain text colour again, and both tile values share one 48 px box so the captions line up.
+- **Review round 4:** on very short phones (600 px tall or less, like a 320×568 SE) the player hides the exercise picture (the How-To chip stays) and puts the two steppers side by side, so no row sits in the faded strip above "Done set"; every Body tile value now has one fixed 56 px box (line-height 1), so the captions line up for numbers, "Today" and text.
 
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
 

@@ -16,18 +16,33 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /** A glass capsule above the tab bar. toast('Saved', 2600, { icon: 'check' }) adds an icon; the text is never HTML. */
-export function toast(message, ms = 2600, { icon: name = '' } = {}) {
+export function toast(message, ms = 2600, { icon: name = '', action = null } = {}) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
   if (name) el.insertAdjacentHTML('afterbegin', icon(name));
-  el.append(document.createTextNode(message));
+  const msg = document.createElement('span');
+  msg.className = 'toast-msg';
+  msg.textContent = message;
+  el.append(msg);
+  let hide = () => {};
+  if (action) {
+    // { label, onClick }: a button in the capsule (Undo). Tapping it runs once and dismisses the toast.
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-act';
+    b.textContent = action.label;
+    b.addEventListener('click', () => { b.disabled = true; hide(); action.onClick(); }, { once: true });
+    el.append(b);
+  }
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
-  setTimeout(() => {
+  let timer = setTimeout(() => hide(), ms);
+  hide = () => {
+    clearTimeout(timer);
     el.classList.remove('show');
     setTimeout(() => el.remove(), DUR.med + 20);
-  }, ms);
+  };
 }
 
 let sheetCount = 0;
@@ -45,6 +60,7 @@ export function sheet(title, render) {
   dlg.innerHTML = `
     <div class="sheet-grab" aria-hidden="true"><i></i></div>
     <div class="sheet-head">
+      <button class="icon-btn sh-back" data-back aria-label="Back" hidden>${icon('back', { size: 20 })}</button>
       <h2 id="${titleId}">${esc(title)}</h2>
       <button class="icon-btn" data-close aria-label="Close">${icon('close', { size: 18 })}</button>
     </div>
@@ -111,7 +127,22 @@ export function sheet(title, render) {
     if (e.target === dlg) close(); // tap on the dimmed backdrop
   });
   forget = registerSheet(close);
-  render(dlg.querySelector('.sheet-body'), close);
+  // Multi-step sheets: head.setStep('Session length', goBack) swaps the title and shows a back chevron; setStep(title, null) goes home.
+  const head = {
+    setStep(text, onBack = null) {
+      dlg.querySelector('h2').textContent = text;
+      const b = dlg.querySelector('.sh-back');
+      b.hidden = !onBack;
+      b.onclick = onBack;
+      const bodyEl = dlg.querySelector('.sheet-body');
+      if (!reducedMotion()) {
+        bodyEl.classList.remove('step-in', 'step-back');
+        void bodyEl.offsetWidth;
+        bodyEl.classList.add(onBack ? 'step-in' : 'step-back');
+      }
+    },
+  };
+  render(dlg.querySelector('.sheet-body'), close, head);
   dlg.showModal();
   void dlg.offsetHeight; // lock in the off-screen start, then let it spring up
   dlg.classList.remove('pre');

@@ -5,11 +5,11 @@ import { unlockAudio, beep, buzz, fmtClock, setWantAwake } from '../timer.js';
 import { openCardioLog } from './tools.js';
 
 export const PRESETS = {
-  boxing: { name: 'Boxing rounds', work: 180, rest: 60, rounds: 6, prep: 10, combos: true },
-  hiit: { name: 'HIIT 40/20', work: 40, rest: 20, rounds: 10, prep: 10 },
-  emom: { name: 'EMOM 10', work: 60, rest: 0, rounds: 10, prep: 10 },
-  tabata: { name: 'Tabata', work: 20, rest: 10, rounds: 8, prep: 10 },
-  custom: { name: 'Custom', work: 45, rest: 15, rounds: 8, prep: 10 },
+  boxing: { name: 'Boxing rounds', short: 'Boxing', work: 180, rest: 60, rounds: 6, prep: 10, combos: true },
+  hiit: { name: 'HIIT 40/20', short: 'HIIT', work: 40, rest: 20, rounds: 10, prep: 10 },
+  emom: { name: 'EMOM 10', short: 'EMOM', work: 60, rest: 0, rounds: 10, prep: 10 },
+  tabata: { name: 'Tabata', short: 'Tabata', work: 20, rest: 10, rounds: 8, prep: 10 },
+  custom: { name: 'Custom', short: 'Custom', work: 45, rest: 15, rounds: 8, prep: 10 },
 };
 
 // Punch numbers: 1 jab, 2 cross, 3 lead hook, 4 rear hook, 5 lead uppercut, 6 rear uppercut.
@@ -54,8 +54,8 @@ export function renderTimer(el) {
   el.innerHTML = `
     <section class="stack timer-screen">
       <h1>Interval timer</h1>
-      <div class="seg wrap" role="radiogroup" aria-label="Preset">
-        ${Object.entries(PRESETS).map(([k, p]) => `<label><input type="radio" name="preset" value="${k}" ${cfg.key === k ? 'checked' : ''} ${run ? 'disabled' : ''}><span>${esc(p.name)}</span></label>`).join('')}
+      <div class="seg small" role="radiogroup" aria-label="Preset">
+        ${Object.entries(PRESETS).map(([k, p]) => `<label><input type="radio" name="preset" value="${k}" aria-label="${esc(p.name)}" ${cfg.key === k ? 'checked' : ''} ${run ? 'disabled' : ''}><span>${esc(p.short)}</span></label>`).join('')}
       </div>
       <div class="row gap">
         <label class="field grow"><span>Work (sec)</span><input data-k="work" type="number" inputmode="numeric" min="5" value="${cfg.work}" ${run ? 'disabled' : ''}></label>

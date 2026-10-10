@@ -94,6 +94,6 @@ export function navBar({ title, back = null, backLabel = null, onBack = null, ac
     io = new IntersectionObserver(([entry]) => {
       el.classList.toggle('collapsed', !entry.isIntersecting);
     }, { rootMargin: `-${Math.max(0, el.offsetHeight - 6)}px 0px 0px 0px`, threshold: 0 });
-    io.observe(large);
+    io.observe(large.querySelector('h1') || large); // collapse exactly when the heading itself passes under the bar
   }
 }

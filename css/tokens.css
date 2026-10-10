@@ -42,7 +42,7 @@
   --info-tint: rgba(108, 180, 255, .14);
 
   /* Glass + overlays */
-  --glass: rgba(10, 10, 11, .66);
+  --glass: rgba(10, 10, 11, .84);
   --glass-sheet: rgba(24, 24, 27, .86);
   --glass-float: rgba(44, 44, 49, .72);
   --hairline: rgba(255, 255, 255, .14);
@@ -66,6 +66,7 @@
   --num: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
 
   --tap: 48px;
+  --ts: 1; /* text scale: js/ui/textsize.js sets it from iOS Settings → Text Size (1 to 1.35) */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -109,7 +110,7 @@
     --gold-tint: rgba(148, 101, 0, .12);
     --info-tint: rgba(27, 100, 196, .1);
 
-    --glass: rgba(242, 242, 247, .72);
+    --glass: rgba(242, 242, 247, .88);
     --glass-sheet: rgba(250, 250, 253, .88);
     --glass-float: rgba(255, 255, 255, .78);
     --hairline: rgba(60, 60, 67, .2);

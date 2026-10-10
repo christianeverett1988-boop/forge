@@ -6,9 +6,9 @@
 .ms-check .ic { width: 28px; height: 28px; }
 .ms-ring { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--text-3); box-sizing: border-box; }
 .ms-text { display: grid; gap: 1px; }
-.ms-text small { font-size: 13px; }
+.ms-text small { font-size: calc(13px * var(--ts)); }
 .ms-row.done .ms-text > span { color: var(--text-2); }
-.ms-xp { font: 700 13px var(--num, inherit); color: var(--accent-text); white-space: nowrap; }
+.ms-xp { font: 700 calc(13px * var(--ts)) var(--num, inherit); color: var(--accent-text); white-space: nowrap; }
 .ms-done { display: flex; align-items: center; gap: 10px; min-height: var(--tap, 48px); color: var(--text); text-decoration: none; }
 .ms-done .ic { color: var(--good); width: 24px; height: 24px; }
 .ms-done > span:nth-of-type(1) { flex: 1; font-weight: 700; }
@@ -18,12 +18,12 @@
 .ms-dot.some i { background: color-mix(in srgb, var(--ember) 45%, var(--surface-2)); }
 .ms-dot.all i { background: var(--ember); box-shadow: 0 0 10px color-mix(in srgb, var(--ember) 50%, transparent); }
 .ms-dot.off i { background: transparent; border: 1.5px dashed var(--text-3); }
-.ms-dot small { font-size: 11px; color: var(--text-3); }
+.ms-dot small { font-size: calc(11px * var(--ts)); color: var(--text-3); }
 .ms-set { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
-.ms-set input[type=time] { min-height: 44px; font: 600 17px var(--font, inherit); background: var(--surface-2); color: var(--text); border: 0; border-radius: 12px; padding: 0 12px; }
+.ms-set input[type=time] { min-height: 44px; font: 600 calc(17px * var(--ts)) var(--font, inherit); background: var(--surface-2); color: var(--text); border: 0; border-radius: 12px; padding: 0 12px; }
 .ms-stepper { display: flex; align-items: center; gap: 4px; }
-.ms-stepper button { width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--surface-2); color: var(--text); font: 800 22px var(--num, inherit); cursor: pointer; }
-.ms-stepper output { min-width: 64px; text-align: center; font: 700 17px var(--num, inherit); }
+.ms-stepper button { width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--surface-2); color: var(--text); font: 800 calc(22px * var(--ts)) var(--num, inherit); cursor: pointer; }
+.ms-stepper output { min-width: 64px; text-align: center; font: 700 calc(17px * var(--ts)) var(--num, inherit); }
 @media (prefers-reduced-motion: no-preference) {
   .ms-pop { animation: ms-spring .5s var(--ease-spring) both; }
   @keyframes ms-spring { 0% { transform: scale(.4); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
@@ -31,7 +31,7 @@
 /* New mission badge on Today */
 .ms-badge { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 12px; min-height: var(--tap, 48px); }
 .ms-badge-text { display: grid; gap: 2px; }
-.ms-badge-text b { font-size: 17px; }
+.ms-badge-text b { font-size: calc(17px * var(--ts)); }
 .ms-badge-links { display: grid; justify-items: end; }
 .ms-badge-links .link { display: inline-flex; align-items: center; min-height: 44px; }
 .ms-badge-x { width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text-3); display: grid; place-items: center; cursor: pointer; }
@@ -48,10 +48,10 @@
 .pg-list li + li { border-top: .5px solid var(--separator); }
 .pg-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 0; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .pg-text { display: grid; gap: 2px; }
-.pg-text small { font-size: 13px; }
-.pg-rec { background: color-mix(in srgb, var(--ember) 22%, var(--surface-2)); color: var(--accent-text); font-weight: 700; margin-left: 6px; }
+.pg-text small { font-size: calc(13px * var(--ts)); }
+.pg-rec { background: var(--accent-tint); color: var(--accent-text); white-space: nowrap; font-weight: 700; margin-left: 6px; }
 .pg-line { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--tap, 48px); color: var(--text); text-decoration: none; }
-.pg-line-text { flex: 1; min-width: 0; font-size: 15px; }
+.pg-line-text { flex: 1; min-width: 0; font-size: calc(15px * var(--ts)); }
 .pg-line .chev { flex: none; align-self: center; color: var(--text-3); display: inline-flex; }
 .pg-head { display: flex; flex-direction: row; align-items: center; gap: 16px; }
 .pg-ring { position: relative; width: 104px; height: 104px; flex: none; }
@@ -59,7 +59,7 @@
 .pg-ring-bg { fill: none; stroke: var(--surface-2); stroke-width: 9; }
 .pg-ring-fg { fill: none; stroke: var(--ember); stroke-width: 9; stroke-linecap: round; }
 .pg-ring-text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
-.pg-ring-text b { font: 800 19px var(--num, inherit); }
+.pg-ring-text b { font: 800 calc(19px * var(--ts)) var(--num, inherit); }
 .pg-head-text { display: grid; gap: 4px; }
 .pg-half, .pg-now { width: 24px; height: 24px; border-radius: 50%; box-sizing: border-box; }
 .pg-half { border: 2px solid var(--ember); background: color-mix(in srgb, var(--ember) 35%, transparent); }
@@ -69,8 +69,8 @@
 .pg-bar { position: relative; height: 10px; margin: 8px 0 2px; border-radius: 5px; background: var(--surface-2); }
 .pg-zone { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: color-mix(in srgb, var(--good) 45%, var(--surface-2)); }
 .pg-dot { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--text); border: 3px solid var(--bg); box-sizing: border-box; }
-.pg-end { color: var(--text-3); justify-self: center; font-size: 15px; }
-.pg-done .ms-badge-text small { font-size: 13px; }
+.pg-end { color: var(--text-3); justify-self: center; font-size: calc(15px * var(--ts)); }
+.pg-done .ms-badge-text small { font-size: calc(13px * var(--ts)); }
 @media (prefers-reduced-motion: no-preference) {
   .pg-ring-fg { transition: stroke-dashoffset .6s var(--ease-out); }
   .pg-dot { transition: left .4s var(--ease-out); }

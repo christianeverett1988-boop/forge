@@ -277,7 +277,7 @@ function drawSet(el) {
 
       <button class="pl-demo ${hasFigure(ex.id) || hasPhotos(ex.id) ? 'has-fig' : ''}" data-demo aria-label="How to do ${esc(ex.name)}">
         ${hasFigure(ex.id) ? '<div class="fig-wrap" data-fig></div>' : hasPhotos(ex.id) ? photoLoop(ex.id, ex.name) : `<div class="pl-muscles">${muscles}<span class="muted small">Tap for how-to</span></div>`}
-        <span class="pl-howto">How-To</span>
+        <span class="pl-demo-cap">${esc(MUSCLE_LABELS[ex.primary[0]] || '')}</span><span class="pl-howto">How-To</span>
       </button>
       ${boxing ? '<p class="pl-combo" data-combo aria-live="polite"></p>' : ''}
 
@@ -301,14 +301,16 @@ function drawSet(el) {
         ${[null, 0, 1, 2, 3, 4].map((r) => `<button data-rir="${r}" class="${draft.rir === r ? 'on' : ''}" aria-pressed="${draft.rir === r}">${r == null ? '–' : r === 4 ? '4+' : r}</button>`).join('')}
       </div>` : ''}
 
+      <div class="pl-dock">
       <label class="haptic-btn pl-done ${s.done ? 'is-done' : ''}" data-done-label>
         ${hapticInput('data-done aria-label="Done set"')}
         <span data-done-text>${s.done ? `${icon('check')} Done` : isTimed ? `Start ${draft.reps} s` : 'Done set'}</span>
       </label>
-      <p class="pl-next">${nextUp ? `Next: <b>${esc(nextUp.name)}</b> · ${esc(nextUp.detail)}` : 'Last one. Finish strong!'}</p>
+      <p class="pl-next">${nextUp ? `<span class="pl-next-name">Next: <b>${esc(nextUp.name)}</b></span><span class="pl-next-meta">· ${esc(nextUp.detail)}</span>` : 'Last one. Finish strong!'}</p>
+      </div>
       <nav class="pl-nav" aria-label="Sets">
         <button data-prev ${k === 0 ? 'disabled' : ''}>${icon('back', { size: 16 })} Back</button>
-        <button data-undo>Undo last set</button>
+        <button data-undo>Undo set</button>
         <button data-skip ${k >= q.length - 1 ? 'disabled' : ''}>Next ${icon('chev', { size: 16 })}</button>
       </nav>
     </section>`;
@@ -376,7 +378,7 @@ function drawSet(el) {
   onHapticTap($('[data-done]', el), () => {
     unlockAudio();
     if (s.done) {
-      toast('Already done. Use “Undo last set” to change it.');
+      toast('Already done. Use “Undo set” to change it.');
       return;
     }
     if (isTimed) startTimed(el, ex, i, j);

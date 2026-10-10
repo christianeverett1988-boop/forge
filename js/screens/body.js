@@ -10,7 +10,7 @@ import { currentRecovery, historyIndex } from '../workouts/plan.js';
 import { exerciseById } from '../workouts/library.js';
 import { MUSCLE_LABELS, muscleStats, SHOW_MUSCLES as SHOW, freshCount } from '../workouts/recovery.js';
 import { bodyMap, musclesIn, regionLabel, recoveryColor } from '../ui/bodymap.js';
-import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap } from '../withings/body.js';
+import { BODY_METRICS, metricSeries, dailySeries, latestAndChange, fmtMetric, heightM, lastWeighInDay, compositionGap, staleCaption, daysBetween, OLD_READING_DAYS } from '../withings/body.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { programsCard, bindProgramsCard } from '../body-programs/ui.js';
 
@@ -32,22 +32,32 @@ function compositionCard() {
   const h = heightM(docs, state.profile);
   const latestDay = lastWeighInDay(docs);
   const gap = compositionGap(docs);
-  const asOf = (day) => new Date(`${day}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', ...(day.slice(0, 4) !== latestDay.slice(0, 4) ? { year: 'numeric' } : {}) });
-  const tiles = BODY_METRICS.map((m) => {
+  const today = todayKey();
+  const fresh = [];
+  const old = [];
+  BODY_METRICS.forEach((m) => {
     const pts = dailySeries(metricSeries(docs, m.key, { height: h })).map((p) => ({ ...p, at: p.at }));
     const lc = latestAndChange(pts, 30);
-    if (!lc) return '';
+    if (!lc) return;
     const ch = lc.change;
-    // Older than your latest weigh-in (e.g. the scale couldn't read body composition since): say so.
+    // Older than your latest weigh-in (e.g. the scale couldn't read body composition since): say when, calmly.
     const stale = latestDay && lc.last.day < latestDay;
-    const sub = stale ? `as of ${asOf(lc.last.day)}` : ch == null ? '&nbsp;' : `${ch > 0 ? '▲' : ch < 0 ? '▼' : '•'} ${fmtMetric(m.key, Math.abs(ch), u, { unit: false })} · 30d`;
-    return `<a class="bc-tile${stale ? ' stale' : ''}" href="#/metric/${m.key}"><span>${m.label}</span><b>${fmtMetric(m.key, lc.last.v, u)}</b><small class="muted">${sub}</small></a>`;
-  }).join('');
+    const sub = stale ? staleCaption(lc.last.day, today) : ch == null ? '&nbsp;' : `${ch > 0 ? '▲' : ch < 0 ? '▼' : '•'} ${fmtMetric(m.key, Math.abs(ch), u, { unit: false })} · 30d`;
+    const tile = `<a class="bc-tile${stale ? ' stale' : ''}" href="#/metric/${m.key}"><span>${m.label}</span><b>${fmtMetric(m.key, lc.last.v, u)}</b><small class="muted">${sub}</small></a>`;
+    (stale && daysBetween(lc.last.day, today) > OLD_READING_DAYS ? old : fresh).push({ key: m.key, tile });
+  });
+  const tiles = fresh.map((t) => t.tile).join('');
+  // The Standing HR note sits next to the HR tile: under the grid when it is fresh, inside "Show older" when it is tucked away.
+  const hrNote = '<p class="small muted" data-bc-hr>Standing HR is the heart rate your scale measures while you stand. It is usually higher than your resting heart rate.</p>';
+  const hrFresh = fresh.some((t) => t.key === 'heart_pulse_bpm');
+  const hrOld = old.some((t) => t.key === 'heart_pulse_bpm');
+  const olderTiles = old.length ? `<details class="learn-more bc-older" data-bc-older><summary>Show older (${old.length})</summary><div class="bc-grid">${old.map((t) => t.tile).join('')}</div>${hrOld ? hrNote : ''}</details>` : '';
   const last = [...docs].sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))[0];
   return `<div class="card">
     <div class="row between"><p class="label">Body composition</p><span class="small muted">${last ? new Date(last.measured_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span></div>
     ${gap ? `<p class="notice info small" data-bc-gap>Your last ${gap === 1 ? 'weigh-in' : `${gap} weigh-ins`} had no body composition. Stand barefoot with dry feet on the electrodes and keep still until the scale finishes.</p>` : ''}
-    <div class="bc-grid">${tiles}</div>
+    <div class="bc-grid">${tiles}</div>${olderTiles}
+    ${hrFresh ? hrNote : ''}
     <p class="small muted">From your scale. Tap any number for its chart and what it means.</p>
   </div>`;
 }
@@ -73,18 +83,12 @@ export function renderBody(el) {
     <section class="stack">
       <h1>Body</h1>
       <div class="body-hero">
-        <div><b data-count>${fresh}</b><span>fresh muscle groups</span></div>
-        ${days == null ? '<div data-no-workouts><b class="bh-text">No workouts yet</b><span>Your first one starts the count</span></div>'
-          : `<div><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
+        <button type="button" class="bh-tile bh-tap" data-goto-recovery><b data-count>${fresh}</b><span>fresh muscles</span></button>
+        ${days == null ? '<a class="bh-tile bh-tap" href="#/train" data-no-workouts><b>0</b><span>Start your first workout</span></a>'
+          : days === 0 ? '<div class="bh-tile"><b class="bh-word">Today</b><span>last workout</span></div>'
+          : `<div class="bh-tile"><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
       </div>
-      <div data-photos-slot></div>
-      ${insightCards()}
-      ${compositionCard()}
-      ${programsCard()}
-      ${goalPathCard()}
-      ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
-      <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
-      <div class="card" data-tour="body-recovery">
+      <div class="card" data-tour="body-recovery" id="body-recovery" tabindex="-1">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>
         ${bodyMap(rec, { mode: 'recovery', tappable: true })}
         <div class="bm-legend">
@@ -95,8 +99,22 @@ export function renderBody(el) {
         ${tired.length ? `<p class="small muted">Least recovered: ${tired.map((m) => `${esc(MUSCLE_LABELS[m])} ${rec[m]}%`).join(' · ')}</p>` : '<p class="small muted">Everything is recovered. Good day to train anything.</p>'}
         <p class="small muted">Based on your sets, effort and time since (big muscles ~72 h, small ~48 h).</p>
       </div>
+      <div data-photos-slot></div>
+      ${insightCards()}
+      ${compositionCard()}
+      ${programsCard()}
+      ${goalPathCard()}
+      ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
+      <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
     </section>`;
 
+  $('[data-goto-recovery]', el)?.addEventListener('click', () => {
+    const card = $('#body-recovery', el);
+    if (!card) return;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    if (!calm) card.animate([{ boxShadow: '0 0 0 0 var(--accent)' }, { boxShadow: '0 0 0 3px var(--accent)' }, { boxShadow: '0 0 0 0 var(--accent)' }], { duration: 900 });
+  });
   bindInsightCards(el, dismissInsight);
   bindProgramsCard(el);
   import('../photos/cards.js').then((m) => m.mountBodyPhotosCard($('[data-photos-slot]', el)));

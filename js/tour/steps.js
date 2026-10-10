@@ -53,7 +53,7 @@ export const TOUR_STEPS = [
   {
     id: 'body', route: 'body', target: '[data-tour="body-recovery"]',
     title: 'Body: what’s recovered',
-    body: 'Green muscles are ready to train, red ones need rest. Tap a muscle for details. Your Progress photos card is at the top of this screen, and you can also reach it from Progress.',
+    body: 'Green muscles are ready to train, red ones need rest. Tap a muscle for details. Your Progress photos card is just below, and you can also reach it from Progress.',
   },
   {
     id: 'progress', route: 'weight', target: '.tabbar a[href="#/weight"]',

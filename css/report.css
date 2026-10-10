@@ -1,19 +1,19 @@
 /* Health summary for your doctor (v0.13.1). On screen: Forge cards. Printed: plain black on white, no chrome,
    one section never split across pages. No hex colours here (tokens only, plus the black/white keywords for print). */
 .report .rp-actions .btn { min-height: 52px; }
-.report .rp-head h1 { font-size: 28px; line-height: 34px; }
-.report .rp-sec h2 { margin: 0; font-size: 20px; line-height: 25px; }
+.report .rp-head h1 { font-size: calc(28px * var(--ts)); line-height: 34px; }
+.report .rp-sec h2 { margin: 0; font-size: calc(20px * var(--ts)); line-height: calc(25px * var(--ts)); }
 .rp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .rp-list li { display: flex; flex-wrap: wrap; column-gap: var(--s-3); align-items: baseline; padding: 10px 0; }
 .rp-list li + li { border-top: .5px solid var(--separator); }
 .rp-list li > span { color: var(--text-2); white-space: nowrap; }
 .rp-list li b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; margin-left: auto; }
 .rp-nb { white-space: nowrap; }
-.rp-list li small { flex-basis: 100%; text-align: right; color: var(--text-2); font-size: 13px; line-height: 18px; }
+.rp-list li small { flex-basis: 100%; text-align: right; color: var(--text-2); font-size: calc(13px * var(--ts)); line-height: calc(18px * var(--ts)); }
 .rp-notes { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s-2); }
-.rp-explain { color: var(--text-2); font-size: 13px; line-height: 18px; }
+.rp-explain { color: var(--text-2); font-size: calc(13px * var(--ts)); line-height: calc(18px * var(--ts)); }
 .rp-chart { width: 100%; height: auto; display: block; }
-.rp-chart text { fill: var(--text-2); font-size: 10px; font-family: inherit; }
+.rp-chart text { fill: var(--text-2); font-size: calc(10px * var(--ts)); font-family: inherit; }
 .rp-chart .rp-grid { stroke: var(--separator); stroke-width: .5; }
 .rp-chart .rp-line { fill: none; stroke: var(--text-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 
@@ -41,7 +41,7 @@
   .rp-list li + li { border-top: .25pt solid black; }
   .rp-list li small { font-size: 9pt; line-height: 1.25; }
   .rp-chart { margin-top: 6pt; max-height: 45mm; }
-  .rp-chart text { fill: black; font-size: 8px; }
+  .rp-chart text { fill: black; font-size: calc(8px * var(--ts)); }
   .rp-chart .rp-grid { stroke: black; stroke-width: .25; }
   .rp-chart .rp-line { stroke: black; stroke-width: 1.5; }
 }

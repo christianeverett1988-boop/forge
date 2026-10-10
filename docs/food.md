@@ -1,6 +1,6 @@
 # Food logging (v0.11.0, part 1)
 
-Part 1 of Checkpoint C worked from your own data on the phone. **v0.15.5 adds USDA FoodData Central search** (see "USDA search" at the end).
+Part 1 of Checkpoint C worked from your own data on the phone. **v0.15.9 adds USDA FoodData Central search** (see "USDA search" at the end).
 
 ## Where it lives
 
@@ -42,7 +42,7 @@ Nutrition (15%) is documented in `docs/forge-score.md`. It lights up after **3 l
 - **Adaptive TDEE** from logged intake and the weight trend (Withings+ replacement). It needs about 2–3 weeks of real logs to test, so it waits. Plan: compare average logged kcal with the trend's energy change (7,700 kcal per kg, as in `js/nutrition/targets.js`) over a rolling 14–21 days that has at least 10 logged days, shrink toward the formula TDEE until there's enough data, and show it as a suggestion the user accepts, never a silent change.
 - Barcode scan, meals/recipes.
 
-## USDA search (v0.15.5)
+## USDA search (v0.15.9)
 
 **Server:** callable `foodSearch` (`functions/index.js` → `functions/src/usda.js`), secret `USDA_API_KEY` (a free api.data.gov key). Deploy: `firebase deploy --only functions:foodSearch`.
 

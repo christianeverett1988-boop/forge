@@ -161,11 +161,11 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
         </form>
         <div class="food-dock" data-dock hidden>
           <div class="row between center food-dock-head"><div class="food-dock-title"><b class="clamp2" data-sel-name></b><small class="muted" data-sel-brand hidden></small></div>
-            <span class="stepper" data-stepper>${stepBtns('1')}</span></div>
+            <span class="serv-stepper" data-stepper>${stepBtns('1')}</span></div>
           <div class="portion" data-portion hidden>
-            <div class="chips" role="radiogroup" aria-label="Servings">${SERVING_CHOICES.map((n) => `<button type="button" class="chip-btn" role="radio" data-serv-choice="${n}">${servingsLabel(n)}</button>`).join('')}</div>
+            <div class="serv-chips" role="radiogroup" aria-label="Servings">${SERVING_CHOICES.map((n) => `<button type="button" class="chip-btn" role="radio" data-serv-choice="${n}">${servingsLabel(n)}</button>`).join('')}</div>
             <p class="portion-cap" data-measures-cap hidden>Serving size</p>
-            <div class="chips chips--wrap" role="radiogroup" aria-label="Serving size" data-measures hidden></div>
+            <div class="serv-chips serv-chips--wrap" role="radiogroup" aria-label="Serving size" data-measures hidden></div>
             <div class="portion-amount">
               <label class="field"><input type="text" inputmode="decimal" autocomplete="off" data-amount aria-label="Amount"></label>
               <div class="unit-seg" role="radiogroup" aria-label="Unit">${(units() === 'metric' ? ['serv', 'g', 'oz'] : ['serv', 'oz', 'g']).map((u) => `<button type="button" role="radio" data-unit="${u}">${u === 'serv' ? 'servings' : u}</button>`).join('')}</div>
@@ -173,7 +173,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
             <p class="small muted" data-portion-note></p>
           </div>
           <p class="small muted" data-sel-line></p>
-          <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
+          <div class="meal-chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
           <button class="btn" data-add></button>
         </div>
       </div>`;
@@ -360,8 +360,8 @@ function openEditEntry(e) {
       <div class="stack">
         <p class="small muted" data-line></p>
         <div class="row between center"><b>Servings</b>
-          <span class="stepper">${stepBtns()}</span></div>
-        <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
+          <span class="serv-stepper">${stepBtns()}</span></div>
+        <div class="meal-chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
         <button class="btn" data-save>Save</button>
         <button class="btn danger-ghost" data-del>Delete this entry</button>
       </div>`;

@@ -181,7 +181,7 @@ const OTHER_TYPES = [
 ];
 
 /** A tappable code chip: copies its text. (Text inside <code> is hard to select on iPhone.) */
-const copyChip = (text, label = text) => `<button type="button" class="copy-chip" data-copy-text="${esc(text)}" aria-label="Copy ${esc(label)}"><code>${esc(label)}</code><span aria-hidden="true">Copy</span></button>`;
+const copyChip = (text, label = text) => `<button type="button" class="copy-chip" data-copy-text="${esc(text)}" aria-label="Copy ${esc(label)}"><code>${esc(label).replace(/_/g, '_<wbr>')}</code><span aria-hidden="true">Copy</span></button>`;
 
 function recipe() {
   const keyList = (types) => `<ul>${types.map(([n, k]) => `<li>${esc(n)} → ${copyChip(k)}</li>`).join('')}</ul>`;
@@ -261,7 +261,7 @@ export function renderApple(el) {
         <p class="label">Shortcut token</p>
         <p>${has ? 'A token is active. Your Shortcut uses it to send data to Forge.' : 'Make a token, then paste it into the Shortcut below. It works like a password for just this one job.'}</p>
         ${has && a.token_created_at ? `<p class="small muted">Made ${esc(ago(a.token_created_at))}.</p>` : ''}
-        <button class="btn bigbtn" data-create ${busy === 'create' ? 'disabled' : ''}>${busy === 'create' ? 'Making it…' : has ? 'Make a new token' : 'Create Shortcut token'}</button>
+        <button class="btn bigbtn" data-create ${busy === 'create' ? 'disabled' : ''}>${busy === 'create' ? 'Making it…' : has ? 'Make a new token' : 'Create token'}</button>
         ${has ? `<button class="btn ghost bigbtn" data-revoke ${busy === 'revoke' ? 'disabled' : ''}>Turn it off</button>` : ''}
       </div>
       ${recipe()}
@@ -270,7 +270,7 @@ export function renderApple(el) {
       <div class="card stack">
         <p class="label">Delete Apple Health data</p>
         <p class="small muted">Removes every Apple Health day from Forge and turns the Shortcut token off. Your Withings data and your workouts stay.</p>
-        <button class="btn danger-ghost bigbtn" data-delete ${busy === 'delete' ? 'disabled' : ''}>Delete Apple Health data</button>
+        <button class="btn danger-ghost bigbtn" data-delete ${busy === 'delete' ? 'disabled' : ''}>Delete Health data</button>
       </div>
       <p class="disclaimer">General fitness information, not medical advice.</p>
     </section>`;

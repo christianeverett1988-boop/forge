@@ -21,19 +21,29 @@ export async function mountBodyPhotosCard(host) {
     return;
   }
   if (!sessions.length) {
-    host.innerHTML = `<a class="card row between center nav-card" href="#/photos/take" data-photos-empty>
-      <span class="row center gap"><span aria-hidden="true">${icon('camera')}</span><span><b>Progress photos</b><br><span class="small muted">Take your first set</span></span></span>
-      <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
+    host.innerHTML = `<a class="card stack nav-card pp-promo" href="#/photos/take" data-photos-empty>
+      <span class="row center gap"><span class="pp-disc" aria-hidden="true">${icon('camera')}</span>
+        <span class="pp-promo-text"><b>Progress photos</b><span>See your change, not just the scale</span></span></span>
+      <span class="btn small primary pp-cta">Take photos</span></a>`;
     return;
   }
   const latest = sessions[0];
+  const nextCheckin = checkinText(daysToCheckin(todayKey(), getRemindDow()));
   const shown = POSES.filter((p) => latest.poses[p.key]);
   host.innerHTML = `<a class="card stack nav-card" href="#/photos" data-photos-card>
-    <div class="row between center"><p class="label">Progress photos</p><span class="small muted">${esc(formatDay(latest.day))}</span></div>
+    <div class="row between center"><p class="label">Progress photos</p><span class="small muted">Last set ${esc(formatDay(latest.day))}</span></div>
     <div class="pp-thumbs">${shown.map((p) => `<span class="pp-thumb"><img src="${photoUrl(latest.poses[p.key])}" alt=""><span>${p.label}</span></span>`).join('')}</div>
-    <span class="small link">${sessions.length} ${sessions.length === 1 ? 'set' : 'sets'} · see all${icon('chev')}</span>
+    <div class="row between center"><span class="small muted">${nextCheckin}</span><span class="small link">${sessions.length} ${sessions.length === 1 ? 'set' : 'sets'} · see all${icon('chev')}</span></div>
   </a>`;
 }
+
+/** Days from `today` (YYYY-MM-DD) to the next weekly check-in day (0 = today), or null when reminders are off. */
+export function daysToCheckin(today, dow) {
+  if (dow == null) return null;
+  const d = new Date(`${today}T12:00:00Z`).getUTCDay();
+  return (dow - d + 7) % 7;
+}
+export const checkinText = (n) => (n == null ? '' : n === 0 ? 'Check-in day is today' : n === 1 ? 'Next check-in tomorrow' : `Next check-in in ${n} days`);
 
 // ---- weekly reminder (in-app only; no notifications) ----
 const key = (name) => `forge.photos.${state.user ? state.user.uid : 'x'}.${name}`;
