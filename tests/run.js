@@ -35,6 +35,7 @@ import './bodyprograms.test.js';
 import './readiness-trends.test.js';
 import './food.test.js';
 import './v0153.test.js';
+import './v0154.test.js';
 import { VERSION } from '../js/version.js';
 
 test('sw.js VERSION matches js/version.js', () => {

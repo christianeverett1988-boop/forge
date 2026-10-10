@@ -184,11 +184,16 @@ export function renderSettings(el) {
     paintPhotos();
   };
 
-  const run = (fn) => async () => {
+  const run = (fn) => async (ev) => {
+    const btn = ev && ev.currentTarget;
+    const label = btn && btn.innerHTML;
+    if (btn) { btn.disabled = true; if (isNative()) btn.textContent = 'Getting it ready…'; }
     try {
       await fn();
     } catch (e) {
       toast(e.message || 'Export failed');
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = label; }
     }
   };
   $('[data-export-json]', el).onclick = run(exportJSON);

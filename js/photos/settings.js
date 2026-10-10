@@ -45,6 +45,8 @@ export async function bindPhotoSettings(el) {
     const { photos } = await mySessions();
     if (!photos.length) return toast('No photos to export yet');
     btn.disabled = true;
+    const label = btn.innerHTML;
+    btn.textContent = 'Building your backup…';
     try {
       const sorted = [...photos].sort((a, b) => (a.day + a.pose < b.day + b.pose ? -1 : 1));
       const entries = [];
@@ -58,6 +60,7 @@ export async function bindPhotoSettings(el) {
       toast('Couldn’t build the backup. Try again.');
     } finally {
       btn.disabled = false;
+      btn.innerHTML = label;
     }
   };
 
