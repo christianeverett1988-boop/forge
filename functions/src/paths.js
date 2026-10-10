@@ -12,6 +12,7 @@ export const P = {
   health: (uid, day) => `users/${uid}/health_daily/${day}`,
   shortcut: (uid) => `users/${uid}/private/shortcut`,
   shortcutTok: (hash) => `shortcut_tokens/${hash}`,
+  foodSearch: (uid) => `users/${uid}/private/food_search`,
   apple: (uid) => `users/${uid}/integrations/apple`,
   state: (s) => `oauth_states/${s}`,
   wuser: (withingsUserId) => `withings_users/${withingsUserId}`,

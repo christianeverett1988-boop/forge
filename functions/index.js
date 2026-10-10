@@ -5,6 +5,7 @@
 // Secrets (set once in your own Terminal, never in the repo or the app):
 //   firebase functions:secrets:set WITHINGS_CLIENT_SECRET
 //   firebase functions:secrets:set WITHINGS_WEBHOOK_KEY
+//   firebase functions:secrets:set USDA_API_KEY   (food search; a free api.data.gov key)
 // Plain config (asked for at deploy, saved in functions/.env.<project>): WITHINGS_CLIENT_ID.
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -28,6 +29,7 @@ import { resultPage } from './src/pages.js';
 import { P } from './src/paths.js';
 import { handleIngest, importDays, createToken, revokeToken, deleteAppleData, BadPayload, MAX_BODY_BYTES } from './src/health.js';
 import { log } from './src/log.js';
+import { searchFoods, FoodSearchError } from './src/usda.js';
 
 initializeApp();
 const REGION = 'us-east1';
@@ -35,6 +37,7 @@ setGlobalOptions({ region: REGION, maxInstances: 2, memory: '256MiB' });
 
 const CLIENT_SECRET = defineSecret('WITHINGS_CLIENT_SECRET');
 const WEBHOOK_KEY = defineSecret('WITHINGS_WEBHOOK_KEY');
+const USDA_KEY = defineSecret('USDA_API_KEY');
 const CLIENT_ID = defineString('WITHINGS_CLIENT_ID', { description: 'Client ID of your Withings developer app (not secret)' });
 const APP_URL = defineString('FORGE_APP_URL', { default: 'https://christianeverett1988-boop.github.io/forge/' });
 
@@ -199,4 +202,20 @@ export const importHealthDays = onCall({ secrets: [], timeoutSeconds: 60 }, asyn
       throw e;
     }
   });
+});
+
+// ---------- Food search (USDA FoodData Central). The key never leaves the server; neither it nor the query is logged ----------
+export const foodSearch = onCall({ secrets: [USDA_KEY], timeoutSeconds: 20 }, async (req) => {
+  const uid = needUid(req);
+  try {
+    return await searchFoods({ db: db(), uid, data: req.data, apiKey: USDA_KEY.value().trim(), fetch: globalThis.fetch });
+  } catch (e) {
+    if (e instanceof FoodSearchError) {
+      if (e.code === 'invalid') throw new HttpsError('invalid-argument', 'Type at least 2 letters (up to 60).');
+      if (e.code === 'limited') throw new HttpsError('resource-exhausted', 'That’s a lot of searches. Try again in a little while.');
+      if (e.code === 'busy') throw new HttpsError('unavailable', 'Food search is busy. Try again in a minute.');
+      throw new HttpsError('unavailable', 'Food search isn’t available right now.');
+    }
+    throw new HttpsError('internal', 'Something went wrong on Forge’s server.');
+  }
 });

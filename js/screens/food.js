@@ -1,19 +1,21 @@
 // Food (v0.11.0): today's totals against your targets, the day's meals, and the Log food sheet.
 // It lives under the Today tab (#/food, reached from the Food card on Today) so the tab bar stays at five.
-// Everything here is local: My foods and your recent entries. USDA search arrives in part 2 through js/food/search.js.
-import { state } from '../state.js';
+// Log food searches My foods and recents instantly, then USDA FoodData Central a moment later (js/food/search.js).
+import { state, units } from '../state.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
 import { esc, $, $$, sheet, toast, confirmSheet, todayKey, formatDay } from '../ui.js';
 import { currentTargets } from '../derived.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { MEAL_LABEL, MEALS, cleanFood, copyMealFields, dayBefore, dayTotals, groupByMeal, progress, stepServings } from '../food/core.js';
 import { createFlow } from '../food/flow.js';
-import { search } from '../food/search.js';
+import { search, createOnlineSearch } from '../food/search.js';
+import { SERVING_CHOICES, amountLabel, gramsFromAmount, gramsToOz, portionItem, servingsLabel } from '../food/portion.js';
 
 let viewDay = null; // the day shown; null = today
 const dayShown = () => (viewDay && viewDay <= todayKey() ? viewDay : todayKey());
 const fmtNum = (n) => Math.round(n * 100) / 100;
 const grams = (n) => `${Math.round(n)} g`;
+let lastUnit = 'serv'; // the portion unit you used last (servings, oz or g), kept while the app is open
 
 function itemLine(it) {
   const bits = [`${Math.round(it.kcal)} kcal`];
@@ -26,7 +28,8 @@ function entryLine(e) {
   const n = e.servings;
   const bits = [`${Math.round(e.kcal * n)} kcal`];
   if (e.protein_g) bits.push(`${Math.round(e.protein_g * n)} g protein`);
-  bits.push(`${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`);
+  if (e.portion) bits.push(n === 1 ? e.portion : `${servingsLabel(n)} × ${e.portion}`);
+  else bits.push(`${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`);
   return bits.join(' · ');
 }
 
@@ -133,8 +136,15 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
     body.innerHTML = `
       <div class="stack food-log">
         <label class="field">
-          <input type="search" name="q" placeholder="Search your foods" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search your foods"></label>
-        <ul class="list food-results" data-results></ul>
+          <input type="search" name="q" placeholder="Search foods" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search foods"></label>
+        <div class="food-scroll">
+          <ul class="list food-results" data-results></ul>
+          <section class="food-online" data-online hidden aria-label="USDA results">
+            <h3 class="food-online-head" data-online-head>From USDA FoodData Central</h3>
+            <ul class="list food-results" data-online-list></ul>
+            <p class="small muted food-online-note" data-online-note role="status" aria-live="polite"></p>
+          </section>
+        </div>
         <button class="btn ghost" data-quick-toggle>Quick add: just calories</button>
         <form class="stack" data-quick hidden novalidate>
           <div class="field-grid">
@@ -145,8 +155,16 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
           <button class="btn" type="submit">Add</button>
         </form>
         <div class="food-dock" data-dock hidden>
-          <div class="row between center"><b data-sel-name></b>
-            <span class="stepper">${stepBtns('1')}</span></div>
+          <div class="row between center food-dock-head"><b data-sel-name></b>
+            <span class="stepper" data-stepper>${stepBtns('1')}</span></div>
+          <div class="portion" data-portion hidden>
+            <div class="chips" role="radiogroup" aria-label="Servings">${SERVING_CHOICES.map((n) => `<button type="button" class="chip-btn" role="radio" data-serv-choice="${n}">${servingsLabel(n)}</button>`).join('')}</div>
+            <div class="portion-amount">
+              <label class="field"><input type="text" inputmode="decimal" autocomplete="off" data-amount aria-label="Amount"></label>
+              <div class="unit-seg" role="radiogroup" aria-label="Unit">${(units() === 'metric' ? ['serv', 'g', 'oz'] : ['serv', 'oz', 'g']).map((u) => `<button type="button" role="radio" data-unit="${u}">${u === 'serv' ? 'servings' : u}</button>`).join('')}</div>
+            </div>
+            <p class="small muted" data-portion-note></p>
+          </div>
           <p class="small muted" data-sel-line></p>
           <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
           <button class="btn" data-add></button>
@@ -154,7 +172,31 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       </div>`;
     const results = $('[data-results]', body);
     const dock = $('[data-dock]', body);
-    let items = [];
+    const onlineBox = $('[data-online]', body);
+    const onlineHead = $('[data-online-head]', body);
+    const onlineList = $('[data-online-list]', body);
+    const onlineNote = $('[data-online-note]', body);
+    const amountEl = $('[data-amount]', dock);
+    let items = []; // My foods and recents
+    let onlineItems = []; // USDA
+    let portion = null; // while a USDA food is picked: { base, unit: 'serv' | 'oz' | 'g', servings, grams }
+
+    const plain = (n) => String(Math.round(n * 100) / 100);
+    const applyPortion = () => {
+      const { base, unit, servings, grams } = portion;
+      flow.f.selected = portionItem(base, unit === 'serv' ? { mode: 'servings', servings } : { mode: 'weight', unit, grams });
+      flow.f.servings = 1;
+    };
+    const paintPortion = (keepTyped = false) => {
+      const { base, unit, servings, grams } = portion;
+      $$('[data-serv-choice]', dock).forEach((b) => { const on = unit === 'serv' && Number(b.dataset.servChoice) === servings; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      $$('[data-unit]', dock).forEach((b) => { const on = b.dataset.unit === unit; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      if (!keepTyped) amountEl.value = unit === 'serv' ? plain(servings) : unit === 'oz' ? String(Math.round(gramsToOz(grams) * 10) / 10) : String(Math.round(grams));
+      $('[data-portion-note]', dock).textContent = unit === 'serv'
+        ? `1 serving = ${base.usda.serving.text}`
+        : `${amountLabel(grams, unit === 'oz' ? 'g' : 'oz')} · 1 serving = ${base.usda.serving.text}`;
+    };
+    const setPortion = (patch) => { portion = { ...portion, ...patch }; lastUnit = portion.unit; applyPortion(); paintPortion(); paintDock(); };
 
     const paintMeal = () => {
       $$('[data-meal]', dock).forEach((b) => { const on = b.dataset.meal === flow.f.meal; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
@@ -164,30 +206,95 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       const s = flow.f.selected;
       dock.hidden = !s;
       if (!s) return;
+      const usda = !!portion;
+      $('[data-stepper]', dock).hidden = usda;
+      $('[data-portion]', dock).hidden = !usda;
       $('[data-sel-name]', dock).textContent = s.name;
-      $('[data-serv]', dock).textContent = `${fmtNum(flow.f.servings)} ${flow.f.servings === 1 ? 'serving' : 'servings'}`;
-      $('[data-sel-line]', dock).textContent = `${Math.round(s.kcal * flow.f.servings)} kcal · ${Math.round(s.protein_g * flow.f.servings)} g protein${s.serving ? ` · ${s.serving} each` : ''}`;
+      if (usda) {
+        $('[data-sel-line]', dock).textContent = `${s.kcal.toLocaleString('en-US')} kcal · ${Math.round(s.protein_g)} g protein · ${Math.round(s.carbs_g)} g carbs · ${Math.round(s.fat_g)} g fat`;
+      } else {
+        $('[data-serv]', dock).textContent = `${fmtNum(flow.f.servings)} ${flow.f.servings === 1 ? 'serving' : 'servings'}`;
+        $('[data-sel-line]', dock).textContent = `${Math.round(s.kcal * flow.f.servings).toLocaleString('en-US')} kcal · ${Math.round(s.protein_g * flow.f.servings)} g protein${s.serving ? ` · ${s.serving} each` : ''}`;
+      }
+      $('[data-add]', dock).disabled = false;
       paintMeal();
     };
     const paintResults = async () => {
+      const q = flow.f.query.trim();
       items = await search(flow.f.query, { foods: state.foods, logs: state.food_logs });
+      const picked = (it) => (flow.f.selected && flow.f.selected.key === it.key ? 'picked' : '');
       results.innerHTML = items.length ? items.map((it, i) => `
-        <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-i="${i}" role="button" tabindex="0">
+        <li class="tap ${picked(it)}" data-i="${i}" role="button" tabindex="0">
           <div><b>${esc(it.name)}</b><small class="muted">${esc(itemLine(it))}</small></div>
           <span class="muted">${it.kind === 'recent' ? 'Recent' : ''}</span></li>`).join('')
-        : `<li class="food-none"><div><b>${flow.f.query ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${flow.f.query ? 'Try Quick add, or save it in My foods.' : 'Use Quick add, or save foods in My foods. Search of a big food database comes next.'}</small></div></li>`;
+        : q.length >= 2 ? '' // the USDA section below speaks for itself
+          : `<li class="food-none"><div><b>${q ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${q ? 'Try Quick add, or save it in My foods.' : 'Type a food to search the USDA database, or use Quick add.'}</small></div></li>`;
     };
+    const paintOnline = (u) => {
+      if (u.state === 'idle') { onlineItems = []; onlineBox.hidden = true; return; }
+      onlineBox.hidden = false;
+      onlineBox.setAttribute('aria-busy', String(u.state === 'loading'));
+      if (u.state === 'loading') {
+        onlineNote.textContent = '';
+        if (onlineItems.length) { onlineList.classList.add('stale'); return; } // keep the old rows (dimmed) so the list doesn't jump
+        onlineHead.hidden = false;
+        onlineList.innerHTML = '<li class="food-skel" aria-hidden="true"><i class="skeleton"></i></li>'.repeat(3);
+        return;
+      }
+      onlineList.classList.remove('stale');
+      if (u.state !== 'ok') {
+        onlineItems = [];
+        onlineHead.hidden = true;
+        onlineList.innerHTML = '';
+        onlineNote.textContent = u.state === 'offline' ? 'Online search needs a connection' : 'Online search isn’t available right now';
+        return;
+      }
+      onlineItems = u.items;
+      onlineHead.hidden = !onlineItems.length;
+      onlineList.innerHTML = onlineItems.map((it, i) => `
+        <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-o="${i}" role="button" tabindex="0">
+          <div class="food-row"><b class="food-name">${esc(it.title)}</b>
+            <small class="food-sub">${it.brand ? `<span class="food-brand">${esc(it.brand)}</span>` : ''}<span class="food-kcal">${it.kcal.toLocaleString('en-US')} kcal</span><span class="food-serv">${esc(it.serving)}</span></small></div></li>`).join('');
+      onlineNote.textContent = onlineItems.length ? '' : 'No matches in the USDA database.';
+    };
+    const onlineSearch = createOnlineSearch({ onUpdate: paintOnline });
     const pick = (li) => {
-      const it = items[Number(li.dataset.i)];
+      const isOnline = li.dataset.o !== undefined;
+      const it = (isOnline ? onlineItems : items)[Number(isOnline ? li.dataset.o : li.dataset.i)];
       if (!it) return;
       flow.select(it);
+      portion = it.usda ? { base: it, unit: lastUnit, servings: 1, grams: it.usda.serving.g } : null;
+      if (portion) { applyPortion(); paintPortion(); }
       paintDock();
-      $$('[data-i]', results).forEach((x) => x.classList.toggle('picked', x === li));
+      $$('[data-i], [data-o]', body).forEach((x) => x.classList.toggle('picked', x === li));
     };
 
-    results.addEventListener('click', (e) => { const li = e.target.closest('[data-i]'); if (li) pick(li); });
-    results.addEventListener('keydown', (e) => { const li = e.target.closest('[data-i]'); if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(li); } });
-    $('[name=q]', body).addEventListener('input', (e) => { flow.search(e.target.value); paintResults(); });
+    for (const list of [results, onlineList]) {
+      list.addEventListener('click', (e) => { const li = e.target.closest('[data-i], [data-o]'); if (li) pick(li); });
+      list.addEventListener('keydown', (e) => { const li = e.target.closest('[data-i], [data-o]'); if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(li); } });
+    }
+    $$('[data-serv-choice]', dock).forEach((b) => { b.onclick = () => { const n = Number(b.dataset.servChoice); setPortion({ unit: 'serv', servings: n, grams: n * portion.base.usda.serving.g }); }; });
+    $$('[data-unit]', dock).forEach((b) => {
+      b.onclick = () => {
+        const u = b.dataset.unit;
+        if (u === portion.unit) return;
+        const sg = portion.base.usda.serving.g;
+        if (u === 'serv') { const n = Math.max(0.25, Math.round((portion.grams / sg) * 100) / 100); setPortion({ unit: u, servings: n, grams: n * sg }); } else setPortion({ unit: u });
+      };
+    });
+    amountEl.addEventListener('input', () => {
+      if (!portion) return;
+      const sg = portion.base.usda.serving.g;
+      const raw = amountEl.value.replace(/,/g, '').trim();
+      const n = Number(raw);
+      const grams = portion.unit === 'serv' ? (raw && n > 0 && n * sg <= 5000 ? n * sg : null) : gramsFromAmount(raw, portion.unit);
+      if (grams === null) { $('[data-add]', dock).disabled = true; return; } // not a usable amount yet: keep what was typed, don't log it
+      portion = { ...portion, grams, ...(portion.unit === 'serv' ? { servings: n } : {}) };
+      applyPortion();
+      paintPortion(true);
+      paintDock();
+    });
+    $('[name=q]', body).addEventListener('input', (e) => { flow.search(e.target.value); paintResults(); onlineSearch.query(e.target.value); });
     $('[data-minus]', dock).onclick = () => { flow.f.servings = stepServings(flow.f.servings, -1); paintDock(); };
     $('[data-plus]', dock).onclick = () => { flow.f.servings = stepServings(flow.f.servings, 1); paintDock(); };
     $$('[data-meal]', dock).forEach((b) => { b.onclick = () => { flow.setMeal(b.dataset.meal); paintMeal(); }; });

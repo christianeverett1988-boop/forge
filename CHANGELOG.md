@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.5 — USDA food search (2026-10-10)
+
+Part 4 of the audit in issue #57. **This PR waits for a deploy: Christian runs `firebase deploy --only functions:foodSearch` (the `USDA_API_KEY` secret is already saved) and then merges.** `firestore.rules` is unchanged (the `usda:<fdcId>` id fits the existing `food_id` string, and the portion text is an extra field the rules already allow), and so are `firebase.json` and `config.js`. The web app updates by itself; the iPhone app needs one Refresh Forge run.
+
+- **Real foods in Log food:** type "banana" or "chobani" and USDA FoodData Central rows appear under your own foods and recents. Yours show instantly; USDA rows follow about 300 ms after you stop typing, under a skeleton, and the list doesn't jump (old rows dim until the new ones arrive).
+- **Rows:** name, brand, "1,250 kcal" and a serving line ("1 cup (240 g)" or "100 g"). Each stays on one line; a long brand shortens first and the calories never split.
+- **Portion picker:** servings ½, 1, 1½, 2, or type an amount in servings, oz or g (oz first for lb/ft users), with calories and protein, carbs and fat updating as you go. The app remembers which unit you used last.
+- **What gets logged:** a normal food entry for exactly that portion, with the USDA id kept (`usda:<fdcId>`) and a portion line like "4 oz (113 g)", so Recents bring it back. Small amounts (20 g of oil) are exact, not rounded up to a quarter serving.
+- **Offline or down:** your own foods keep working and one quiet line says "Online search needs a connection" or "Online search isn’t available right now". No toasts.
+- **Server (`foodSearch`):** needs sign-in, 2–60 characters, 120 searches an hour per person, the key in a header (never in a URL), a 6 s timeout, a 5-minute in-memory cache. Whole foods rank first for "chicken breast"; brand-named queries ("quest bar") rank branded first. Near-duplicates are dropped, 25 results at most. The key, the request and what you typed are never logged.
+
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
 
 Part 3 of the audit in issue #57 (item 5). No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. **Christian: run Refresh Forge once** (it installs the two new plugins), then check on the phone: Settings → Export everything, Export photos, and Health summary → Print or share should each open the iOS sheet.
