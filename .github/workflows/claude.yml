@@ -38,8 +38,14 @@ jobs:
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
+        env:
+          # The full test suite (incl. the headless layout test) takes ~2-3 min.
+          # With the default 2-min Bash timeout it got moved to the background,
+          # and three runs on #69 then ended without a final result or a push.
+          BASH_DEFAULT_TIMEOUT_MS: "600000"
+          BASH_MAX_TIMEOUT_MS: "900000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --max-turns 200
-            --allowedTools "Edit,Write,MultiEdit,Bash(node:*),Bash(npm:*),Bash(npx:*),Bash(git:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*),Bash(find:*),Bash(sed:*),Bash(mkdir:*),Bash(cp:*),Bash(mv:*),Bash(rm:*),Bash(test:*),Bash(diff:*)"
+            --max-turns 300
+            --allowedTools "Edit,Write,MultiEdit,Bash(node:*),Bash(npm:*),Bash(npx:*),Bash(git:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*),Bash(find:*),Bash(sed:*),Bash(mkdir:*),Bash(cp:*),Bash(mv:*),Bash(rm:*),Bash(test:*),Bash(diff:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(sort:*),Bash(uniq:*),Bash(awk:*),Bash(cut:*),Bash(tr:*),Bash(echo:*),Bash(pwd:*),Bash(jq:*),Bash(python3:*)"
