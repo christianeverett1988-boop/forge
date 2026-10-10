@@ -205,7 +205,7 @@ export function renderSummary(el, id) {
       const how = await shareImage(b, `forge-workout-${number}.png`);
       if (how === 'downloaded') toast('Image saved');
     } catch (e) {
-      if (e && e.name !== 'AbortError') toast('Couldn’t share the image');
+      if (e && e.name !== 'AbortError') toast(/^Couldn’t/.test(e.message || '') ? e.message : 'Couldn’t share the image');
     }
   };
 }

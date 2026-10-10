@@ -3,6 +3,8 @@
 // share it.
 
 import { bodyMapStandalone } from './bodymap.js';
+import { isNative } from '../native/bridge.js';
+import { shareNative } from '../native/share.js';
 
 /** No-break spaces after "→" and before a trailing unit, so "→ 212 lb" never splits. Pure; exported for tests. */
 export const glue = (text) => String(text).replace(/ → /g, ' →\u00a0').replace(/ (lb|kg|reps|s)(?=$|[\s,.)])/g, '\u00a0$1');
@@ -162,6 +164,7 @@ export async function renderShareCard(card) {
 
 /** Share the PNG with the system share sheet, or download it where sharing files isn't supported. */
 export async function shareImage(blob, name = 'forge-workout.png') {
+  if (isNative()) return (await shareNative(blob, name, 'My Forge workout')) === 'cancelled' ? 'cancelled' : 'shared';
   const file = new File([blob], name, { type: 'image/png' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     await navigator.share({ files: [file], title: 'My Forge workout' });

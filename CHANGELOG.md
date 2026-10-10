@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
+
+Part 3 of the audit in issue #57 (item 5). No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. **Christian: run Refresh Forge once** (it installs the two new plugins), then check on the phone: Settings → Export everything, Export photos, and Health summary → Print or share should each open the iOS sheet.
+
+- **Share sheet instead of dead downloads:** in the app, Export everything (JSON), the CSV exports, the photos zip, the time-lapse or photo strip and the workout share card are written to the app's cache (`@capacitor/filesystem`), opened in the iOS share sheet (`@capacitor/share`: Save to Files, AirDrop, Mail…) and deleted afterwards. Big files go in 3 MB pieces so a 100+ MB zip doesn't freeze the screen. The web keeps its downloads exactly.
+- **Doctor summary:** in the app the button says "Print or share". It makes a US Letter PDF (lb, °F, "8,532") that follows the printed page: title block, boxed sections with the label on the left and the bold value on the right, small grey sub-lines, the weight trend as a line chart with start/end dates, the HRV and Forge Score notes, and a "Page X of Y · Not a medical record" footer. A box never splits across pages. Opens the share sheet, which includes Print.
+- **Rows stay put while busy:** the export rows keep their icon and style and only swap the label text. In the app they show the share icon, and the Health summary row says "Print or share a PDF".
+- **Never silent:** buttons say "Getting it ready…", "Making the PDF…" or "Building your backup…" while they work. If writing or sharing fails you get "Couldn’t open the share sheet. Try again." Closing the share sheet shows nothing.
+
 ## 0.15.3 — Findable photos, a shorter Today, a fuller tour, small fixes (2026-10-10)
 
 Part 2 of the audit in issue #57 (items 4, 6, 7, 8 and one rings polish fix). No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. **Christian: run Refresh Forge once** to get this on your phone (the web app updates by itself).

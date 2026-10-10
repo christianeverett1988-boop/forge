@@ -1,6 +1,6 @@
 // Service worker: caches the app so it opens with no signal, and hands off new versions.
 // Bump VERSION here AND in js/version.js on every release.
-const VERSION = '0.15.3';
+const VERSION = '0.15.4';
 const CACHE = `forge-${VERSION}`;
 const FB = 'https://www.gstatic.com/firebasejs/12.19.0';
 // Demo photos live in their own cache (not versioned, not precached): see js/ui/photos.js.
@@ -71,6 +71,7 @@ const SHELL = [
   './js/health/longevity.js',
   './js/health/longview.js',
   './js/health/clinical.js',
+  './js/health/pdf.js',
   './js/health/clinicalview.js',
   './js/health/zip.js',
   './js/health/apple-export.js',
@@ -146,6 +147,8 @@ const SHELL = [
   './js/native/expiry.js',
   './js/native/refresh-ui.js',
   './js/native/health.js',
+  './js/native/share.js',
+  './js/deliver-file.js',
   './js/ui/errors.js',
   './data/metrics.json',
   './withings-connected.html',

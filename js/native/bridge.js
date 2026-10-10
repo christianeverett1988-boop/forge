@@ -3,7 +3,7 @@
 // unchanged. Plugins are reached through the Capacitor runtime the shell injects (window.Capacitor), so the
 // app still needs no build step or bundler.
 //
-// Plugins used (installed in the shell, see package.json): Haptics, LocalNotifications, StatusBar, Browser, SplashScreen, Keyboard,
+// Plugins used (installed in the shell, see package.json): Filesystem + Share (js/native/share.js), Haptics, LocalNotifications, StatusBar, Browser, SplashScreen, Keyboard,
 // and @capgo/capacitor-health (HealthKit; see js/native/health.js).
 
 const cap = () => (typeof window !== 'undefined' && window.Capacitor) || null;

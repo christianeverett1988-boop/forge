@@ -1,4 +1,4 @@
-// Health summary for your doctor (v0.13.1): everything the phone knows over 30 days, 90 days or a year, boiled
+// Doctor summary (v0.13.1): everything the phone knows over 30 days, 90 days or a year, boiled
 // down to the numbers a clinician reads. Pure functions, no DOM, no network. A section is present only when it
 // has data, and the summary never contains a name or an email (the profile is read for age, sex and height only).
 // Rules are written down in docs/report.md.

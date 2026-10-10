@@ -5,28 +5,7 @@ import { VERSION } from './version.js';
 import { exerciseById } from './workouts/library.js';
 import { toCSV } from './csv.js';
 import { BODY_COLUMNS, bodyRows } from './export-body.js';
-
-async function deliver(filename, text, type) {
-  const blob = new Blob([text], { type });
-  const file = new File([blob], filename, { type });
-  // On iPhone, the share sheet is the reliable way to save a file ("Save to Files").
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: filename });
-      return;
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-    }
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
+import { deliver } from './deliver-file.js';
 
 export async function exportJSON() {
   const out = { app: 'forge', version: VERSION, exported_at: new Date().toISOString(), data: {} };
