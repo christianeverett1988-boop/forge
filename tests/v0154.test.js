@@ -84,6 +84,13 @@ test('doctor summary: Print or share in the app, window.print on the web', () =>
   assert(src.includes('window.print()'));
 });
 
+test('Doctor summary row subtitles fit on one line (38 chars or fewer)', () => {
+  const src = readFileSync(new URL('../js/screens/settings.js', import.meta.url), 'utf8');
+  const m = src.match(/'Doctor summary', isNative\(\) \? '([^']+)' : '([^']+)'/);
+  assert(m, 'row not found');
+  assert(m[1].length <= 38 && m[2].length <= 38, m[1].length + '/' + m[2].length);
+});
+
 test('plugins reach the device build', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert(pkg.devDependencies['@capacitor/filesystem'] && pkg.devDependencies['@capacitor/share']);
