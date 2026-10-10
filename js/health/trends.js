@@ -201,3 +201,10 @@ export function allTrends({ series, today, goal = 'health', floors = NOISE_FLOOR
   }
   return list;
 }
+
+/** Why there's no 4-week direction yet. Says how many readings there are, so it can't contradict a smoothed line the user can see. */
+export function notEnoughText(key, n) {
+  const count = (word) => `Only ${n === 0 ? 'no' : n} ${word}${n === 1 ? '' : 's'} in the last 4 weeks.`;
+  if (key === 'weight_kg') return `${count('weigh-in')} The trend line is your smoothed average. Weigh in 3+ times a week for a reliable 4-week direction.`;
+  return `${count('reading')} Forge needs ${MIN_POINTS} in 4 weeks to call a direction.`;
+}

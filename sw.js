@@ -44,6 +44,7 @@ const SHELL = [
   './js/food/portion.js',
   './js/food/flow.js',
   './js/weight/smoothing.js',
+  './js/weight/reading.js',
   './js/weight/chart.js',
   './js/workouts/equipment.js',
   './js/workouts/exercises.js',
