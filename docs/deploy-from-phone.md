@@ -30,134 +30,20 @@ A red ✗ means nothing new is live, or only part of it. Tap the run, then the r
 
 This tells Google to accept deploys from this one GitHub workflow, started by you, from main. No password or key is created or stored anywhere: GitHub proves who it is to Google for each run with a token that lasts minutes. Nothing here is secret, so it's fine that the repo is public.
 
-The button can only be used once this PR is merged, because GitHub only shows "Run workflow" for workflow files on main.
-
 ### 1. Run the setup in Google Cloud Shell
 
 1. On your phone or any computer, open **console.cloud.google.com** and sign in as yourself.
 2. At the top, check that the project is **forge-web-f2351**.
 3. Tap the **>_** icon (Activate Cloud Shell) at the top right. Wait for the black terminal at the bottom. If it asks to authorize, tap **Authorize**.
-4. Copy the whole grey block below (from `cat` to the last line), paste it into Cloud Shell, and press Return.
+4. Copy this one line, paste it into Cloud Shell, and press Return. It runs [`scripts/deploy-setup.sh`](../scripts/deploy-setup.sh) from main. Read that file first if you'd like to see what it does.
 
 ```bash
-cat > ~/forge-deploy-setup.sh <<'SETUP'
-#!/usr/bin/env bash
-# Forge "Deploy" button: one-time Google Cloud setup. Keyless (no key file is ever created). Safe to re-run.
-set -euo pipefail
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1
-PROJECT=forge-web-f2351
-REGION=us-east1
-REPO_ID=1409700573   # github.com/christianeverett1988-boop/forge
-OWNER_ID=259723992   # GitHub user christianeverett1988-boop
-WORKFLOW_REF="christianeverett1988-boop/forge/.github/workflows/deploy.yml@refs/heads/main"
-POOL=github
-PROVIDER=forge-deploy
-SA_NAME=forge-deployer
-SA="${SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
-ROLE_ID=forgeDeployExtras
-SECRETS="WITHINGS_CLIENT_SECRET WITHINGS_WEBHOOK_KEY USDA_API_KEY XAI_API_KEY"
-retry() { for _ in 1 2 3 4 5 6; do "$@" >/dev/null 2>&1 && return 0; sleep 10; done; "$@" >/dev/null; }
-
-gcloud config set project "$PROJECT" >/dev/null 2>&1
-NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
-RUNTIME_SA="${NUM}-compute@developer.gserviceaccount.com"
-LEGACY_SA="${PROJECT}@appspot.gserviceaccount.com"
-POOL_NAME="projects/${NUM}/locations/global/workloadIdentityPools/${POOL}"
-
-echo "1/6 Turning on the APIs the deploy uses (can take a minute)..."
-gcloud services enable iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com \
-  cloudresourcemanager.googleapis.com serviceusage.googleapis.com firebase.googleapis.com \
-  cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-  cloudscheduler.googleapis.com cloudtasks.googleapis.com secretmanager.googleapis.com \
-  eventarc.googleapis.com pubsub.googleapis.com storage.googleapis.com \
-  firebaserules.googleapis.com firestore.googleapis.com >/dev/null
-
-echo "2/6 The deploy robot account (no key)..."
-gcloud iam service-accounts describe "$SA" >/dev/null 2>&1 || \
-  gcloud iam service-accounts create "$SA_NAME" --display-name="Forge Deploy button (GitHub, keyless)" >/dev/null
-retry gcloud iam service-accounts describe "$SA"
-
-echo "3/6 A small custom role for two permissions no narrow built-in role has..."
-PERMS=firebase.projects.get,serviceusage.services.generateServiceIdentity
-if gcloud iam roles describe "$ROLE_ID" --project="$PROJECT" >/dev/null 2>&1; then
-  if [ "$(gcloud iam roles describe "$ROLE_ID" --project="$PROJECT" --format='value(deleted)')" = "True" ]; then
-    gcloud iam roles undelete "$ROLE_ID" --project="$PROJECT" >/dev/null
-  fi
-  gcloud iam roles update "$ROLE_ID" --project="$PROJECT" --permissions="$PERMS" --stage=GA >/dev/null
-else
-  gcloud iam roles create "$ROLE_ID" --project="$PROJECT" --title="Forge deploy extras" \
-    --description="Read the Firebase project config; create the Pub/Sub and Eventarc service identities." \
-    --permissions="$PERMS" --stage=GA >/dev/null
-fi
-
-echo "4/6 Granting only what firebase deploy needs..."
-for ROLE in roles/cloudfunctions.admin roles/run.admin roles/artifactregistry.reader \
-    roles/cloudscheduler.admin roles/cloudtasks.queueAdmin roles/secretmanager.viewer \
-    roles/firebaserules.admin roles/datastore.indexAdmin roles/serviceusage.serviceUsageConsumer \
-    "projects/${PROJECT}/roles/${ROLE_ID}"; do
-  retry gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${SA}" --role="$ROLE" --condition=None
-done
-retry gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
-  --member="serviceAccount:${SA}" --role=roles/iam.serviceAccountUser --condition=None
-if gcloud iam service-accounts describe "$LEGACY_SA" >/dev/null 2>&1; then
-  retry gcloud iam service-accounts add-iam-policy-binding "$LEGACY_SA" \
-    --member="serviceAccount:${SA}" --role=roles/iam.serviceAccountUser --condition=None
-fi
-# The functions (not the robot) read the secrets. Granting that here means the robot never needs to change secret permissions.
-for S in $SECRETS; do
-  if gcloud secrets describe "$S" >/dev/null 2>&1; then
-    retry gcloud secrets add-iam-policy-binding "$S" \
-      --member="serviceAccount:${RUNTIME_SA}" --role=roles/secretmanager.secretAccessor --condition=None
-  fi
-done
-
-echo "5/6 Keyless sign-in from GitHub, for this repo, its owner and the main-branch deploy.yml only..."
-if gcloud iam workload-identity-pools describe "$POOL" --location=global >/dev/null 2>&1; then
-  if [ "$(gcloud iam workload-identity-pools describe "$POOL" --location=global --format='value(state)')" = "DELETED" ]; then
-    gcloud iam workload-identity-pools undelete "$POOL" --location=global >/dev/null
-  fi
-else
-  gcloud iam workload-identity-pools create "$POOL" --location=global --display-name="GitHub Actions" >/dev/null
-fi
-MAPPING="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.actor_id=assertion.actor_id,attribute.workflow_ref=assertion.workflow_ref,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name"
-CONDITION="assertion.repository_id=='${REPO_ID}' && assertion.repository_owner_id=='${OWNER_ID}' && assertion.actor_id=='${OWNER_ID}' && assertion.event_name=='workflow_dispatch' && assertion.ref=='refs/heads/main' && assertion.workflow_ref=='${WORKFLOW_REF}'"
-if gcloud iam workload-identity-pools providers describe "$PROVIDER" --workload-identity-pool="$POOL" --location=global >/dev/null 2>&1; then
-  if [ "$(gcloud iam workload-identity-pools providers describe "$PROVIDER" --workload-identity-pool="$POOL" --location=global --format='value(state)')" = "DELETED" ]; then
-    gcloud iam workload-identity-pools providers undelete "$PROVIDER" --workload-identity-pool="$POOL" --location=global >/dev/null
-  fi
-  gcloud iam workload-identity-pools providers update-oidc "$PROVIDER" --workload-identity-pool="$POOL" --location=global \
-    --issuer-uri="https://token.actions.githubusercontent.com" --attribute-mapping="$MAPPING" --attribute-condition="$CONDITION" >/dev/null
-else
-  gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" --workload-identity-pool="$POOL" --location=global \
-    --display-name="Forge deploy.yml" --issuer-uri="https://token.actions.githubusercontent.com" \
-    --attribute-mapping="$MAPPING" --attribute-condition="$CONDITION" >/dev/null
-fi
-retry gcloud iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/${POOL_NAME}/attribute.repository_id/${REPO_ID}" --condition=None
-
-echo "6/6 Old build images: auto-delete after 1 day (only if no cleanup rule is set yet)..."
-if REPO_JSON=$(gcloud artifacts repositories describe gcf-artifacts --location="$REGION" --format=json 2>/dev/null); then
-  if echo "$REPO_JSON" | jq -e '((.cleanupPolicies // {}) | length) == 0 and ((.labels // {})["firebase-functions-cleanup-opted-out"] != "true")' >/dev/null; then
-    echo '[{"name":"firebase-functions-cleanup","action":{"type":"Delete"},"condition":{"tagState":"any","olderThan":"1d"}}]' > /tmp/forge-cleanup.json
-    gcloud artifacts repositories set-cleanup-policies gcf-artifacts --location="$REGION" --policy=/tmp/forge-cleanup.json --no-dry-run >/dev/null
-  fi
-fi
-
-echo
-echo "All set. Add these two GitHub Actions VARIABLES (they are not secrets):"
-echo
-echo "GCP_WIF_PROVIDER"
-echo "${POOL_NAME}/providers/${PROVIDER}"
-echo
-echo "GCP_DEPLOY_SA"
-echo "${SA}"
-SETUP
-bash ~/forge-deploy-setup.sh
+curl -fsSL https://raw.githubusercontent.com/christianeverett1988-boop/forge/main/scripts/deploy-setup.sh | bash
 ```
 
 5. It takes 1–3 minutes. At the end it prints **All set** and two values. Keep the tab open.
 
-If it stops with an error, copy the error and send it to me. Running the block again is always safe.
+If it stops with an error, copy the error and send it to me. Running the line again is always safe.
 
 ### 2. Add the two values to GitHub
 
@@ -213,7 +99,9 @@ The functions' account (`…-compute@developer…`) usually has broad access to 
 Use the Mac (`firebase deploy --only functions,firestore:rules` with the hotspot, see [DEPLOY.md](../DEPLOY.md)) for:
 
 - **A new kind of trigger** the project has never had, such as the first Firestore or Storage trigger. Those need project-permission changes, which the robot can't make.
-- **A new secret.** Set it in your own terminal (`firebase functions:secrets:set NAME`). Then add its name to the `SECRETS=` line in the block above and run the block again, so the functions can read it.
+- **A new secret.** Set it in your own terminal (`firebase functions:secrets:set NAME`). Then run the setup line from step 1 again with the new name on the end, so the functions can read it:
+  `curl -fsSL https://raw.githubusercontent.com/christianeverett1988-boop/forge/main/scripts/deploy-setup.sh | bash -s -- NEW_SECRET_NAME`
+  (Also ask for the name to be added to the `SECRETS=` line in `scripts/deploy-setup.sh`, so later re-runs keep it.)
 - **Removing or renaming a function.** The deploy stops rather than delete a live function. To delete on purpose, run the button with **Also delete live functions…** turned on. That option also skips a few other "are you sure?" questions: functions that start retrying on failure, or a higher minimum bill.
 
 ## How it works (for the next developer)
