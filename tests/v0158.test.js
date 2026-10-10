@@ -104,7 +104,7 @@ test('Change: every day type fits the chosen length (home and gym), and 20 < 30 
 test('Change: the button, sheet and Undo are wired; the old Switch and day select are gone', () => {
   const t = src('js/screens/train.js');
   assert(t.includes(`aria-label="Change today's workout"`) && t.includes('Change</button>'));
-  assert(t.includes(`sheet("Change today's workout"`) && t.includes(`label: 'Undo'`));
+  assert(t.includes(`sheet('Change workout'`) && t.includes(`label: 'Undo'`));
   assert(!t.includes('data-switch') && !t.includes('data-day') && !t.includes('Or train a different day'));
   assert(src('css/player.css').includes('prefers-reduced-motion: reduce) { .pv-ex.flash'));
   assert(src('js/ui.js').includes('toast-act'));

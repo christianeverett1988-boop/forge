@@ -207,8 +207,9 @@ function previewCard(plan, { d, loc, program, u }) {
         <div class="pv-warm">
           <p class="pv-group-h"><span>Warm-up</span><small class="muted">~${plan.warm_min || 5} min</small></p>
           <ul class="pv-wlist">
-            <li>3–5 min easy cardio or brisk walk</li>
-            <li>Arm circles, hip hinges and bodyweight squats, 10 each</li>
+            ${(plan.warm_min || 5) <= 3
+              ? '<li>2 min easy cardio</li><li>Arm circles and bodyweight squats, 10 each</li>'
+              : '<li>3–5 min easy cardio or brisk walk</li><li>Arm circles, hip hinges and bodyweight squats, 10 each</li>'}
             ${warm.map((it) => `<li>${esc(exerciseById(it.exercise_id).name)}: ${it.warmups.length} lighter set${it.warmups.length === 1 ? '' : 's'} first (built in)</li>`).join('')}
           </ul>
         </div>
@@ -296,25 +297,25 @@ function openChange(el, plan) {
   const usual = (state.profile && state.profile.sessionMin) || 60;
   const where = loc ? loc.name : 'this location';
   const row = (attr, title, sub, { disabled = false, check = false, one = false, wrap = false } = {}) => `
-    <button class="pick" type="button" ${attr} ${wrap ? 'data-layout-ok' : ''} ${disabled ? 'disabled' : ''}>
-      <span class="pick-text"><b>${title}</b>${sub ? `<small${one ? ' class="one"' : ''}>${sub}</small>` : ''}</span>
+    <button class="pick" type="button" ${attr} ${disabled ? 'disabled' : ''}>
+      <span class="pick-text"><b>${title}</b>${sub ? `<small${one ? ' class="one"' : ''}${wrap ? ' data-layout-ok' : ''}>${sub}</small>` : ''}</span>
       <span class="chev" aria-hidden="true">${check ? icon('check') : icon('chev')}</span>
     </button>`;
 
-  sheet("Change today's workout", (body, close, head) => {
+  sheet('Change workout', (body, close, head) => {
     const home = () => {
-      head.setStep("Change today's workout", null);
+      head.setStep('Change workout', null);
       const otherFocus = dayChoices(program).filter(([k]) => k !== plan.dayType).map(([, l]) => l);
       const otherPlaces = state.locations.filter((l) => !loc || l.id !== loc.id).map((l) => l.name);
       body.innerHTML = `
         <div class="stack">
           <p class="small muted">Nothing changes until you pick one. You can undo it right after.</p>
           <div class="pick-group">
-            ${row('data-o="new"', 'New exercises, same focus', canSwap ? `Different ${esc(focusLabel)} moves for the same muscles.` : esc(noSwapReason(where, focusLabel)), { disabled: !canSwap, wrap: true })}
+            ${row('data-o="new"', 'New exercises', canSwap ? `Same ${esc(focusLabel)} focus, different moves.` : esc(noSwapReason(where, focusLabel)), { disabled: !canSwap, wrap: true })}
             ${row('data-o="focus"', 'Train a different focus', esc(otherFocus.join(', ')), { one: true, wrap: true })}
-            ${row('data-o="length"', 'Session length', `Now ${minOverride || usual} min. Pick 20 to 60 for today only.`, { wrap: true })}
+            ${row('data-o="length"', 'Session length', `Now ${minOverride || usual} min, for today only.`, { wrap: true })}
             ${state.locations.length > 1 ? row('data-o="place"', 'Different location', esc(otherPlaces.join(', ')), { one: true, wrap: true }) : ''}
-            ${isChanged({ edits, dayOverride, minOverride }) ? row('data-o="reset"', 'Back to recommended', 'Clears every change you made to today’s workout.') : ''}
+            ${isChanged({ edits, dayOverride, minOverride }) ? row('data-o="reset"', 'Back to recommended', 'Clears every change for today.') : ''}
           </div>
           ${picks.size && canSwap ? '<label class="choice check"><input type="checkbox" data-replace-picks><span>Also replace the ones I picked<small>Otherwise your own picks stay.</small></span></label>' : ''}
         </div>`;
@@ -351,7 +352,7 @@ function openChange(el, plan) {
       const recLabel = recommended ? recommended.label : 'the usual';
       const rows = [row('data-v=""', `Recommended: ${esc(recLabel)}`, 'Forge’s pick for today.', { check: !dayOverride })]
         .concat(choices.filter(([k]) => k !== recKey).map(([k, l]) => row(`data-v="${esc(k)}"`, esc(l), '', { check: dayOverride === k })));
-      listStep('Train a different focus', rows.join(''), (v) => {
+      listStep('Focus', rows.join(''), (v) => {
         const before = snap();
         dayOverride = v || null;
         const label = v ? (choices.find(([k]) => k === v) || [0, v])[1] : recLabel;
@@ -376,7 +377,7 @@ function openChange(el, plan) {
     };
     const placeStep = () => {
       const rows = state.locations.map((l) => row(`data-v="${esc(l.id)}"`, esc(l.name), '', { check: loc && l.id === loc.id }));
-      listStep('Different location', rows.join(''), (v) => {
+      listStep('Location', rows.join(''), (v) => {
         if (loc && v === loc.id) { close(); return; }
         const before = snap();
         dayOverride = null;

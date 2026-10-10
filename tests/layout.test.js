@@ -111,6 +111,11 @@ if (standalone) {
         if (c.long && label === 'place') probs = probs.filter((x) => !/Downtown|Hotel/.test(x)); // a place name wider than the row is the user's own text
         if (!(await browser.eval("!!document.querySelector('dialog.sheet[open]')"))) probs.push('sheet is not open');
         for (const pr of probs) note(`${label}: ${pr}`, at);
+        // The sheet title is one line on every step, and the home step's row titles and subtitles are too (>= 390 for subtitles).
+        const lines = await browser.eval(`(() => { const n = (e) => { const s = getComputedStyle(e); return Math.round(e.getBoundingClientRect().height / (parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25)); }; const h = document.querySelector('dialog.sheet h2'); return { h2: h ? n(h) : 1, titles: [...document.querySelectorAll('dialog.sheet .pick b')].map(n), subs: [...document.querySelectorAll('dialog.sheet .pick small')].map(n) }; })()`);
+        if (lines.h2 > 1) note(`${label}: sheet title wraps to ${lines.h2} lines`, at);
+        if (lines.titles.some((x) => x > 1) && !c.long) note(`${label}: a row title wraps`, at);
+        if (label === 'sheet' && c.w >= 390 && lines.subs.some((x) => x > 1)) note('sheet: a subtitle wraps', at);
         if (shots) await browser.screenshot(`${shots}/change-${label}-${c.w}x${c.h}-${c.dark ? 'dark' : 'light'}${c.long ? '-long' : ''}.png`);
       };
       const sh = "document.querySelector('dialog.sheet ";
