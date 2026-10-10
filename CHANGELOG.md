@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.10 — Fit-and-finish, part 4: weight card, Food at 320, Log food dock (2026-10-10)
+
+Issue #64, part 4. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes.
+
+- **Weight card (Today):** today's weigh-in is the big number, labelled "Today · 7:42 AM" (or "Yesterday" / "Latest · Oct 8"). Under it: "Trend 207.7 · ↑ 2.0 this week", and a one-line "What's trend weight?" explainer. Weight screen: the stats show Today/Latest next to Trend (two-by-two).
+- **Weight detail message:** instead of "Not enough readings…" it says how many weigh-ins there are, e.g. "Only 2 weigh-ins in the last 4 weeks. The trend line is your smoothed average. Weigh in 3+ times a week for a reliable 4-week direction."
+- **Steps insight:** the "Steps are trending up" wording from 0.15.6 comes from one function that both the Today card and the Body card use. A phone still showing "Steps is…" is on an older build.
+- **Food summary at 320:** each value and its "of target" stay on one line at 320, 375 and 390, at normal and large text. When they don't fit beside the label the value goes under it on purpose; Carbs and Fat stack label over value.
+- **Log food dock:** each macro keeps its number with its unit ("5 g fat" never splits); the line only breaks between macros.
+- Tests: `tests/v01510.test.js`; the layout test covers over-target Food at 320/375/390 (scale 1 and 1.35) and the dock macro line at 320/390 (scale 1 and 1.35).
+
 ## 0.15.9 — USDA food search (2026-10-10)
 
 Part 4 of the audit in issue #57. **The functions (`foodSearch`, and the `withingsDisconnect` change) are already deployed.** `firestore.rules` is unchanged (the `usda:<fdcId>` id fits the existing `food_id` string, and the portion text is an extra field the rules already allow), and so are `firebase.json` and `config.js`. The web app updates by itself; the iPhone app needs one Refresh Forge run.
