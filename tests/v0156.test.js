@@ -109,13 +109,30 @@ test('player: Done set is pinned in a dock; RIR and timer tighten at 320px', () 
   assert(/\.pl-dock \{[^}]*position: sticky; bottom: 0[^}]*safe-bottom/.test(p));
   const j = src('js/screens/player.js');
   assert(j.indexOf('class="pl-dock"') < j.indexOf('data-done-label') && j.indexOf('data-done-label') < j.indexOf('class="pl-nav"'));
-  assert(/max-width: 340px\) \{ \.pl-rir \{ gap: 2px/.test(p) && /max-height: 700px\) \{ \.pl-demo\.has-fig/.test(p));
+  assert(/max-width: 340px\) \{ \.pl-rir \{ gap: 2px/.test(p) && /max-height: 700px\) \{\s*\.pl-demo\.has-fig/.test(p));
   assert(/max-width: 340px\) \{ \.timer-screen \.seg\.small span \{ font-size: 12px/.test(src('css/app.css')));
 });
 
 test('rings legend: short titles, sets as three rows without separators', () => {
   const r = src('js/workouts/rings.js');
   assert(r.includes("label: 'Calories'") && r.includes("label: 'Protein'") && r.includes('lines: ['));
+});
+
+test('player: short screens compact the set view; Next line stays on one row; hint balances', () => {
+  const p = src('css/player.css');
+  const short = p.slice(p.indexOf('@media (max-height: 700px)'));
+  assert(/\.pl-demo\.has-fig \{ height: 72px/.test(short) && /\.pl-hero-n b \{ font-size: 56px/.test(short));
+  assert(/\.pl-next-name \{[^}]*min-width: 0[^}]*text-overflow: ellipsis/.test(p) && /\.pl-next-meta \{ flex: none/.test(p));
+  assert(/\.pl-last \{[^}]*text-wrap: balance/.test(p));
+  assert(src('js/screens/player.js').includes('class="pl-next-name"'));
+  assert(src('js/workouts/progression.js').includes('times. Do' + String.fromCharCode(160) + '$'));
+});
+
+test('Body tiles: second value is --text, every value has one 48px box', () => {
+  const p = src('css/player.css');
+  assert(/\.body-hero b \{[^}]*min-height: 48px; display: flex; align-items: center/.test(p));
+  assert(/\.body-hero \.bh-tile \+ \.bh-tile b \{ color: var\(--text\)/.test(p));
+  assert(!/\.body-hero div/.test(p));
 });
 
 test('Programs badge uses accent tokens only', () => {

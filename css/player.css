@@ -68,7 +68,7 @@ body.playing .navbar { display: none; }
 .stepper div { text-align: center; display: flex; flex-direction: column; }
 .stepper b { font: 800 26px var(--num); font-variant-numeric: tabular-nums; }
 .stepper small { color: var(--muted); font-size: 12px; font-weight: 700; }
-.pl-last { text-align: center; color: var(--muted); font-size: 14px; min-height: 20px; }
+.pl-last { text-align: center; color: var(--muted); font-size: 14px; min-height: 20px; text-wrap: balance; }
 
 .pl-rir { display: grid; grid-template-columns: repeat(6, 1fr); align-items: center; gap: 6px; }
 .pl-rir span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-weight: 700; }
@@ -76,7 +76,16 @@ body.playing .navbar { display: none; }
 .pl-rir button.on { background: var(--text-1); color: var(--bg); }
 
 @media (max-width: 340px) { .pl-rir { gap: 2px; } }
-@media (max-height: 700px) { .pl-demo.has-fig { height: 120px; } .pl-hero-n b { font-size: 64px; } }
+/* Short phones (SE, Duo outer screen): shrink the picture and hero so the RIR row clears the dock without scrolling. */
+@media (max-height: 700px) {
+  .pl-demo.has-fig { height: 72px; }
+  .pl-demo { min-height: 72px; }
+  .fig-wrap { inset: 4px; }
+  .pl-muscles { padding: 8px; }
+  .player { gap: 6px; }
+  .pl-hero { padding: 0; }
+  .pl-hero-n b { font-size: 56px; }
+}
 
 /* The big Done button is a <label> with an invisible native switch over it (haptic tick on iOS 18+). */
 .haptic-btn { position: relative; display: grid; place-items: center; cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -89,7 +98,9 @@ body.playing .navbar { display: none; }
 .pl-done.is-done { background: var(--accent-tint); color: var(--accent-text); box-shadow: none; }
 /* Done set stays pinned to the bottom of the screen (clear of the home indicator), however short the phone. */
 .pl-dock { position: sticky; bottom: 0; z-index: 3; display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 10px 0 calc(var(--safe-bottom) + 4px); background: linear-gradient(to top, var(--bg) 88%, transparent); }
-.pl-next { text-align: center; color: var(--muted); font-size: 15px; }
+.pl-next { display: flex; justify-content: center; gap: 4px; color: var(--muted); font-size: 15px; white-space: nowrap; }
+.pl-next-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pl-next-meta { flex: none; }
 .pl-next b { color: var(--text); }
 .pl-nav { display: flex; justify-content: space-between; gap: 8px; }
 .pl-nav button { flex: 1; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font: 700 14px var(--font); cursor: pointer; }
@@ -167,12 +178,10 @@ body.playing .navbar { display: none; }
 
 /* Body */
 .body-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.body-hero div { background: var(--surface); border: 0; border-radius: var(--r-xl); padding: var(--s-4); display: flex; flex-direction: column; }
-.body-hero b { font: 900 40px var(--num); color: var(--rec-green); }
-.body-hero div + div b { color: var(--text); }
+.body-hero b { font: 900 40px var(--num); color: var(--rec-green); min-height: 48px; display: flex; align-items: center; }
+.body-hero .bh-tile + .bh-tile b { color: var(--text); }
 .body-hero b.bh-text { font: 800 20px var(--font); color: var(--text); line-height: 1.2; }
 .body-hero b.bh-word { font-size: clamp(28px, 10.5vw, 40px); }
-.body-hero div:first-child b, .body-hero b.bh-text { min-height: 48px; display: flex; align-items: center; }
 .body-hero span { color: var(--muted); font-size: 13px; font-weight: 700; }
 
 /* Progress tabs */
