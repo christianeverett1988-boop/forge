@@ -1,6 +1,6 @@
 # Health summary for your doctor (`#/report`)
 
-Added in v0.13.1. Replaces Withings+'s clinician sharing ("Export a PDF for your doctor", "share with my dietitian"; addendum 3 §A.2/A.3). Open it from **Settings → Your data → Health summary for your doctor**.
+Added in v0.13.1. Replaces Withings+'s clinician sharing ("Export a PDF for your doctor", "share with my dietitian"; addendum 3 §A.2/A.3). Open it from **Settings → Your data → Doctor summary**.
 
 Everything is worked out on the phone from data Forge already stores. **Nothing is uploaded or sent anywhere**, there are no new keys, functions, rules or dependencies, and the chart is inline SVG. General information, not a medical record.
 

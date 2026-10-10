@@ -4,11 +4,12 @@
 .report .rp-head h1 { font-size: 28px; line-height: 34px; }
 .report .rp-sec h2 { margin: 0; font-size: 20px; line-height: 25px; }
 .rp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.rp-list li { display: grid; grid-template-columns: 1fr auto; column-gap: var(--s-3); align-items: baseline; padding: 10px 0; }
+.rp-list li { display: flex; flex-wrap: wrap; column-gap: var(--s-3); align-items: baseline; padding: 10px 0; }
 .rp-list li + li { border-top: .5px solid var(--separator); }
-.rp-list li span { color: var(--text-2); }
-.rp-list li b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-.rp-list li small { grid-column: 1 / -1; text-align: right; color: var(--text-2); font-size: 13px; line-height: 18px; }
+.rp-list li > span { color: var(--text-2); white-space: nowrap; }
+.rp-list li b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; margin-left: auto; }
+.rp-nb { white-space: nowrap; }
+.rp-list li small { flex-basis: 100%; text-align: right; color: var(--text-2); font-size: 13px; line-height: 18px; }
 .rp-notes { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s-2); }
 .rp-explain { color: var(--text-2); font-size: 13px; line-height: 18px; }
 .rp-chart { width: 100%; height: auto; display: block; }
@@ -34,7 +35,9 @@
   .report .rp-sec h2 { font-size: 13pt; line-height: 1.2; margin-bottom: 4pt; color: black; }
   .report .muted, .report .rp-explain, .rp-list li span, .rp-list li small { color: black !important; }
   .rp-explain { font-size: 9pt; line-height: 1.3; margin-top: 4pt; }
-  .rp-list li { padding: 3pt 0; }
+  .rp-list li { display: grid; grid-template-columns: 1fr auto; padding: 3pt 0; }
+  .rp-list li > span { white-space: normal; }
+  .rp-list li small { grid-column: 1 / -1; }
   .rp-list li + li { border-top: .25pt solid black; }
   .rp-list li small { font-size: 9pt; line-height: 1.25; }
   .rp-chart { margin-top: 6pt; max-height: 45mm; }

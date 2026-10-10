@@ -98,7 +98,7 @@ export function renderSettings(el) {
 
       <p class="sec-title">Your data</p>
       <div class="group">
-        ${nav('#/report', 'heart', 'Health summary for your doctor', isNative() ? 'Print or share a PDF' : 'Print or save a PDF')}
+        ${nav('#/report', 'heart', 'Doctor summary', isNative() ? 'A PDF to print or share with your doctor' : 'A PDF to print or save for your doctor')}
         <button class="g-row" data-export-json><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export everything (JSON)</span></span></button>
         <button class="g-row" data-export-csv><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export weights (CSV)</span></span></button>
         <button class="g-row" data-export-workouts><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export workouts (CSV)</span></span></button>

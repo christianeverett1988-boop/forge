@@ -115,7 +115,7 @@ export function refreshRow(expiryMs, now = Date.now(), exact = true) {
   const due = refreshDue(expiryMs, now);
   const value = expiryMs <= now ? 'Due now' : `${n} day${n === 1 ? '' : 's'}`;
   const how = 'plug into the Mac mini and double-click Refresh Forge';
-  let sub = exact ? `Good until ${dayOf(expiryMs)} · ${timeOf(expiryMs)}` : `Good until about ${dayOf(expiryMs)}`;
+  let sub = exact ? `Good until ${new Date(expiryMs).toLocaleDateString('en-US', { weekday: 'short' })} ${timeOf(expiryMs).replace(/\s+/g, ' ')}` : `Good until about ${dayOf(expiryMs)}`;
   if (due) sub = `${expiryMs <= now ? 'Due now' : dayDiff(expiryMs, now) <= 0 ? 'Due today' : 'Due tomorrow'}: ${how}`;
   return { value, sub, due };
 }

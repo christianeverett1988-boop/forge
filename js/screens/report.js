@@ -1,4 +1,4 @@
-// Settings → Your data → Health summary for your doctor (#/report). Built on this phone from data Forge already
+// Settings → Your data → Doctor summary (#/report). Built on this phone from data Forge already
 // has; nothing is uploaded. "Print or save as PDF" uses the browser's print sheet (on iPhone: Share → Save to Files).
 import { state, units as getUnits } from '../state.js';
 import { $, $$, toast, todayKey } from '../ui.js';

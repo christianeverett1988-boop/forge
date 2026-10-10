@@ -120,7 +120,7 @@ export function reportModel(s, units, generated) {
 const sectionHtml = (m, units) => {
   const list = m.bullets
     ? `<ul class="rp-notes">${m.bullets.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`
-    : `<ul class="rp-list">${m.rows.map((r) => `<li><span>${esc(r.label)}</span><b>${esc(r.value)}</b>${r.note ? `<small>${esc(r.note)}</small>` : ''}</li>`).join('')}</ul>`;
+    : `<ul class="rp-list">${m.rows.map((r) => `<li><span>${esc(r.label)}</span><b>${String(r.value).split(' → ').map((p) => `<span class="rp-nb">${esc(p)}</span>`).join(' → ')}</b>${r.note ? `<small>${esc(r.note)}</small>` : ''}</li>`).join('')}</ul>`;
   const chart = m.chart ? weightChartSvg(m.chart, units) : '';
   return `<section class="rp-sec card stack" data-rp="${m.key}"><h2>${esc(m.title)}</h2>${list}${chart}${m.explain.map((t) => `<p class="rp-explain">${esc(t)}</p>`).join('')}</section>`;
 };

@@ -268,7 +268,9 @@ test('expiry wording: the deadline says today, tomorrow or the weekday', () => {
   assert(bannerDeadline(exp, local(2026, 10, 17, 9)).startsWith('Forge may have stopped opening.'));
   const far = refreshRow(exp, local(2026, 10, 11, 9));
   eq(far.value, '6 days');
-  eq(far.sub, 'Good until Fri, Oct 16 · 6:12 PM');
+  eq(far.sub, 'Good until Fri 6:12 PM');
+  assert(far.sub.length <= 28, 'row subtitle fits one line');
+  assert(!/ (AM|PM)/.test(far.sub), 'AM/PM never splits from the time');
   assert(!far.due);
   const soon = refreshRow(exp, local(2026, 10, 15, 20));
   assert(soon.due);
