@@ -1,0 +1,197 @@
+# The "Deploy" button: runs `firebase deploy` for Forge's backend from GitHub, so a deploy needs only a
+# phone (GitHub app → Actions → Deploy → Run workflow). Steps for Christian: docs/deploy-from-phone.md.
+#
+# Security (the repo and these logs are public):
+# - No stored Google key. The job proves who it is to Google with GitHub's short-lived OIDC token
+#   (Workload Identity Federation). Google only accepts tokens for THIS repo, dispatched by the repo owner,
+#   running THIS file from main (see the attribute condition in docs/deploy-from-phone.md), so no other
+#   workflow (claude.yml, tests.yml) and no branch copy of this file can get credentials.
+# - The `ref` input picks which code to deploy (for example a PR branch before merge); the workflow itself
+#   always comes from main. Only deploy branches you have reviewed: their code runs during the deploy.
+# - GCP_WIF_PROVIDER and GCP_DEPLOY_SA are repo *variables* (not secrets): neither one grants anything by itself.
+# - Nothing here prints a token. firebase-tools runs with --non-interactive.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: What to deploy
+        type: choice
+        required: true
+        default: functions
+        options:
+          - functions
+          - rules
+          - everything
+      ref:
+        description: Branch to deploy (main, or a PR branch to test it before merging)
+        type: string
+        required: true
+        default: main
+      allow_function_deletes:
+        description: Also delete live functions that are no longer in the code (leave off unless you meant to remove one)
+        type: boolean
+        required: false
+        default: false
+
+# Two deploys never overlap; a second tap waits for the first instead of cancelling it half-way.
+concurrency:
+  group: firebase-deploy-forge-web-f2351
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_ID: forge-web-f2351
+  REGION: us-east1
+  # Exact version (>= 15.22.3, which fixed keyless/ADC sign-in in CI). Bump on purpose, not by accident.
+  FIREBASE_TOOLS: firebase-tools@15.33.0
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.what }} from ${{ inputs.ref }}
+    # Only the repo owner can start a deploy (Google enforces the same thing on its side).
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      id-token: write # lets the job ask GitHub for its short-lived OIDC token; nothing else
+    steps:
+      - name: Check the inputs
+        id: inputs
+        env:
+          WHAT: ${{ inputs.what }}
+          REF: ${{ inputs.ref }}
+          ALLOW_DELETES: ${{ inputs.allow_function_deletes }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOY_SA: ${{ vars.GCP_DEPLOY_SA }}
+        run: |
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$DEPLOY_SA" ]; then
+            echo "::error title=Setup not finished::Add the GitHub variables GCP_WIF_PROVIDER and GCP_DEPLOY_SA first (docs/deploy-from-phone.md, one-time setup)."
+            exit 1
+          fi
+          # Google only trusts this file as it is on main (see the header), so the workflow must run from main.
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error title=Run it from main::Leave 'Use workflow from' on main and type the branch you want in 'Branch to deploy'."
+            exit 1
+          fi
+          if ! git check-ref-format --branch "$REF" >/dev/null 2>&1; then
+            echo "::error title=Bad branch name::The 'Branch to deploy' box doesn't hold a valid branch name."
+            exit 1
+          fi
+          case "$WHAT" in
+            functions)  targets="functions" ;;
+            rules)      targets="firestore:rules,firestore:indexes" ;;
+            everything) targets="functions,firestore:rules,firestore:indexes" ;;
+            *) echo "::error::Unknown choice '$WHAT'"; exit 1 ;;
+          esac
+          flags=""
+          if [ "$ALLOW_DELETES" = "true" ]; then flags="--force"; fi
+          {
+            echo "targets=$targets"
+            echo "flags=$flags"
+            case "$targets" in *functions*) echo "functions=true" ;; *) echo "functions=false" ;; esac
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check out ${{ inputs.ref }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # Installed BEFORE signing in to Google, so package install scripts never see credentials.
+      # (functions/package-lock.json is deliberately not committed, so `npm ci` can't be used; same as tests.yml.)
+      - name: Install function dependencies
+        if: steps.inputs.outputs.functions == 'true'
+        working-directory: functions
+        run: npm install --no-audit --no-fund
+
+      - name: Sign in to Google (keyless)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      # The functions read plain (non-secret) settings such as WITHINGS_CLIENT_ID and FORGE_APP_URL from
+      # functions/.env and functions/.env.forge-web-f2351. The second file lives on the Mac, not in git, and a
+      # non-interactive deploy can't ask for values. For any setting the branch's files don't give, copy the
+      # value the live functions already use, so a deploy never changes it. Values are not printed.
+      - name: Reuse the live function settings
+        if: steps.inputs.outputs.functions == 'true'
+        working-directory: functions
+        run: |
+          envfile=".env.${PROJECT_ID}"
+          names=$(grep -ohE "define(String|Int|Float|Boolean|List)\(['\"][A-Z0-9_]+" index.js src/*.js 2>/dev/null \
+            | sed -E "s/.*\(['\"]//" | sort -u) || true
+          have=$(cat .env "$envfile" 2>/dev/null | grep -oE '^[A-Z0-9_]+=' | tr -d '=' | sort -u) || true
+          live=""
+          for n in $names; do
+            if printf '%s\n' "$have" | grep -qx "$n"; then
+              echo "$n: from the branch"
+              continue
+            fi
+            if [ -z "$live" ]; then
+              live=$(gcloud functions describe withingsAuthStart --region="$REGION" --project="$PROJECT_ID" \
+                --format=json 2>/dev/null | jq -c '.serviceConfig.environmentVariables // {}') || live='{}'
+            fi
+            v=$(printf '%s' "$live" | jq -r --arg n "$n" '.[$n] // empty')
+            if [ -n "$v" ]; then
+              if [ -s "$envfile" ] && [ -n "$(tail -c1 "$envfile")" ]; then echo >> "$envfile"; fi
+              printf '%s=%s\n' "$n" "$v" >> "$envfile"
+              echo "$n: copied from the live functions"
+            else
+              echo "::warning title=Missing setting::$n has no value yet. Put its (non-secret) value in functions/.env in the branch."
+            fi
+          done
+
+      - name: Deploy
+        id: deploy
+        env:
+          TARGETS: ${{ steps.inputs.outputs.targets }}
+          FLAGS: ${{ steps.inputs.outputs.flags }}
+        run: |
+          # shellcheck disable=SC2086 # FLAGS is empty or exactly --force
+          npx --yes "$FIREBASE_TOOLS" deploy --only "$TARGETS" --project "$PROJECT_ID" --non-interactive $FLAGS
+
+      - name: Summary
+        if: always()
+        env:
+          WHAT: ${{ inputs.what }}
+          REF: ${{ inputs.ref }}
+          TARGETS: ${{ steps.inputs.outputs.targets }}
+          ALLOW_DELETES: ${{ inputs.allow_function_deletes }}
+          OUTCOME: ${{ steps.deploy.outcome }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          sha=$(git rev-parse HEAD 2>/dev/null || echo "not checked out")
+          subject=$(git log -1 --format=%s 2>/dev/null || echo "")
+          if [ "$OUTCOME" = "success" ]; then
+            verdict="✅ Deployed. The new backend is live."
+          elif [ "$OUTCOME" = "skipped" ] || [ -z "$OUTCOME" ]; then
+            verdict="❌ Nothing was deployed: a step before the deploy failed (see the red step above)."
+          else
+            verdict="❌ The deploy failed. Some parts may have updated and others not; the red Deploy step says which. Fix and run it again."
+          fi
+          {
+            echo "## Firebase deploy: ${WHAT}"
+            echo
+            echo "$verdict"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| What | \`${WHAT}\` (\`${TARGETS:-?}\`) |"
+            echo "| Branch | \`${REF}\` |"
+            echo "| Commit | \`${sha:0:12}\` ${subject} |"
+            echo "| Project | \`${PROJECT_ID}\` (${REGION}) |"
+            echo "| Delete removed functions | ${ALLOW_DELETES} |"
+            echo "| Result | ${OUTCOME:-not run} (job: ${JOB_STATUS}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
