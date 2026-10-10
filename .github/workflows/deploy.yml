@@ -79,7 +79,9 @@ jobs:
             echo "::error title=Run it from main::Leave 'Use workflow from' on main and type the branch you want in 'Branch to deploy'."
             exit 1
           fi
-          if ! git check-ref-format --branch "$REF" >/dev/null 2>&1; then
+          # A pasted branch name often carries a stray space or line break; drop all whitespace (branch names can't contain any).
+          REF="$(printf '%s' "$REF" | tr -d '[:space:]')"
+          if [ -z "$REF" ] || ! git check-ref-format --branch "$REF" >/dev/null 2>&1; then
             echo "::error title=Bad branch name::The 'Branch to deploy' box doesn't hold a valid branch name."
             exit 1
           fi
@@ -92,6 +94,7 @@ jobs:
           flags=""
           if [ "$ALLOW_DELETES" = "true" ]; then flags="--force"; fi
           {
+            echo "ref=$REF"
             echo "targets=$targets"
             echo "flags=$flags"
             case "$targets" in *functions*) echo "functions=true" ;; *) echo "functions=false" ;; esac
@@ -100,7 +103,7 @@ jobs:
       - name: Check out ${{ inputs.ref }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ steps.inputs.outputs.ref }}
           persist-credentials: false
 
       - name: Set up Node 22
@@ -166,7 +169,7 @@ jobs:
         if: always()
         env:
           WHAT: ${{ inputs.what }}
-          REF: ${{ inputs.ref }}
+          REF: ${{ steps.inputs.outputs.ref || inputs.ref }}
           TARGETS: ${{ steps.inputs.outputs.targets }}
           ALLOW_DELETES: ${{ inputs.allow_function_deletes }}
           OUTCOME: ${{ steps.deploy.outcome }}
