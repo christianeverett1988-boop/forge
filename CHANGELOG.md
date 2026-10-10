@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.15.9 — USDA food search (2026-10-10)
+
+Part 4 of the audit in issue #57. **The functions (`foodSearch`, and the `withingsDisconnect` change) are already deployed.** `firestore.rules` is unchanged (the `usda:<fdcId>` id fits the existing `food_id` string, and the portion text is an extra field the rules already allow), and so are `firebase.json` and `config.js`. The web app updates by itself; the iPhone app needs one Refresh Forge run.
+
+- **Real foods in Log food:** type "banana" or "chobani" and USDA FoodData Central rows appear under your own foods and recents. Yours show instantly; USDA rows follow about 300 ms after you stop typing, under a skeleton, and the list doesn't jump (old rows dim until the new ones arrive).
+- **Rows:** name, brand, "1,250 kcal" and a serving line ("1 cup (240 g)" or "100 g"). The name wraps to two lines; brand, calories and serving stay on one line (a long brand shortens first, the calories never split).
+- **Portion picker:** servings ½, 1, 1½, 2, or type an amount in servings, oz or g (oz first for lb/ft users), with calories and protein, carbs and fat updating as you go. The app remembers which unit you used last.
+- **What gets logged:** a normal food entry for exactly that portion, with the USDA id kept (`usda:<fdcId>`) and a portion line like "4 oz (113 g)", so Recents bring it back. Small amounts (20 g of oil) are exact, not rounded up to a quarter serving.
+- **Offline or down:** your own foods keep working and one quiet line says "Online search needs a connection" or "Online search isn’t available right now". No toasts.
+- **Round 1 review fixes:**
+  - Rows: a short brand sizes to its text ("Perdue · 123 kcal · 4 oz (112 g)"); names wrap to two lines so "raw" vs "roasted" shows; the loading skeleton is a name bar and a grey bar.
+  - Household servings: foods with USDA household measures (Survey/FNDDS) default to the first one ("1 cup (158 g)") instead of 100 g, and up to 4 measures show as chips above the ½ 1 1½ 2 chips. 100 g stays the fallback.
+  - Names: a USDA entry is stored with the clean title and the brand in its own `brand` field (40 characters at most). The Log food dock, the meal list and Recents show the title (two lines) with the brand first on the grey line. The "Added" toast is one short line ("Added to breakfast · 1,250 kcal"). Calories show a thousands separator everywhere on the Food screen.
+  - Messages: the server's "That's a lot of searches…" line is shown as written; "isn’t available right now" is only for real outages.
+  - Privacy: Delete everything now also removes the food-search counter (`private/food_search`), even if you never used Withings or Apple Health. **This is a Cloud Functions change (`withingsDisconnect`): redeploy with `firebase deploy --only functions`.**
+  - Server brand text is cut cleanly at 40 characters with a real "…".
+- **Round 2 review fixes:**
+  - Serving-size chips are one scrolling row of one-line pills under a "Serving size" caption (the `.chips` grid no longer overrides them). "0.5 breast, bone and skin removed" now survives (limit 40 characters), and 0.5 / 0.25 read "½" / "¼".
+  - Toasts size to their text (`width: max-content`), so "Added to breakfast · 1,250 kcal" is one line. This applies to every toast in the app.
+  - Round 3: the server shortens brands in code (`shortBrand`: "Kraft Heinz Foods Company International Division" becomes "Kraft Heinz"; past 22 characters it cuts at a word with a real "…"), so no CSS ellipsis leaves a gap. With a serving-size chip row, the "1 serving = 86 g" note is one line (the selected chip names the measure); otherwise "(86 g)" never orphans. The chips deliberately wrap onto more rows.
+  - The meal row's grey line is one line: brand (shortens first) · protein · portion. Calories are the number on the right.
+  - A cut brand ends where its "…" ends (the separator belongs to the brand). The loading skeleton bars line up with the row text.
+  - "Food search is busy. Try again in a minute." is shown as written.
+  - Privacy without a bypass: Delete everything removes `private/food_search` only after its hour window has passed, so it can't reset the 120 an hour limit.
+- **Server (`foodSearch`):** needs sign-in, 2–60 characters, 120 searches an hour per person, the key in a header (never in a URL), a 6 s timeout, a 5-minute in-memory cache. Whole foods rank first for "chicken breast"; brand-named queries ("quest bar") rank branded first. Near-duplicates are dropped, 25 results at most. The key, the request and what you typed are never logged.
+
 ## 0.15.8 — Fit-and-finish, part 3: "Change today's workout" (2026-10-10)
 
 Issue #64, item 25. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes, and #65's branch is untouched. Update-on-resume (26) and the iPhone Duo layouts (27–31) are not in this release.

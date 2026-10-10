@@ -23,7 +23,7 @@ export async function call(name, data = {}, { timeout = 70000 } = {}) {
     const res = await httpsCallable(f, name, { timeout })(data);
     return res.data;
   } catch (e) {
-    throw new Error(friendly(e));
+    throw Object.assign(new Error(friendly(e)), { code: String((e && e.code) || '').replace('functions/', '') });
   }
 }
 

@@ -37,6 +37,7 @@ import './food.test.js';
 import './v0153.test.js';
 import './v0154.test.js';
 import './v0154pdf.test.js';
+import './v0159.test.js';
 import './v0156.test.js';
 import './v0157.test.js';
 import './v0158.test.js';

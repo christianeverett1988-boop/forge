@@ -1,6 +1,6 @@
 # Food logging (v0.11.0, part 1)
 
-Part 1 of Checkpoint C. Everything works from your own data on the phone; USDA FoodData Central search is part 2 and needs a key from Christian.
+Part 1 of Checkpoint C worked from your own data on the phone. **v0.15.9 adds USDA FoodData Central search** (see "USDA search" at the end).
 
 ## Where it lives
 
@@ -28,7 +28,8 @@ Copying the macros into the entry means editing or deleting a food never rewrite
 ## Code
 
 - `js/food/core.js`: totals, grouping by meal, validation, copy-a-meal, stepper. Pure.
-- `js/food/search.js`: the one search interface, `search(query, ctx)`. Only the local provider exists. **Part 2:** push a USDA provider onto `PROVIDERS` (items have `kind: 'usda'`; the sheet needs no other change).
+- `js/food/search.js`: the one search interface. `search()` is the instant local part; `searchRemote()` and `createOnlineSearch()` run the `remote: true` providers (USDA), debounced.
+- `js/food/portion.js`: servings ↔ grams ↔ oz maths for USDA foods.
 - `js/food/flow.js`: the Log sheet as a state machine (counts the taps; tested).
 - `js/screens/food.js`: the screen and sheets. Tests: `tests/food.test.js`.
 
@@ -39,4 +40,28 @@ Nutrition (15%) is documented in `docs/forge-score.md`. It lights up after **3 l
 ## TODO (not in this PR)
 
 - **Adaptive TDEE** from logged intake and the weight trend (Withings+ replacement). It needs about 2–3 weeks of real logs to test, so it waits. Plan: compare average logged kcal with the trend's energy change (7,700 kcal per kg, as in `js/nutrition/targets.js`) over a rolling 14–21 days that has at least 10 logged days, shrink toward the formula TDEE until there's enough data, and show it as a suggestion the user accepts, never a silent change.
-- USDA FoodData Central search (needs the key), barcode scan, meals/recipes, a macro ring on Today.
+- Barcode scan, meals/recipes.
+
+## USDA search (v0.15.9)
+
+**Server:** callable `foodSearch` (`functions/index.js` → `functions/src/usda.js`), secret `USDA_API_KEY` (a free api.data.gov key). Deploy: `firebase deploy --only functions:foodSearch`.
+
+- Input `{ query, page? }`: the query is trimmed to 2–60 characters (control characters dropped), page 1–10. Needs sign-in.
+- Rate limit: 120 an hour per user, counted in `users/{uid}/private/food_search` (server-only; the rules close `private` to clients). The hour starts at the first search. Over it: "That’s a lot of searches. Try again in a little while."
+- Two FDC `/v1/foods/search` calls in parallel (Foundation + SR Legacy + Survey (FNDDS), and Branded), POST with the key in `X-Api-Key`, 6 s timeout, 40 rows each, so branded rows never crowd out whole foods. If one fails the other still answers. That is two FDC calls per search; the free key allows 1,000 an hour.
+- Returns `{ foods: [{ fdcId, name, brand, dataType, serving: { g, text, real }, per100, perServing }], more }`, at most 25. `per100` and `perServing` are `{ kcal, protein_g, carbs_g, fat_g }`; `perServing = per100 × serving.g / 100`. USDA's serving (grams, or ml treated as grams) is used when it has one; otherwise 100 g with `real: false`. Rows with no energy are dropped. Energy is nutrient 208 (kcal), or the Atwater energies (957/958) for Foundation foods.
+- Ranking: a generic query lists Foundation, SR Legacy, Survey, then Branded. If two or more branded hits have a whole query word (3+ letters) in their brand, it's a brand query and branded rows go first. Names that start with the query lead within a group. Near-identical rows (same words, same brand) are dropped.
+- Cache: identical queries (same page, case-insensitive) for 5 minutes, in memory per instance. Cached answers still count toward the rate limit.
+- Never logged: the key, the request and the query (`log.js` only gets a status, a count and milliseconds). Tested.
+
+**Client:** USDA rows appear under My foods and recents. Typing re-runs the local search at once and the online one 300 ms after the last key (under 2 letters: nothing). A picked USDA food opens the portion picker: ½ / 1 / 1½ / 2 servings, or an amount in servings, oz or g (oz first for lb/ft users). The entry is a normal `food_logs` doc for that portion: macros for those grams, `servings: 1`, `food_id: "usda:<fdcId>"` and a `portion` text like "4 oz (113 g)". Why `servings: 1`: entries have a 0.25-serving floor, so 20 g of oil would otherwise be wrong. Recents show the portion as their serving line. No rules change: `food_id` is any string and the rules don't restrict extra fields.
+
+Offline or a failed call: one quiet line, "Online search needs a connection" or "Online search isn’t available right now". Your own foods are never affected.
+
+### Measures, brand and messages (rounds 1–2)
+
+- **Household measures:** Survey (FNDDS) and SR Legacy hits carry `foodMeasures`. The server returns up to 4 as `measures: [{ text, g }]` (USDA's order; no "Quantity not specified", bare g/oz, repeats, 0 g or over 2 kg; text up to 40 characters; "0.5" and "0.25" shown as "½" and "¼"). With no USDA serving size, the first measure is the serving ("1 cup (158 g)"); 100 g is the fallback. In the portion picker, 2 or more measures show under a "Serving size" caption as one scrolling row of one-line pills, below the ½ 1 1½ 2 row. Picking one changes what "1 serving" means; the logged portion text and macros follow.
+- **Round 3:** `shortBrand` drops filler (Company, Inc., LLC, International, Division, Foods/Brands when another word stays) and cuts at a word past 22 characters; the CSS no longer ellipsizes brands. The serving-size chips wrap onto more rows.
+- **Brand:** a log entry stores the clean title in `name` and the brand in its own `brand` field (40 characters at most, `logFields`). The rules don't restrict extra string fields. The dock, meal rows, results and Recents show the title (two lines) with the brand first on the one-line grey line. The meal row's grey line is brand · protein · portion; its calories are the number on the right.
+- **Messages:** the server's "That’s a lot of searches…" (`resource-exhausted`) and "Food search is busy. Try again in a minute." (`unavailable`, USDA answered 429) are shown as written. Only real outages say "Online search isn’t available right now".
+- **Delete everything and the counter:** `private/food_search` ({ hour_start, hour_n }) is deleted by `withingsDisconnect` with `deleteApple`, but only once its hour has passed. Inside the hour it stays, so deleting can't reset the 120 an hour limit on the shared USDA key; the next search overwrites it. It holds no health or search data.

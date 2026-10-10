@@ -1,33 +1,41 @@
 // Food (v0.11.0): today's totals against your targets, the day's meals, and the Log food sheet.
 // It lives under the Today tab (#/food, reached from the Food card on Today) so the tab bar stays at five.
-// Everything here is local: My foods and your recent entries. USDA search arrives in part 2 through js/food/search.js.
-import { state } from '../state.js';
+// Log food searches My foods and recents instantly, then USDA FoodData Central a moment later (js/food/search.js).
+import { state, units } from '../state.js';
 import { put, patch, softDelete, newRecord } from '../db.js';
 import { esc, $, $$, sheet, toast, confirmSheet, todayKey, formatDay } from '../ui.js';
 import { currentTargets } from '../derived.js';
 import { icon, emptyState } from '../ui/icons.js';
 import { MEAL_LABEL, MEALS, cleanFood, copyMealFields, dayBefore, dayTotals, groupByMeal, progress, stepServings } from '../food/core.js';
 import { createFlow } from '../food/flow.js';
-import { search } from '../food/search.js';
+import { search, createOnlineSearch } from '../food/search.js';
+import { SERVING_CHOICES, amountLabel, gramsFromAmount, gramsToOz, measureServing, portionItem, servingsLabel } from '../food/portion.js';
 
 let viewDay = null; // the day shown; null = today
 const dayShown = () => (viewDay && viewDay <= todayKey() ? viewDay : todayKey());
 const fmtNum = (n) => Math.round(n * 100) / 100;
 const grams = (n) => `${Math.round(n)} g`;
+let lastUnit = 'serv'; // the portion unit you used last (servings, oz or g), kept while the app is open
 
 function itemLine(it) {
-  const bits = [`${Math.round(it.kcal)} kcal`];
+  const bits = it.brand ? [it.brand] : [];
+  bits.push(`${Math.round(it.kcal).toLocaleString('en-US')} kcal`);
   if (it.protein_g) bits.push(`${Math.round(it.protein_g)} g protein`);
   if (it.serving) bits.push(it.serving);
   return bits.join(' · ');
 }
 
+/** One-line grey text under a food name: brand (shortens first), the numbers that never split, then the portion. */
+function subLine({ brand, kcal, protein, portion }) {
+  const span = (cls, t) => `<span class="${cls}">${esc(t)}</span>`;
+  return `<small class="food-sub muted">${brand ? `<span class="food-brand"><i>${esc(brand)}</i></span>` : ''}${kcal == null ? '' : span('food-kcal', `${Math.round(kcal).toLocaleString('en-US')} kcal`)}${protein ? span('food-kcal', `${Math.round(protein)} g protein`) : ''}${portion ? span('food-serv', portion) : ''}</small>`;
+}
+
+/** A logged entry's grey line. The calories are the number on the right, so they aren't repeated here. */
 function entryLine(e) {
   const n = e.servings;
-  const bits = [`${Math.round(e.kcal * n)} kcal`];
-  if (e.protein_g) bits.push(`${Math.round(e.protein_g * n)} g protein`);
-  bits.push(`${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`);
-  return bits.join(' · ');
+  const portion = e.portion ? (n === 1 ? e.portion : `${servingsLabel(n)} × ${e.portion}`) : `${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`;
+  return subLine({ brand: e.brand, protein: e.protein_g * n, portion });
 }
 
 const stepBtns = (out = '') => `<button type="button" class="icon-btn" data-minus aria-label="Fewer servings">${icon('minus')}</button><output data-serv aria-live="polite">${out}</output><button type="button" class="icon-btn" data-plus aria-label="More servings">${icon('plus')}</button>`;
@@ -38,7 +46,7 @@ function meter(label, value, target, unit, { big = false } = {}) {
   const over = p && p.pct > 110;
   return `<div class="meter-row ${big ? 'meter-row--big' : ''}">
     <div class="row between"><span class="label">${label}</span>
-      <span class="${big ? 'meter-val' : 'small'}"><b>${unit === 'kcal' ? Math.round(value).toLocaleString() : grams(value)}</b>${target ? ` <span class="muted">of ${unit === 'kcal' ? target.toLocaleString() + ' kcal' : grams(target)}</span>` : ''}</span></div>
+      <span class="${big ? 'meter-val' : 'small'}"><b>${unit === 'kcal' ? Math.round(value).toLocaleString('en-US') : grams(value)}</b>${target ? ` <span class="muted">of ${unit === 'kcal' ? target.toLocaleString('en-US') + ' kcal' : grams(target)}</span>` : ''}</span></div>
     <div class="meter ${over ? 'over' : ''}" role="img" aria-label="${esc(label)}: ${p ? `${p.pct}% of your target` : 'no target'}"><i style="width:${pct}%"></i></div>
   </div>`;
 }
@@ -79,14 +87,14 @@ export function renderFood(el) {
         return `<div class="food-meal" data-meal="${g.meal}">
           <div class="row between center food-meal-head">
             <h2>${g.label}</h2>
-            <span class="row gap center"><span class="small muted">${g.entries.length ? `${g.totals.kcal.toLocaleString()} kcal` : ''}</span>
+            <span class="row gap center"><span class="small muted">${g.entries.length ? `${g.totals.kcal.toLocaleString('en-US')} kcal` : ''}</span>
               ${canCopy ? `<button class="btn ghost small-btn" data-copy="${g.meal}">Copy yesterday</button>` : ''}
               <button class="btn ghost small-btn" data-add-meal="${g.meal}" aria-label="Add to ${g.label.toLowerCase()}">Add</button></span>
           </div>
           ${g.entries.length ? `<ul class="list">${g.entries.map((e) => `
-            <li class="tap" data-entry="${esc(e.id)}"><div><b>${esc(e.name)}</b>
-              <small class="muted">${entryLine(e)}</small></div>
-              <b>${Math.round(e.kcal * e.servings).toLocaleString()}</b></li>`).join('')}</ul>` : ''}
+            <li class="tap" data-entry="${esc(e.id)}"><div class="food-row"><b class="clamp2">${esc(e.name)}</b>
+              ${entryLine(e)}</div>
+              <b>${Math.round(e.kcal * e.servings).toLocaleString('en-US')}</b></li>`).join('')}</ul>` : ''}
         </div>`;
       }).join('') : ''}
       <div class="group"><button class="g-row" data-my-foods><span class="g-ic">${icon('list')}</span><span class="g-text"><span>My foods</span><small>${state.foods.length ? `${state.foods.length} saved` : 'Save the things you eat often'}</small></span><span class="chev" aria-hidden="true">${icon('chev')}</span></button></div>
@@ -133,8 +141,15 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
     body.innerHTML = `
       <div class="stack food-log">
         <label class="field">
-          <input type="search" name="q" placeholder="Search your foods" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search your foods"></label>
-        <ul class="list food-results" data-results></ul>
+          <input type="search" name="q" placeholder="Search foods" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search foods"></label>
+        <div class="food-scroll">
+          <ul class="list food-results" data-results></ul>
+          <section class="food-online" data-online hidden aria-label="USDA results">
+            <h3 class="food-online-head" data-online-head>From USDA FoodData Central</h3>
+            <ul class="list food-results" data-online-list></ul>
+            <p class="small muted food-online-note" data-online-note role="status" aria-live="polite"></p>
+          </section>
+        </div>
         <button class="btn ghost" data-quick-toggle>Quick add: just calories</button>
         <form class="stack" data-quick hidden novalidate>
           <div class="field-grid">
@@ -145,8 +160,18 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
           <button class="btn" type="submit">Add</button>
         </form>
         <div class="food-dock" data-dock hidden>
-          <div class="row between center"><b data-sel-name></b>
-            <span class="serv-stepper">${stepBtns('1')}</span></div>
+          <div class="row between center food-dock-head"><div class="food-dock-title"><b class="clamp2" data-sel-name></b><small class="muted" data-sel-brand hidden></small></div>
+            <span class="serv-stepper" data-stepper>${stepBtns('1')}</span></div>
+          <div class="portion" data-portion hidden>
+            <div class="serv-chips" role="radiogroup" aria-label="Servings">${SERVING_CHOICES.map((n) => `<button type="button" class="chip-btn" role="radio" data-serv-choice="${n}">${servingsLabel(n)}</button>`).join('')}</div>
+            <p class="portion-cap" data-measures-cap hidden>Serving size</p>
+            <div class="serv-chips serv-chips--wrap" role="radiogroup" aria-label="Serving size" data-measures hidden></div>
+            <div class="portion-amount">
+              <label class="field"><input type="text" inputmode="decimal" autocomplete="off" data-amount aria-label="Amount"></label>
+              <div class="unit-seg" role="radiogroup" aria-label="Unit">${(units() === 'metric' ? ['serv', 'g', 'oz'] : ['serv', 'oz', 'g']).map((u) => `<button type="button" role="radio" data-unit="${u}">${u === 'serv' ? 'servings' : u}</button>`).join('')}</div>
+            </div>
+            <p class="small muted" data-portion-note></p>
+          </div>
           <p class="small muted" data-sel-line></p>
           <div class="meal-chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
           <button class="btn" data-add></button>
@@ -154,7 +179,43 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       </div>`;
     const results = $('[data-results]', body);
     const dock = $('[data-dock]', body);
-    let items = [];
+    const onlineBox = $('[data-online]', body);
+    const onlineHead = $('[data-online-head]', body);
+    const onlineList = $('[data-online-list]', body);
+    const onlineNote = $('[data-online-note]', body);
+    const amountEl = $('[data-amount]', dock);
+    let items = []; // My foods and recents
+    let onlineItems = []; // USDA
+    let portion = null; // while a USDA food is picked: { base, serving: {g, text}, unit: 'serv' | 'oz' | 'g', servings, grams }
+
+    const plain = (n) => String(Math.round(n * 100) / 100);
+    const applyPortion = () => {
+      const { base, unit, servings, grams } = portion;
+      flow.f.selected = portionItem(base, { serving: portion.serving, ...(unit === 'serv' ? { mode: 'servings', servings } : { mode: 'weight', unit, grams }) });
+      flow.f.servings = 1;
+    };
+    const paintPortion = (keepTyped = false) => {
+      const { serving, unit, servings, grams } = portion;
+      $$('[data-measure]', dock).forEach((b) => { const on = measureServing(portion.base.usda.measures[Number(b.dataset.measure)]).text === serving.text; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      $$('[data-serv-choice]', dock).forEach((b) => { const on = unit === 'serv' && Number(b.dataset.servChoice) === servings; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      $$('[data-unit]', dock).forEach((b) => { const on = b.dataset.unit === unit; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+      if (!keepTyped) amountEl.value = unit === 'serv' ? plain(servings) : unit === 'oz' ? String(Math.round(gramsToOz(grams) * 10) / 10) : String(Math.round(grams));
+      // With a chip row the selected chip already names the measure, so the note stays short; "(86 g)" never orphans.
+      const chips = portion.base.usda.measures.length >= 2;
+      const m = /^(.*?)(\s*\(\d[^()]*\))$/.exec(serving.text);
+      const named = chips ? `${plain(serving.g)} g` : (m ? `${esc(m[1])} <span class="nowrap">${esc(m[2].trim())}</span>` : esc(serving.text));
+      $('[data-portion-note]', dock).innerHTML = unit === 'serv'
+        ? `1 serving = ${named}`
+        : `${esc(amountLabel(grams, unit === 'oz' ? 'g' : 'oz'))} · 1 serving = ${named}`;
+    };
+    const paintMeasures = () => {
+      const box = $('[data-measures]', dock);
+      const ms = portion.base.usda.measures;
+      box.hidden = ms.length < 2;
+      $('[data-measures-cap]', dock).hidden = box.hidden;
+      box.innerHTML = ms.map((m, i) => `<button type="button" class="chip-btn" role="radio" data-measure="${i}">${esc(m.text)}</button>`).join('');
+    };
+    const setPortion = (patch) => { portion = { ...portion, ...patch }; lastUnit = portion.unit; applyPortion(); paintPortion(); paintDock(); };
 
     const paintMeal = () => {
       $$('[data-meal]', dock).forEach((b) => { const on = b.dataset.meal === flow.f.meal; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
@@ -164,30 +225,104 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       const s = flow.f.selected;
       dock.hidden = !s;
       if (!s) return;
+      const usda = !!portion;
+      $('[data-stepper]', dock).hidden = usda;
+      $('[data-portion]', dock).hidden = !usda;
       $('[data-sel-name]', dock).textContent = s.name;
-      $('[data-serv]', dock).textContent = `${fmtNum(flow.f.servings)} ${flow.f.servings === 1 ? 'serving' : 'servings'}`;
-      $('[data-sel-line]', dock).textContent = `${Math.round(s.kcal * flow.f.servings)} kcal · ${Math.round(s.protein_g * flow.f.servings)} g protein${s.serving ? ` · ${s.serving} each` : ''}`;
+      const brandEl = $('[data-sel-brand]', dock);
+      brandEl.textContent = s.brand || '';
+      brandEl.hidden = !s.brand;
+      if (usda) {
+        $('[data-sel-line]', dock).textContent = `${s.kcal.toLocaleString('en-US')} kcal · ${Math.round(s.protein_g)} g protein · ${Math.round(s.carbs_g)} g carbs · ${Math.round(s.fat_g)} g fat`;
+      } else {
+        $('[data-serv]', dock).textContent = `${fmtNum(flow.f.servings)} ${flow.f.servings === 1 ? 'serving' : 'servings'}`;
+        $('[data-sel-line]', dock).textContent = `${Math.round(s.kcal * flow.f.servings).toLocaleString('en-US')} kcal · ${Math.round(s.protein_g * flow.f.servings)} g protein${s.serving ? ` · ${s.serving} each` : ''}`;
+      }
+      $('[data-add]', dock).disabled = false;
       paintMeal();
     };
     const paintResults = async () => {
+      const q = flow.f.query.trim();
       items = await search(flow.f.query, { foods: state.foods, logs: state.food_logs });
+      const picked = (it) => (flow.f.selected && flow.f.selected.key === it.key ? 'picked' : '');
       results.innerHTML = items.length ? items.map((it, i) => `
-        <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-i="${i}" role="button" tabindex="0">
-          <div><b>${esc(it.name)}</b><small class="muted">${esc(itemLine(it))}</small></div>
+        <li class="tap ${picked(it)}" data-i="${i}" role="button" tabindex="0">
+          <div class="food-row"><b class="clamp2">${esc(it.name)}</b>${subLine({ brand: it.brand, kcal: it.kcal, protein: it.protein_g, portion: it.serving })}</div>
           <span class="muted">${it.kind === 'recent' ? 'Recent' : ''}</span></li>`).join('')
-        : `<li class="food-none"><div><b>${flow.f.query ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${flow.f.query ? 'Try Quick add, or save it in My foods.' : 'Use Quick add, or save foods in My foods. Search of a big food database comes next.'}</small></div></li>`;
+        : q.length >= 2 ? '' // the USDA section below speaks for itself
+          : `<li class="food-none"><div><b>${q ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${q ? 'Try Quick add, or save it in My foods.' : 'Type a food to search the USDA database, or use Quick add.'}</small></div></li>`;
     };
+    const paintOnline = (u) => {
+      if (u.state === 'idle') { onlineItems = []; onlineBox.hidden = true; return; }
+      onlineBox.hidden = false;
+      onlineBox.setAttribute('aria-busy', String(u.state === 'loading'));
+      if (u.state === 'loading') {
+        onlineNote.textContent = '';
+        if (onlineItems.length) { onlineList.classList.add('stale'); return; } // keep the old rows (dimmed) so the list doesn't jump
+        onlineHead.hidden = false;
+        onlineList.innerHTML = '<li class="food-skel" aria-hidden="true"><div class="food-row"><i class="skeleton food-skel-name"></i><i class="skeleton food-skel-sub"></i></div></li>'.repeat(3);
+        return;
+      }
+      onlineList.classList.remove('stale');
+      if (u.state !== 'ok') {
+        onlineItems = [];
+        onlineHead.hidden = true;
+        onlineList.innerHTML = '';
+        onlineNote.textContent = u.state === 'offline' ? 'Online search needs a connection' : u.state === 'limited' && u.message ? u.message : 'Online search isn’t available right now';
+        return;
+      }
+      onlineItems = u.items;
+      onlineHead.hidden = !onlineItems.length;
+      onlineList.innerHTML = onlineItems.map((it, i) => `
+        <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-o="${i}" role="button" tabindex="0">
+          <div class="food-row"><b class="food-name">${esc(it.title)}</b>
+            <small class="food-sub">${it.brand ? `<span class="food-brand"><i>${esc(it.brand)}</i></span>` : ''}<span class="food-kcal">${it.kcal.toLocaleString('en-US')} kcal</span><span class="food-serv">${esc(it.serving)}</span></small></div></li>`).join('');
+      onlineNote.textContent = onlineItems.length ? '' : 'No matches in the USDA database.';
+    };
+    const onlineSearch = createOnlineSearch({ onUpdate: paintOnline });
     const pick = (li) => {
-      const it = items[Number(li.dataset.i)];
+      const isOnline = li.dataset.o !== undefined;
+      const it = (isOnline ? onlineItems : items)[Number(isOnline ? li.dataset.o : li.dataset.i)];
       if (!it) return;
       flow.select(it);
+      portion = it.usda ? { base: it, serving: it.usda.serving, unit: lastUnit, servings: 1, grams: it.usda.serving.g } : null;
+      if (portion) { paintMeasures(); applyPortion(); paintPortion(); }
       paintDock();
-      $$('[data-i]', results).forEach((x) => x.classList.toggle('picked', x === li));
+      $$('[data-i], [data-o]', body).forEach((x) => x.classList.toggle('picked', x === li));
     };
 
-    results.addEventListener('click', (e) => { const li = e.target.closest('[data-i]'); if (li) pick(li); });
-    results.addEventListener('keydown', (e) => { const li = e.target.closest('[data-i]'); if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(li); } });
-    $('[name=q]', body).addEventListener('input', (e) => { flow.search(e.target.value); paintResults(); });
+    for (const list of [results, onlineList]) {
+      list.addEventListener('click', (e) => { const li = e.target.closest('[data-i], [data-o]'); if (li) pick(li); });
+      list.addEventListener('keydown', (e) => { const li = e.target.closest('[data-i], [data-o]'); if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(li); } });
+    }
+    $$('[data-serv-choice]', dock).forEach((b) => { b.onclick = () => { const n = Number(b.dataset.servChoice); setPortion({ unit: 'serv', servings: n, grams: n * portion.serving.g }); }; });
+    $('[data-measures]', dock).addEventListener('click', (e) => {
+      const b = e.target.closest('[data-measure]');
+      if (!b || !portion) return;
+      const serving = measureServing(portion.base.usda.measures[Number(b.dataset.measure)]);
+      setPortion({ serving, ...(portion.unit === 'serv' ? { grams: portion.servings * serving.g } : {}) });
+    });
+    $$('[data-unit]', dock).forEach((b) => {
+      b.onclick = () => {
+        const u = b.dataset.unit;
+        if (u === portion.unit) return;
+        const sg = portion.serving.g;
+        if (u === 'serv') { const n = Math.max(0.25, Math.round((portion.grams / sg) * 100) / 100); setPortion({ unit: u, servings: n, grams: n * sg }); } else setPortion({ unit: u });
+      };
+    });
+    amountEl.addEventListener('input', () => {
+      if (!portion) return;
+      const sg = portion.serving.g;
+      const raw = amountEl.value.replace(/,/g, '').trim();
+      const n = Number(raw);
+      const grams = portion.unit === 'serv' ? (raw && n > 0 && n * sg <= 5000 ? n * sg : null) : gramsFromAmount(raw, portion.unit);
+      if (grams === null) { $('[data-add]', dock).disabled = true; return; } // not a usable amount yet: keep what was typed, don't log it
+      portion = { ...portion, grams, ...(portion.unit === 'serv' ? { servings: n } : {}) };
+      applyPortion();
+      paintPortion(true);
+      paintDock();
+    });
+    $('[name=q]', body).addEventListener('input', (e) => { flow.search(e.target.value); paintResults(); onlineSearch.query(e.target.value); });
     $('[data-minus]', dock).onclick = () => { flow.f.servings = stepServings(flow.f.servings, -1); paintDock(); };
     $('[data-plus]', dock).onclick = () => { flow.f.servings = stepServings(flow.f.servings, 1); paintDock(); };
     $$('[data-meal]', dock).forEach((b) => { b.onclick = () => { flow.setMeal(b.dataset.meal); paintMeal(); }; });
@@ -196,7 +331,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       if (!fields) return;
       put('food_logs', newRecord(fields));
       close();
-      toast(`Added ${fields.name} to ${MEAL_LABEL[fields.meal].toLowerCase()}`);
+      toast(`Added to ${MEAL_LABEL[fields.meal].toLowerCase()} · ${Math.round(fields.kcal * fields.servings).toLocaleString('en-US')} kcal`);
     };
 
     const quick = $('[data-quick]', body);
@@ -232,7 +367,7 @@ function openEditEntry(e) {
       </div>`;
     const paint = () => {
       $('[data-serv]', body).textContent = fmtNum(servings);
-      $('[data-line]', body).textContent = `${Math.round(e.kcal * servings)} kcal · ${Math.round(e.protein_g * servings)} g protein · ${Math.round(e.carbs_g * servings)} g carbs · ${Math.round(e.fat_g * servings)} g fat`;
+      $('[data-line]', body).textContent = `${Math.round(e.kcal * servings).toLocaleString('en-US')} kcal · ${Math.round(e.protein_g * servings)} g protein · ${Math.round(e.carbs_g * servings)} g carbs · ${Math.round(e.fat_g * servings)} g fat`;
       $$('[data-meal]', body).forEach((b) => { const on = b.dataset.meal === meal; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
     };
     $('[data-minus]', body).onclick = () => { servings = stepServings(servings, -1); paint(); };
