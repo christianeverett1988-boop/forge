@@ -85,7 +85,7 @@ export function renderWeight(el) {
       ${progressTabs('weight')}
       <div class="row between center">
         <h1>Weight</h1>
-        <button class="btn small" data-log>+ Log weight</button>
+        <button class="btn small" data-log aria-label="Log weight">+ Log<span class="hide-xs"> weight</span></button>
       </div>
       ${latest ? `
       <div class="card">

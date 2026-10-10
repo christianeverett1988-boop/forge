@@ -53,7 +53,7 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
   const out = [
     { key: 'training', label: 'Training', value: st.thisWeek.done / goalDays, done: st.thisWeek.done, goal: goalDays, text: `${st.thisWeek.done}/${goalDays} days` },
     {
-      key: 'sets', label: deload ? 'Weekly sets · deload' : 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
+      key: 'sets', label: deload ? 'Sets · deload' : 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
       text: `${sets.push}/${per} push · ${sets.pull}/${per} pull · ${sets.legs}/${per} legs`, groups: sets, per,
       lines: [`${sets.push}/${per} push`, `${sets.pull}/${per} pull`, `${sets.legs}/${per} legs`],
     },

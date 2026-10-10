@@ -136,7 +136,7 @@ test('Today: macro tiles show eaten / target under a "Today of target" label, wi
   const flat = h.replace(/\u00a0/g, " ");
   assert(flat.includes('<b data-eaten>110</b><small data-target>/ 181 g</small>'), 'eaten and target are separate elements');
   assert(flat.includes('<b data-eaten>1,234</b><small data-target>/ 1,500 g</small>') && flat.includes('<b data-eaten>0</b><small data-target>/ 58 g</small>'), 'thousands and zero');
-  assert(/\.food-targets b \{ font-size: 20px/.test(src('css/food.css')) && /\.food-targets small \{ font-size: 13px/.test(src('css/food.css')), 'eaten big, target at 13px');
+  assert(/\.food-targets b \{ font-size: calc\(20px/.test(src("css/food.css")) && /\.food-targets small \{ font-size: calc\(13px/.test(src("css/food.css")), "eaten big, target at 13px");
   assert(h.includes('Carbs 1,234 of 1,500 grams'), 'aria matches');
 });
 

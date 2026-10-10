@@ -142,3 +142,25 @@ export function compositionGap(docs) {
   }
   return n;
 }
+
+/** Readings older than this are tucked behind "Show older" on the Body tab. */
+export const OLD_READING_DAYS = 90;
+
+/** Whole days between two YYYY-MM-DD keys (b minus a), computed at noon so DST can't shift it. */
+export function daysBetween(a, b) {
+  return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000);
+}
+
+/**
+ * Caption for a body tile whose newest reading isn't from your latest weigh-in: "2 days ago" for the last
+ * couple of weeks, then a short date ("Sep 23", with the year only when it isn't this year). One line, never a warning.
+ */
+export function staleCaption(day, today, locale) {
+  const n = daysBetween(day, today);
+  if (n <= 0) return 'Today';
+  if (n === 1) return 'Yesterday';
+  if (n <= 14) return `${n} days ago`;
+  const d = new Date(`${day}T12:00:00Z`);
+  const sameYear = day.slice(0, 4) === today.slice(0, 4);
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC', ...(sameYear ? {} : { year: '2-digit' }) });
+}
