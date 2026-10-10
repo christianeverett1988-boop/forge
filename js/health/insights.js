@@ -60,22 +60,28 @@ export function fmtChange(metric, slopePerWeek, windowDays, units) {
   const total = slopePerWeek * (windowDays / 7);
   const sign = total < 0 ? '−' : '+'; // a real minus sign, not a hyphen
   const a = Math.abs(total);
-  if (metric === 'vo2max') return `${sign}${a.toFixed(1)} ml/kg/min`;
-  if (kind === 'mass') return `${sign}${weightToDisplay(a, units).toFixed(1)} ${weightUnit(units)}`;
-  if (kind === 'sleep' && Math.round(a) >= 60) {
-    const h = Math.floor(Math.round(a) / 60);
-    const m = Math.round(a) % 60;
-    return `${sign}${h} h${m ? ` ${m} min` : ''}/night`;
+  const one = (v) => (Number(v.toFixed(1)) === 0 ? null : v.toFixed(1)); // null: rounds to no change
+  const out = (txt) => (txt == null ? null : `${sign}${txt}`);
+  if (metric === 'vo2max') { const t = one(a); return out(t && `${t} ml/kg/min`); }
+  if (kind === 'mass') { const t = one(weightToDisplay(a, units)); return out(t && `${t} ${weightUnit(units)}`); }
+  if (kind === 'pct') { const t = one(a); return out(t && `${t}% body fat`); }
+  if (kind === 'index') { const t = one(a); return out(t && `${t} on the visceral fat index`); }
+  if (kind === 'bpm') return Math.round(a) === 0 ? null : out(`${Math.round(a)} bpm`);
+  if (kind === 'ms') { const t = one(a); return out(t && `${t} ms`); }
+  if (kind === 'sleep' || kind === 'minutes' || kind === 'count') {
+    const r = Math.round(a);
+    if (r === 0) return null;
+    if (kind === 'sleep' && r >= 60) return out(`${Math.floor(r / 60)} h${r % 60 ? ` ${r % 60} min` : ''}/night`);
+    return out(`${fmtAmount(metric, total, units).replace(/ (steps|min)$/, '')} ${DAILY_UNIT[kind]}`);
   }
-  const amt = fmtAmount(metric, total, units);
-  const unit = DAILY_UNIT[kind];
-  return `${sign}${unit ? `${amt.replace(/ (steps|min)$/, '')} ${unit}` : amt}`;
+  return out(fmtAmount(metric, total, units));
 }
 
 function trendBody(metric, tr, w, units) {
   const span = w === 28 ? '4 weeks' : '3 months';
   const change = fmtChange(metric, tr.slopePerWeek, w, units);
   const kind = (trendMetric(metric) || {}).kind;
+  if (change == null) return `About the same as ${span} ago.`;
   return DAILY_UNIT[kind] ? `${change} vs ${span} ago.` : `${change} over ${span}.`;
 }
 
@@ -146,6 +152,7 @@ function trendCard(t, units) {
   if (!tr.enough || tr.direction === 'flat') return null;
   const copy = (TREND_COPY[t.key] || {})[tr.direction];
   if (!copy) return null;
+  if (fmtChange(t.key, tr.slopePerWeek, w, units) == null) return null; // rounds to no change: no card
   const ratio = Math.abs(tr.slopePerWeek) / (NOISE_FLOOR[t.key] || 1);
   const severity = Math.min(0.7, 0.15 + 0.08 * ratio + (t.tone === 'bad' ? 0.1 : 0));
   return {

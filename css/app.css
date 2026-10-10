@@ -580,3 +580,5 @@ html { scroll-padding-top: calc(var(--safe-top, 0px) + 56px); }
 .body-hero .bh-tap::after { content: "\203A"; position: absolute; right: var(--s-4); bottom: var(--s-4); font: 700 20px/1 var(--font); color: var(--text-3); }
 .body-hero .bh-tap:active { background: var(--surface-2); }
 .timer-screen .seg.small span { padding-inline: 2px; }
+@media (max-width: 340px) { .timer-screen .seg.small span { font-size: 12px; } }
+.tour-card:focus { outline: none; } /* after a tap focus lands on the card (so VoiceOver reads it), with no ring */

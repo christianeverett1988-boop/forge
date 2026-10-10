@@ -17,6 +17,7 @@ Issue #64, first pass. No Cloud Functions, `firestore.rules`, `firebase.json` or
 - Pages scroll with `scroll-padding-top` so jumps don't land under the nav bar.
 - Tests: `tests/v0156.test.js` pins the CSS/markup rules and the insight maths.
 - **Review round 1:** "In the tank" label sits above a row of six equal 44 px buttons; the Progress switcher is 44 px; Interval timer presets are one row of five equal segments with short labels (full names stay in the aria-label); Apple copy chips break identifiers only after `_`, with "Copy" in a fixed column; insight numbers use one decimal for weight, "ml/kg/min" for VO₂max, "2 h 34 min/night" for long sleep changes and a real minus sign; Body shows "Today / last workout" and the two tappable tiles get a chevron and press feedback; the tour's Next keeps one offset keyboard focus ring.
+- **Review round 2:** "Done set" is pinned to the bottom of the player (with the "Next:" line), and the exercise picture and big rep number shrink a little on short phones. The "In the tank" buttons and timer presets fit on 320 px screens. Body tiles stay equal width ("Today" scales to fit). The tour's Next button only gets a focus ring for keyboard users; after a tap, focus goes to the card. Insights read "−0.6% body fat", "−1.5 on the visceral fat index" and "−6 bpm", and never show a zero change.
 
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
 

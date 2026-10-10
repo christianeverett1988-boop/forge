@@ -75,6 +75,9 @@ body.playing .navbar { display: none; }
 .pl-rir button { min-width: 0; height: 44px; border-radius: 10px; border: 0; background: var(--surface-2); color: var(--muted); font: 700 14px var(--num); cursor: pointer; }
 .pl-rir button.on { background: var(--text-1); color: var(--bg); }
 
+@media (max-width: 340px) { .pl-rir { gap: 2px; } }
+@media (max-height: 700px) { .pl-demo.has-fig { height: 120px; } .pl-hero-n b { font-size: 64px; } }
+
 /* The big Done button is a <label> with an invisible native switch over it (haptic tick on iOS 18+). */
 .haptic-btn { position: relative; display: grid; place-items: center; cursor: pointer; user-select: none; -webkit-user-select: none; }
 .haptic-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0.001; cursor: pointer; z-index: 2; }
@@ -84,6 +87,8 @@ body.playing .navbar { display: none; }
 }
 .pl-done:active { transform: scale(.97); }
 .pl-done.is-done { background: var(--accent-tint); color: var(--accent-text); box-shadow: none; }
+/* Done set stays pinned to the bottom of the screen (clear of the home indicator), however short the phone. */
+.pl-dock { position: sticky; bottom: 0; z-index: 3; display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 10px 0 calc(var(--safe-bottom) + 4px); background: linear-gradient(to top, var(--bg) 88%, transparent); }
 .pl-next { text-align: center; color: var(--muted); font-size: 15px; }
 .pl-next b { color: var(--text); }
 .pl-nav { display: flex; justify-content: space-between; gap: 8px; }
@@ -161,11 +166,12 @@ body.playing .navbar { display: none; }
 @keyframes grow-w { to { transform: scaleX(1); } }
 
 /* Body */
-.body-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.body-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .body-hero div { background: var(--surface); border: 0; border-radius: var(--r-xl); padding: var(--s-4); display: flex; flex-direction: column; }
 .body-hero b { font: 900 40px var(--num); color: var(--rec-green); }
 .body-hero div + div b { color: var(--text); }
 .body-hero b.bh-text { font: 800 20px var(--font); color: var(--text); line-height: 1.2; }
+.body-hero b.bh-word { font-size: clamp(28px, 10.5vw, 40px); }
 .body-hero div:first-child b, .body-hero b.bh-text { min-height: 48px; display: flex; align-items: center; }
 .body-hero span { color: var(--muted); font-size: 13px; font-weight: 700; }
 

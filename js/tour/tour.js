@@ -63,7 +63,7 @@ export async function startTour({ replay = false } = {}) {
   root.innerHTML = `
     <div class="tour-block"></div>
     <div class="tour-spot"></div>
-    <div class="tour-card">
+    <div class="tour-card" tabindex="-1">
       <div class="row between center"><p class="small muted" data-count></p><span class="tour-dots" data-dots aria-hidden="true"></span></div>
       <div class="stack tour-text" aria-live="polite"><h2 id="tour-title"></h2><p id="tour-body"></p></div>
       <div class="tour-actions">
@@ -89,6 +89,8 @@ export async function startTour({ replay = false } = {}) {
   root.appendChild(probe);
   const safeTop = () => 12 + (parseFloat(getComputedStyle(probe).paddingTop) || 0);
 
+  let lastInput = 'pointer'; // the Next pill takes focus (and its ring) only for keyboard users; after a tap the card does
+  const onPointer = () => { lastInput = 'pointer'; };
   let raf = 0;
   const place = () => {
     raf = 0;
@@ -134,10 +136,11 @@ export async function startTour({ replay = false } = {}) {
     else await pause(0);
     if (!active || at !== tour.index) return; // moved on while the screen was loading
     place();
-    q('[data-next]').focus({ preventScroll: true });
+    (lastInput === 'key' ? q('[data-next]') : card).focus({ preventScroll: true });
   }
 
   const onKey = (e) => {
+    lastInput = 'key';
     if (e.key === 'Escape') { e.preventDefault(); tour.skip(); } else if (e.key === 'ArrowRight') { tour.next(); if (!tour.ended) show(); } else if (e.key === 'ArrowLeft') { tour.back(); show(); } else if (e.key === 'Tab') {
       const btns = [...root.querySelectorAll('button:not([hidden])')];
       const i = btns.indexOf(document.activeElement);
@@ -156,6 +159,7 @@ export async function startTour({ replay = false } = {}) {
     removeEventListener('resize', schedule);
     removeEventListener('scroll', schedule);
     removeEventListener('keydown', onKey, true);
+    removeEventListener('pointerdown', onPointer, true);
     inertEls.forEach((e) => { e.inert = false; });
     document.body.classList.remove('tour-on');
     root.remove();
@@ -173,6 +177,7 @@ export async function startTour({ replay = false } = {}) {
   addEventListener('resize', schedule);
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('keydown', onKey, true);
+  addEventListener('pointerdown', onPointer, true);
   if (main) observer.observe(main, { childList: true, subtree: true });
   try {
     await show();

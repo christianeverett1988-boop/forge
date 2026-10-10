@@ -75,7 +75,7 @@ export function renderBody(el) {
       <div class="body-hero">
         <button type="button" class="bh-tile bh-tap" data-goto-recovery><b data-count>${fresh}</b><span>fresh muscle groups</span></button>
         ${days == null ? '<a class="bh-tile bh-tap" href="#/train" data-no-workouts><b>0</b><span>Start your first workout</span></a>'
-          : days === 0 ? '<div class="bh-tile"><b>Today</b><span>last workout</span></div>'
+          : days === 0 ? '<div class="bh-tile"><b class="bh-word">Today</b><span>last workout</span></div>'
           : `<div class="bh-tile"><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
       </div>
       <div class="card" data-tour="body-recovery" id="body-recovery" tabindex="-1">

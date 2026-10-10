@@ -51,7 +51,9 @@ test('tap targets: RIR row, Progress switcher, timer presets in one equal row', 
 
 test('Body tiles: tappable ones get a chevron, "Today" for same-day workouts', () => {
   const b = src('js/screens/body.js');
-  assert(b.includes('<b>Today</b><span>last workout</span>') && !b.includes('(today)'));
+  assert(b.includes('<b class="bh-word">Today</b><span>last workout</span>') && !b.includes('(today)'));
+  const pc = src('css/player.css');
+  assert(pc.includes('grid-template-columns: repeat(2, minmax(0, 1fr))') && /\.bh-word \{ font-size: clamp\(28px, 10\.5vw, 40px\)/.test(pc), 'equal tiles; the word scales to fit');
   assert(/bh-tile bh-tap" data-goto-recovery/.test(b) && /bh-tile bh-tap" href="#\/train"/.test(b));
   assert(/\.bh-tap::after \{[^}]*--text-3/.test(src('css/app.css')) && src('css/app.css').includes('.bh-tap:active'));
 });
@@ -77,6 +79,38 @@ test('insight wording: grammar, units and the real change over the window', () =
   assert(Math.abs(parseFloat(w.slice(1)) - 1.12 * 2.20462) / (1.12 * 2.20462) < 0.05, `weight change within 5%: ${w}`);
   const ins = src('js/health/insights.js');
   assert(ins.includes("'are' : 'is'"), 'plural labels say "are"');
+});
+
+test('insight wording: one case per kind, never a zero change', () => {
+  eq(fmtChange('fat_ratio_pct', -0.155, 28, 'metric'), '−0.6% body fat');
+  eq(fmtChange('visceral_fat', -0.385, 28, 'metric'), '−1.5 on the visceral fat index');
+  eq(fmtChange('rhr_bpm', -1.6, 28, 'metric'), '−6 bpm');
+  eq(fmtChange('heart_pulse_bpm', 1.6, 28, 'metric'), '+6 bpm');
+  eq(fmtChange('muscle_mass_kg', 0.25, 28, 'metric'), '+1.0 kg');
+  eq(fmtChange('exercise_min', 2.5, 28, 'metric'), '+10 min/day');
+  eq(fmtChange('weight_kg', 0.001, 28, 'imperial'), null);
+  eq(fmtChange('rhr_bpm', 0.05, 28, 'metric'), null);
+  eq(fmtChange('hrv_sdnn_ms', 0.01, 28, 'metric'), null);
+  eq(fmtChange('steps', 0.05, 28, 'metric'), null);
+  eq(fmtChange('vo2max', 0.001, 28, 'metric'), null);
+  assert(src('js/health/insights.js').includes('About the same as'), 'a zero change reads "about the same"');
+});
+
+test('tour: focus goes to the Next pill only after a key press, otherwise to the card', () => {
+  const t = src('js/tour/tour.js');
+  assert(t.includes('class="tour-card" tabindex="-1"'));
+  assert(t.includes("lastInput = 'key'") && t.includes("lastInput = 'pointer'") && t.includes("addEventListener('pointerdown', onPointer, true)"));
+  assert(t.includes("(lastInput === 'key' ? q('[data-next]') : card).focus("));
+  assert(/\.tour-card:focus \{ outline: none/.test(src('css/app.css')));
+});
+
+test('player: Done set is pinned in a dock; RIR and timer tighten at 320px', () => {
+  const p = src('css/player.css');
+  assert(/\.pl-dock \{[^}]*position: sticky; bottom: 0[^}]*safe-bottom/.test(p));
+  const j = src('js/screens/player.js');
+  assert(j.indexOf('class="pl-dock"') < j.indexOf('data-done-label') && j.indexOf('data-done-label') < j.indexOf('class="pl-nav"'));
+  assert(/max-width: 340px\) \{ \.pl-rir \{ gap: 2px/.test(p) && /max-height: 700px\) \{ \.pl-demo\.has-fig/.test(p));
+  assert(/max-width: 340px\) \{ \.timer-screen \.seg\.small span \{ font-size: 12px/.test(src('css/app.css')));
 });
 
 test('rings legend: short titles, sets as three rows without separators', () => {
