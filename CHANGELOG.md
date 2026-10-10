@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.15.7 — Fit-and-finish, part 2: large text, stale readings, Today and a layout test (2026-10-10)
+
+Issue #64, second pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 25–31 (Change sheet, update-on-resume, iPhone Duo) are **not** in this release. If #65 (v0.15.5) merges after this one, rebase and fix the CHANGELOG order.
+
+- **Large text (item 16):** every font size and line height up to 28 px now scales with iOS Settings → Text Size (up to 135%) through one `--ts` variable (`js/ui/textsize.js`). Buttons wrap their label instead of clipping, and a pair of buttons stacks when both don't fit on a row.
+- **Nav bar (21):** stronger glass (about 84–88% opaque, plus the blur) so text scrolling under it is never half-readable; "What is this?" uses the shared `.learn-more` disclosure; the large title collapses exactly when the heading itself passes under the bar.
+- **Body composition (20):** a reading older than your latest weigh-in says "2 days ago" or "Sep 23" in quiet grey (no orange) on one line; readings older than 90 days sit behind "Show older (n)"; Standing HR is explained under the tiles.
+- **Progress photos card (22):** lime accent card with a filled camera disc, "See your change, not just the scale" and a "Take photos" pill. With photos it shows "Last set …" and "Next check-in in N days".
+- **Today (density):** "See meals", "See plan" and "See chart" moved into the card headers; Start sits beside the workout title; Log food sits beside the Food ring; Log weight sits on the goal row; one insight instead of two; 12 px between cards; a smaller Score ring.
+- **Rings legend:** the ring column is 16 px narrower so "Weekly sets" fits at 375.
+- **Player:** the footer says "Undo set" so it stays on one line at 320 px; on very short phones the How-To strip names the main muscle (for example "Chest") instead of being an empty bar.
+- **Small labels:** Body tile says "fresh muscles"; Settings rows "Export all (JSON)", "Export body data (CSV)", "Replay the how-to tour", "Delete all photos".
+- **Standing layout test (`tests/layout.test.js`):** boots the real app in headless Chromium (no npm packages, Firebase stubbed, synthetic account) and renders Today, Train, Body, Weight, Trends, Timer, History, Settings, Apple Health, Food, Awards, Locations and Library at 320×568, 375×667, 390×844 and 440×956, dark and light, plus long-name/4-digit-calorie data and a 130% text-size case. It fails on text that wraps in a chip, pill, button or label, clipped text or ellipsis, tap targets under 44 px, sideways overflow, content under the tab bar and layout shift. It runs inside `node tests/run.js` (skipped with a note when no Chrome is installed; `--no-layout` skips it) and in CI. Run one screen with `node tests/layout.test.js --routes=today --size=375 --shots=tests/.shots`.
+- Tests: `tests/v0157.test.js` pins the stale-reading captions, the text scale, the photos card, the Today markup and the CSS rules.
+- **Review round 1:** workout meta is "4 exercises · 41 min" with the place on its own ellipsised line; goal sentence gets a full-width line with dates kept together (Today and Body goal path); "+ Log weight" is one flex item; "Plates" tile; buttons wrap only between words (`overflow-wrap: break-word`); layout test skips on Node below 22 and creates the `--shots` folder; Standing HR note shows whenever an HR tile exists.
+- **Review round 2:** the Standing HR note renders inside "Show older" when the HR tile is there, and under the grid when it is fresh; the goal-path chart label is "Goal 181 lb" at the left end of the goal line so the projection never covers it.
+
 ## 0.15.6 — Fit-and-finish, part 1: chips, steppers and Body (2026-10-10)
 
 Issue #64, first pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 16, 20, 22, 25, 26 and 27–31 (large text, stale body readings, photos card accent, the Change sheet, update-on-resume, iPhone Duo layouts) are **not** in this release.

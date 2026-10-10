@@ -57,14 +57,14 @@ function foodCard(t) {
     <div class="food-card-top">
       ${foodRingSvg(tot, t, aria)}
       <div class="food-card-text">
-        <p class="label">Food</p>
+        <div class="row between center card-head"><p class="label">Food</p><a class="card-link" href="#/food">See meals${icon('chev', { size: 14 })}</a></div>
         <p class="food-card-kcal"><b>${n(tot.kcal)}</b> <small>of ${n(t.calories)} kcal</small></p>
         <p class="small ${sum.over ? 'over' : 'muted'}">${esc(sum.note)}</p>
         <p class="small muted">${esc(sum.protein)}</p>
+        <button class="btn small" data-food-log>Log food</button>
       </div>
     </div>
     ${macroTilesHtml(tot, t)}
-    <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div>
     <details class="food-why">
       <summary>Why these numbers?</summary>
       <ul class="reasons">${t.reasoning.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
@@ -107,11 +107,12 @@ function workoutCard() {
   }
   const plan = previewPlan(); // with any edits you made on Train
   if (!plan || !plan.exercises.length) return '';
-  return `<div class="card" data-tour="workout"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p>
-    <p class="big-title">${esc(plan.label)}</p>
-    <p class="small muted">${plan.exercises.length} exercises · about ${plan.est_minutes} min · ${esc(plan.location.name)}</p>
+  return `<div class="card" data-tour="workout"><div class="row between center card-head"><p class="label">Today’s workout${plan.deload ? ' · deload' : ''}</p><a class="card-link" href="#/train">See plan${icon('chev', { size: 14 })}</a></div>
+    <div class="row between center gap"><div class="grow-min"><p class="big-title">${esc(plan.label)}</p>
+    <p class="small muted">${plan.exercises.length} exercises · ${plan.est_minutes} min</p>
+    <p class="small muted one-line" data-layout-ok data-workout-place>${esc(plan.location.name)}</p></div><button class="btn small" data-start>Start</button></div>
     ${plan.readiness ? `<p class="small ${plan.readiness === 'red' ? 'warn' : 'muted'}">Readiness ${plan.readiness}: ${plan.readiness === 'red' ? 'a lighter day' : 'one less set on accessories'}</p>` : ''}
-    <div class="row gap"><button class="btn grow" data-start>Start</button><a class="btn ghost grow" href="#/train">See plan</a></div></div>`;
+  </div>`;
 }
 
 const LEVEL_WORD = { green: 'Green', amber: 'Amber', red: 'Red' };
@@ -159,7 +160,7 @@ function scoreCard() {
   const s = currentScore();
   if (s.score == null) return '';
   return `<a class="card score-card" href="#/score" data-score>
-    <div class="score-mini">${ringSvg(s.score, { size: 84, stroke: 9 })}<b data-count>${round(s.score)}</b></div>
+    <div class="score-mini">${ringSvg(s.score, { size: 84, stroke: 11 })}<b data-count>${round(s.score)}</b></div>
     <div><p class="label" style="margin:0">Forge Score</p><p class="small muted">7-day average${s.movers[0] ? ` · ${esc(s.movers[0].label)} ${s.movers[0].delta >= 0 ? 'up' : 'down'}` : ''}</p></div>
     <span class="chev" aria-hidden="true">${icon('chev')}</span></a>`;
 }
@@ -180,7 +181,7 @@ function insightsBlock() {
   const r = currentReadiness();
   // Readiness already says "short sleep" when it is amber or red for sleep: don't say it twice.
   const sleepShown = r.status === 'ok' && r.level !== 'green' && (r.parts || []).some((p) => p.key === 'sleep' && (p.dir === 'bad' || p.dir === 'low'));
-  const cards = topInsights(4).filter((c) => !(sleepShown && c.id === 'anomaly:sleep')).slice(0, 2);
+  const cards = topInsights(4).filter((c) => !(sleepShown && c.id === 'anomaly:sleep')).slice(0, 1);
   return cards.length ? `<div class="insights stack" data-insights>${compactInsightsHtml(cards)}</div>` : '';
 }
 
@@ -197,7 +198,7 @@ export function renderToday(el) {
   const change = trendChange(series, 7);
   const goal = state.profile.goal;
   const goalKg = state.profile.targetWeightKg;
-  const fmtGoalDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) });
+  const fmtGoalDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) }).replace(/ /g, ' '); // keep a date together
   const goalSentence = goalKg ? goalLine(currentGoalPath(), fmtGoalDay) : ''; // same fit as the Goal path card
 
   // Arrow color: green when the trend moves the way your goal wants.
@@ -216,7 +217,7 @@ export function renderToday(el) {
 
   const ringsBefore = snapshotRings($('.rings-card', el)); // a data refresh redraws Today: the arcs glide on from here
   el.innerHTML = `
-    <section class="stack">
+    <section class="stack today-stack">
       <header class="today-head">
         <p class="muted">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         <h1>${greeting()}</h1>
@@ -255,19 +256,16 @@ export function renderToday(el) {
       ${missionsCard()}
 
       <div class="card weight-card">
+        <div class="row between center card-head"><p class="label">Weight trend</p><a class="card-link" href="#/weight">See chart${icon('chev', { size: 14 })}</a></div>
         <div class="row between center">
           <div>
-            <p class="label">Weight trend</p>
             <p class="hero-num">${latest ? `<span data-count>${weightToDisplay(latest.trend, u).toFixed(1)}</span> <small>${weightUnit(u)}</small>` : '—'}</p>
             <p class="small ${tone}">${change == null ? 'Log a few days to see your trend' : `${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week`}</p>
           </div>
           ${sparklineSVG(series)}
         </div>
         ${goalSentence ? `<p class="small muted" data-goal-line>${esc(goalSentence)}</p>` : ''}
-        <div class="row gap">
-          <button class="btn grow" data-log>Log weight</button>
-          <a class="btn ghost grow" href="#/weight">See chart</a>
-        </div>
+        <div class="row end"><button class="btn small" data-log>Log weight</button></div>
       </div>
 
       ${programLine()}

@@ -13,14 +13,14 @@ export function photoSettingsHtml() {
   return `
       <p class="sec-title">Progress photos</p>
       <div class="group" data-photo-settings>
-        <label class="g-row"><span class="g-text"><span>Weekly reminder</span><small>A card on Today until you take the week’s photos.</small></span>
+        <label class="g-row"><span class="g-text"><span>Reminder</span><small>A card on Today until you take the week’s photos.</small></span>
           <select name="photo-remind" aria-label="Weekly photo reminder day">
             <option value="off" ${dow == null ? 'selected' : ''}>Off</option>
             ${DOW_NAMES.map((n, i) => `<option value="${i}" ${dow === i ? 'selected' : ''}>${n}</option>`).join('')}
           </select></label>
-        <a class="g-row" href="#/photos"><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Open progress photos</span><small data-photo-usage>&nbsp;</small></span><span class="chev">${icon('chev')}</span></a>
+        <a class="g-row" href="#/photos"><span class="g-ic">${icon('camera')}</span><span class="g-text"><span>Progress photos</span><small data-photo-usage>&nbsp;</small></span><span class="chev">${icon('chev')}</span></a>
         <button class="g-row" data-photo-export><span class="g-ic">${icon(isNative() ? 'share' : 'download')}</span><span class="g-text"><span>Export all photos (zip)</span><small>Your backup. Save it to Files or iCloud Drive.</small></span></button>
-        <button class="g-row g-danger" data-photo-wipe><span class="g-ic">${icon('trash')}</span><span class="g-text"><span>Delete all photos on this phone</span></span></button>
+        <button class="g-row g-danger" data-photo-wipe><span class="g-ic">${icon('trash')}</span><span class="g-text"><span>Delete all photos</span></span></button>
       </div>
       <p class="sec-foot">Photos stay on this iPhone only. They aren’t backed up by Forge. ${photoLossLine(isNative())}</p>`;
 }

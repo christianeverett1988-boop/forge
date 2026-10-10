@@ -2,7 +2,7 @@
 [data-photos-slot]:empty, [data-photo-reminder]:empty { display: none; }
 .center-text { text-align: center; }
 
-.pp-date { font-size: 17px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pp-date { font-size: calc(17px * var(--ts)); line-height: calc(22px * var(--ts)); font-weight: 600; font-variant-numeric: tabular-nums; }
 .pp-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
 .pp-thumb {
   position: relative; display: block; aspect-ratio: 3 / 4; padding: 0; border: 0; border-radius: var(--r-md);
@@ -11,7 +11,7 @@
 .pp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pp-thumb > span {
   position: absolute; left: var(--s-2); bottom: var(--s-2); padding: 2px 8px; border-radius: var(--r-pill);
-  background: var(--glass-float); color: var(--text-1); font-size: 12px; font-weight: 600;
+  background: var(--glass-float); color: var(--text-1); font-size: calc(12px * var(--ts)); font-weight: 600;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
 .pp-thumb.empty { cursor: default; border: 1px dashed var(--separator); background: none; }
@@ -39,8 +39,8 @@
 .cp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
 .cp-pair figure { margin: 0; display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
 .cp-pair img, .cp-stage img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--r-md); background: var(--surface-2); display: block; }
-.cp-pair figcaption { font-size: 13px; line-height: 18px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.cp-pair figcaption b { color: var(--text-1); display: block; font-size: 15px; }
+.cp-pair figcaption { font-size: calc(13px * var(--ts)); line-height: calc(18px * var(--ts)); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cp-pair figcaption b { color: var(--text-1); display: block; font-size: calc(15px * var(--ts)); }
 .cp-days { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cp-stage {
   position: relative; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: var(--r-md); overflow: hidden;
@@ -57,7 +57,7 @@
   background: var(--glass-float); border: 2px solid var(--text-1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .cp-stage .cp-tag {
-  position: absolute; top: var(--s-2); padding: 2px 8px; border-radius: var(--r-pill); background: var(--glass-float); font-size: 12px; font-weight: 600;
+  position: absolute; top: var(--s-2); padding: 2px 8px; border-radius: var(--r-pill); background: var(--glass-float); font-size: calc(12px * var(--ts)); font-weight: 600;
 }
 .cp-stage .cp-tag.l { left: var(--s-2); }
 .cp-stage .cp-tag.r { right: var(--s-2); }
@@ -68,4 +68,13 @@
 .tl-progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width var(--dur-fast, 150ms) ease; }
 @media (prefers-reduced-motion: reduce) { .tl-progress i { transition: none; } }
 .g-row.disabled { opacity: .55; }
-.g-row select { width: auto; max-width: 48%; min-height: 40px; flex: none; }
+.g-row select { width: auto; max-width: 48%; min-height: 44px; flex: none; }
+
+/* Progress photos card (v0.15.7): accent invitation when empty. Tokens only. */
+.pp-promo { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface-1)), var(--surface-1)); gap: var(--s-3); }
+.pp-disc { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); }
+.pp-disc svg { width: 22px; height: 22px; }
+.pp-promo-text { display: flex; flex-direction: column; min-width: 0; }
+.pp-promo-text b { font-size: calc(17px * var(--ts)); }
+.pp-promo-text span { color: var(--text-2); font-size: calc(15px * var(--ts)); line-height: calc(20px * var(--ts)); }
+.pp-cta { width: 100%; justify-content: center; pointer-events: none; }

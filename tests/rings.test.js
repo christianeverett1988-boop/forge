@@ -92,5 +92,5 @@ test('rings: cardio counts as a training day', () => {
 test('rings: a deload week lowers the weekly sets target and says so', () => {
   const r = todayRings({ workouts: [], profile: { experience: 'intermediate' }, exerciseById: byId, now: NOW, deload: true })[1];
   eq(r.per, Math.round(WEEKLY_SET_TARGET.intermediate * 0.5));
-  eq(r.label, 'Weekly sets · deload');
+  eq(r.label, 'Sets · deload');
 });

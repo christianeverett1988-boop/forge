@@ -9,6 +9,7 @@ import { viewTransition, animateCounters, resetCounters, reducedMotion } from '.
 import { loadPhotoIndex } from './ui/photos.js';
 import { navBar, hideNavBar, screenNav } from './ui/navbar.js';
 import { hapticTabs, hapticSegments } from './ui/haptic.js';
+import { setupTextSize } from './ui/textsize.js';
 import { enhanceSegs } from './ui/controls.js';
 import { attachPull, detachPull, canPullSync, waitAtMost, PULL_WAIT_MS } from './ui/pull.js';
 import { call } from './functions.js';
@@ -21,6 +22,8 @@ const nav = document.getElementById('nav');
 const syncPill = document.getElementById('sync');
 const offlineBanner = document.getElementById('offline');
 const scrollMemory = createScrollMemory();
+
+setupTextSize(); // follow iOS Settings → Text Size (web and app)
 
 // ---------- the iPhone app (Capacitor shell) ----------
 if (isNative()) {

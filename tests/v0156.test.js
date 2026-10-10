@@ -18,7 +18,7 @@ test('Food markup uses its scoped classes; the player keeps .stepper', () => {
   const f = src('js/screens/food.js');
   assert(!f.includes('class="stepper"') && !/class="chips"/.test(f), 'food.js uses .serv-stepper / .meal-chips');
   assert(f.includes('serv-stepper') && f.includes('meal-chips'));
-  assert(src('css/player.css').includes('.stepper { display: grid; grid-template-columns: 56px 1fr 56px'));
+  assert(src('css/player.css').includes('.stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px'));
 });
 
 test('one .chip-btn definition: pill radius in app.css only', () => {
@@ -110,7 +110,7 @@ test('player: Done set is pinned in a dock; RIR and timer tighten at 320px', () 
   const j = src('js/screens/player.js');
   assert(j.indexOf('class="pl-dock"') < j.indexOf('data-done-label') && j.indexOf('data-done-label') < j.indexOf('class="pl-nav"'));
   assert(/max-width: 340px\) \{ \.pl-rir \{ gap: 2px/.test(p) && /max-height: 700px\) \{\s*\.pl-demo\.has-fig/.test(p));
-  assert(/max-width: 340px\) \{ \.timer-screen \.seg\.small span \{ font-size: 12px/.test(src('css/app.css')));
+  assert(/max-width: 340px\) \{ \.timer-screen \.seg\.small span \{ font-size: calc\(12px/.test(src('css/app.css')));
 });
 
 test('rings legend: short titles, sets as three rows without separators', () => {

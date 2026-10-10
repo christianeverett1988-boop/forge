@@ -129,11 +129,11 @@ export function renderTrain(el) {
       </a>
 
       <div class="tools">
-        <a class="tool" href="#/timer"><span class="t-ic" aria-hidden="true">${icon('timer')}</span>Interval timer</a>
+        <a class="tool" href="#/timer"><span class="t-ic" aria-hidden="true">${icon('timer')}</span>Timer</a>
         <button class="tool" data-cardio><span class="t-ic" aria-hidden="true">${icon('bike')}</span>Log cardio</button>
-        <button class="tool" data-plates><span class="t-ic" aria-hidden="true">${icon('dumbbell')}</span>Plate calculator</button>
-        <a class="tool" href="#/library"><span class="t-ic" aria-hidden="true">${icon('book')}</span>Exercise library</a>
-        <a class="tool" href="#/history"><span class="t-ic" aria-hidden="true">${icon('chart')}</span>History &amp; PRs</a>
+        <button class="tool" data-plates><span class="t-ic" aria-hidden="true">${icon('dumbbell')}</span>Plates</button>
+        <a class="tool" href="#/library"><span class="t-ic" aria-hidden="true">${icon('book')}</span>Exercises</a>
+        <a class="tool" href="#/history"><span class="t-ic" aria-hidden="true">${icon('chart')}</span>History</a>
       </div>
     </section>`;
 

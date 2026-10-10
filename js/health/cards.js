@@ -6,7 +6,7 @@ import { weightToDisplay, weightUnit, formatWeight } from '../units.js';
 import { FFMI_BANDS, FMI_BANDS } from './bodyprofile.js';
 import { icon, emptyState } from '../ui/icons.js';
 
-const fmtDate = (key, withYear = false) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) });
+const fmtDate = (key, withYear = false) => new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) }).replace(/ /g, ' '); // a date never splits across lines
 
 // ---- insight cards ----
 
@@ -104,7 +104,7 @@ export function goalPathSvg(path, series, today, goalKg, units, { width = 340, h
     proj = `<polygon class="gp-band" points="${x0},${y0} ${x(path.earlyDay).toFixed(1)},${g} ${slow}"/>
       <line class="gp-proj" x1="${x0}" y1="${y0}" x2="${x(path.etaDay).toFixed(1)}" y2="${g}"/>
       <line class="gp-goal" x1="${L}" x2="${width - R}" y1="${g}" y2="${g}"/>
-      <text x="${width - R}" y="${(Number(g) - 4).toFixed(1)}" class="axis" text-anchor="end">goal ${esc(formatWeight(goalKg, units, 0))}</text>`;
+      <text x="${L + 4}" y="${(Number(g) - 4).toFixed(1)}" class="axis" text-anchor="start">Goal ${esc(formatWeight(goalKg, units, 0))}</text>`;
   }
   const disp = (kg) => weightToDisplay(kg, units).toFixed(0);
   return `<svg viewBox="0 0 ${width} ${height}" class="chart goalpath" role="img" aria-label="Weight trend and projection to your goal">
@@ -172,7 +172,7 @@ export function bodyProfileHtml(bp, { sex, age }) {
   }
   return `<div class="card stack" data-bodyprofile>
     <p class="label">Body profile</p>${inner}
-    <details><summary>What is this?</summary>
+    <details class="learn-more"><summary>What is this?</summary>
       <p class="small muted" style="margin-top:8px">FFMI is your lean mass divided by height squared. FMI is your fat mass divided by height squared. Putting both on one grid tells you more than BMI, which can’t tell muscle from fat. Based on Kyle UG et al., “Body composition interpretation”, Nutrition 2003;19:597-604. The bands are approximate adult reference ranges for ${who}, not adjusted for age. General information, not medical advice.</p>
     </details>
   </div>`;

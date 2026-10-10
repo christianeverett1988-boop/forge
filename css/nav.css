@@ -40,20 +40,20 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .nb-back {
   pointer-events: auto; justify-self: start;
   display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; white-space: nowrap; min-height: 44px; min-width: 44px; padding: 0 10px 0 4px;
-  border: 0; background: none; color: var(--accent-text); font: 17px var(--font); cursor: pointer;
+  border: 0; background: none; color: var(--accent-text); font: calc(17px * var(--ts)) var(--font); cursor: pointer;
 }
 .nb-back[hidden] { display: none; }
 /* Title squeezed too hard: keep just the chevron (the aria-label still names the destination). */
 .nb-back.icon-only span { display: none; }
 .nb-back svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .nb-title {
-  grid-column: 2; margin: 0; font-size: 17px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  grid-column: 2; margin: 0; font-size: calc(17px * var(--ts)); font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   opacity: 0; transform: translateY(6px);
   transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-spring);
 }
 .navbar.collapsed .nb-title { opacity: 1; transform: none; }
 .nb-status {
-  grid-column: 3; justify-self: end; margin-right: 8px; font-size: 13px; font-weight: 600; color: var(--text-2);
+  grid-column: 3; justify-self: end; margin-right: 8px; font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--text-2);
   display: inline-flex; align-items: center; gap: 6px;
 }
 .nb-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -69,7 +69,7 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .offline-banner {
   position: fixed; z-index: 6; left: 50%; top: calc(var(--safe-top) + 48px); translate: -50% 0;
   max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 999px; text-align: center;
-  font-size: 13px; font-weight: 600; color: var(--ember);
+  font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--ember);
   background: var(--glass-float); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   animation: vt-fade-in var(--t-med) var(--ease-out);
 }
@@ -88,7 +88,7 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .tabbar a {
   position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-height: 49px; color: var(--text-2); text-decoration: none; font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+  min-height: 49px; color: var(--text-2); text-decoration: none; font-size: calc(10.5px * min(var(--ts), 1.15)); font-weight: 600; letter-spacing: .01em;
 }
 .tabbar svg { width: 26px; height: 26px; stroke-linecap: round; stroke-linejoin: round; }
 .tabbar .ic-off { fill: none; stroke: currentColor; stroke-width: 1.9; }
@@ -102,18 +102,18 @@ a, button, label, summary, [role="tab"], .list li.tap, input[type="checkbox"], i
 .update-capsule {
   position: fixed; z-index: 20; left: 50%; top: calc(var(--safe-top) + 8px); translate: -50% 0;
   min-height: 44px; padding: 0 8px 0 18px; border: 0; border-radius: 999px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 12px; color: var(--text); font: 600 15px var(--font);
+  display: inline-flex; align-items: center; gap: 12px; color: var(--text); font: 600 calc(15px * var(--ts)) var(--font);
   background: var(--glass-float); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .5), inset 0 0 0 .5px var(--hairline);
 }
-.update-capsule b { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 7px 14px; font-size: 14px; }
+.update-capsule b { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 7px 14px; font-size: calc(14px * var(--ts)); }
 .update-capsule[hidden] { display: none; }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 84px); z-index: 30;
   translate: -50% 24px; opacity: 0;
   transition: opacity var(--t-med) var(--ease-out), translate var(--t-med) var(--ease-spring);
-  background: var(--glass-float); color: var(--text); font-weight: 600; font-size: 15px;
+  background: var(--glass-float); color: var(--text); font-weight: 600; font-size: calc(15px * var(--ts));
   -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .4), inset 0 0 0 .5px var(--hairline);
   padding: 12px 18px; border-radius: var(--r-pill); max-width: calc(100% - 32px); text-align: center; display: flex; align-items: center; justify-content: center; gap: var(--s-2);
