@@ -4,7 +4,7 @@ import { reducedMotion } from './motion.js';
 import { esc } from '../ui.js';
 import { icon } from './icons.js';
 
-const COLORS = { training: 'var(--ember)', sets: 'var(--accent-text)', recovery: 'var(--info)', calories: 'var(--warn)', protein: 'var(--text)' };
+const COLORS = { training: 'var(--ember)', sets: 'var(--accent-text)', recovery: 'var(--info)', calories: 'var(--food-kcal)', protein: 'var(--food-protein)' };
 // Recovery and the two food rings never burst (going over on calories isn't a win).
 const NO_BURST = new Set(['recovery', 'calories', 'protein']);
 // Canvas confetti can't read CSS variables, so the burst keeps plain colours.
@@ -15,19 +15,55 @@ const strokeFor = (n) => (n > 3 ? 9 : 13);
 const gapFor = (n) => (n > 3 ? 2 : 3);
 const radius = (i, n) => SIZE / 2 - strokeFor(n) / 2 - i * (strokeFor(n) + gapFor(n));
 
+/** How much of a second lap an over-target ring shows (0..1); 0 when not over. */
+export const overLap = (value) => (value > 1 ? Math.min(1, value - 1) : 0);
+
+const NB = ' '; // numbers never part from their units
+const num = (v) => Math.round(v).toLocaleString('en-US');
+
+/** The Food card's text lines: { note, over, protein }. Same wording rules as the Today rings legend. */
+export function foodSummary(tot, t) {
+  const left = Math.round(t.calories - tot.kcal);
+  return {
+    over: left < 0,
+    note: !tot.kcal ? 'Nothing logged yet' : left >= 0 ? `${num(left)}${NB}kcal left` : `${num(-left)}${NB}kcal over`,
+    protein: `${num(tot.protein_g)} of ${num(t.proteinG)}${NB}g protein`,
+  };
+}
+
+/** The Food card's little ring: calories outside, protein inside. Over the calorie target the lap turns warn with a darker second lap. */
+export function foodRingSvg(tot, t, aria) {
+  const arc = (r, w, v, color, deep) => {
+    const C = 2 * Math.PI * r;
+    const dash = (x) => (C * (1 - Math.max(0, Math.min(1, x || 0)))).toFixed(1);
+    const lap = deep ? `<circle cx="40" cy="40" r="${r}" fill="none" stroke="var(--warn-deep)" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${dash(deep)}" data-over/>` : '';
+    return `<circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" opacity=".16"/>
+    <circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${dash(v)}"/>${lap}`;
+  };
+  const kv = t.calories > 0 ? tot.kcal / t.calories : 0;
+  const over = kv > 1;
+  const pv = t.proteinG > 0 ? tot.protein_g / t.proteinG : 0;
+  return `<svg class="food-card-ring" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="${esc(aria)}"><g transform="rotate(-90 40 40)">${arc(35, 9, kv, over ? 'var(--warn)' : 'var(--food-kcal)', overLap(kv))}${arc(23, 9, pv, 'var(--food-protein)', 0)}</g></svg>`;
+}
+
 export function ringsHtml(rings) {
   const arcs = rings.map((r, i) => {
     const R = radius(i, rings.length);
     const sw = strokeFor(rings.length);
     const C = 2 * Math.PI * R;
     const v = Math.max(0, Math.min(1, r.value || 0));
-    return `<circle class="ring-track" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" style="stroke-width:${sw}px;stroke:${COLORS[r.key]}"/>
+    // Over target: the lap turns warn and the overflow is drawn as a darker second lap on top.
+    const col = r.over ? 'var(--warn)' : COLORS[r.key];
+    const over = r.over ? overLap(r.value) : 0;
+    const lap = over ? `<circle class="ring-arc ring-over" data-ring="${r.key}-over" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}"
+        stroke-dasharray="${C.toFixed(1)}" style="stroke-width:${sw}px;stroke:var(--warn-deep);--c:${C.toFixed(1)};--off:${(C * (1 - over)).toFixed(1)}"/>` : '';
+    return `<circle class="ring-track" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}" style="stroke-width:${sw}px;stroke:${col}"/>
       <circle class="ring-arc${v >= 1 && !NO_BURST.has(r.key) ? ' ring-closed' : ''}" data-ring="${r.key}" cx="${SIZE / 2}" cy="${SIZE / 2}" r="${R}"
-        stroke-dasharray="${C.toFixed(1)}" style="stroke-width:${sw}px;color:${COLORS[r.key]};stroke:${COLORS[r.key]};--c:${C.toFixed(1)};--off:${(C * (1 - v)).toFixed(1)}"/>`;
+        stroke-dasharray="${C.toFixed(1)}" style="stroke-width:${sw}px;color:${col};stroke:${col};--c:${C.toFixed(1)};--off:${(C * (1 - v)).toFixed(1)}"/>${lap}`;
   }).join('');
   const legend = rings.map((r) => `
-    <li style="--rc:${COLORS[r.key]}"><span class="ring-dot" aria-hidden="true"></span>
-      <span><b>${esc(r.label)}${r.value >= 1 && r.key !== 'calories' ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="muted">${esc(r.text)}</small></span></li>`).join('');
+    <li style="--rc:${r.over ? 'var(--warn)' : COLORS[r.key]}"><span class="ring-dot" aria-hidden="true"></span>
+      <span><b>${esc(r.label)}${r.value >= 1 && r.key !== 'calories' ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="${r.over ? 'warn' : 'muted'}">${esc(r.text)}</small></span></li>`).join('');
   const aria = rings.map((r) => `${r.label}: ${r.text}`).join('; ');
   return `<div class="rings" role="img" aria-label="${esc(aria)}">
     <svg class="rings-svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" aria-hidden="true"><g transform="rotate(-90 ${SIZE / 2} ${SIZE / 2})">${arcs}</g></svg>

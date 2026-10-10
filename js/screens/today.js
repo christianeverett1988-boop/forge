@@ -14,7 +14,7 @@ import { playerRoute, previewPlan, startPlan } from './train.js';
 import { todayRings } from '../workouts/rings.js';
 import { weekOf } from '../workouts/awards.js';
 import { exerciseById } from '../workouts/library.js';
-import { ringsHtml, animateRings } from '../ui/rings.js';
+import { ringsHtml, animateRings, foodSummary, foodRingSvg } from '../ui/rings.js';
 import { currentReadiness, currentScore, readinessOverridden, overrideReadiness } from '../health/today.js';
 import { ringSvg, animateScoreRings, round } from '../health/ui.js';
 import { icon } from '../ui/icons.js';
@@ -46,28 +46,20 @@ function foodToday(t) {
   return { kcal: tot.kcal, protein_g: tot.protein_g, targetKcal: t.calories, targetProtein: t.proteinG };
 }
 
-/** One arc of the Food card's little ring (r = radius, v = 0..1). */
-const foodArc = (r, w, v, color) => {
-  const C = 2 * Math.PI * r;
-  const off = C * (1 - Math.max(0, Math.min(1, v || 0)));
-  return `<circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" opacity=".16"/>
-    <circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>`;
-};
-
 /** The Food card, just under the workout: a calories ring with protein inside it, today's numbers, Log food and See meals. */
 function foodCard(t) {
   const tot = dayTotals(state.food_logs, todayKey());
   const n = (v) => Math.round(v).toLocaleString('en-US');
-  const left = Math.round(t.calories - tot.kcal);
-  const note = !tot.kcal ? 'Nothing logged yet' : left >= 0 ? `${n(left)} kcal left` : `${n(-left)} kcal over`;
+  const sum = foodSummary(tot, t);
   const aria = `Food today: ${n(tot.kcal)} of ${n(t.calories)} kcal, ${n(tot.protein_g)} of ${n(t.proteinG)} g protein`;
   return `<div class="card food-card" data-food-card data-tour="food">
     <div class="food-card-top">
-      <svg class="food-card-ring" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="${esc(aria)}"><g transform="rotate(-90 40 40)">${foodArc(35, 9, tot.kcal / t.calories, 'var(--warn)')}${foodArc(23, 9, tot.protein_g / t.proteinG, 'var(--text)')}</g></svg>
+      ${foodRingSvg(tot, t, aria)}
       <div class="food-card-text">
         <p class="label">Food</p>
         <p class="food-card-kcal"><b>${n(tot.kcal)}</b> <small>of ${n(t.calories)} kcal</small></p>
-        <p class="small muted">${esc(note)} · ${n(tot.protein_g)} of ${n(t.proteinG)} g protein</p>
+        <p class="small ${sum.over ? 'over' : 'muted'}">${esc(sum.note)}</p>
+        <p class="small muted">${esc(sum.protein)}</p>
       </div>
     </div>
     <div class="row gap"><button class="btn grow" data-food-log>Log food</button><a class="btn ghost grow" href="#/food">See meals</a></div></div>`;
@@ -223,7 +215,7 @@ export function renderToday(el) {
       ${readinessCard()}
 
       <div class="card rings-card">
-        <div class="row between center"><p class="label">This week · today’s food</p><a class="link small" href="#/awards">Awards ${icon('chev', { size: 14 })}</a></div>
+        <div class="row between center"><p class="label">Training and food</p><a class="link small" href="#/awards">Awards ${icon('chev', { size: 14 })}</a></div>
         ${ringsHtml(rings)}
       </div>
 

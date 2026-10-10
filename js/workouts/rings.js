@@ -61,8 +61,13 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
   // Today's food: calories in vs target, then protein. food: { kcal, protein_g, targetKcal, targetProtein }.
   if (food && food.targetKcal > 0) {
     const n = (v) => Math.round(v).toLocaleString('en-US');
-    out.push({ key: 'calories', label: 'Calories today', value: food.kcal / food.targetKcal, done: food.kcal, goal: food.targetKcal, text: `${n(food.kcal)} of ${n(food.targetKcal)} kcal` });
-    if (food.targetProtein > 0) out.push({ key: 'protein', label: 'Protein today', value: food.protein_g / food.targetProtein, done: food.protein_g, goal: food.targetProtein, text: `${n(food.protein_g)} of ${n(food.targetProtein)} g` });
+    const over = Math.round(food.kcal - food.targetKcal);
+    // Non-breaking spaces keep every number with its unit.
+    out.push({
+      key: 'calories', label: 'Calories today', value: food.kcal / food.targetKcal, done: food.kcal, goal: food.targetKcal, over: over > 0,
+      text: `${n(food.kcal)} of ${n(food.targetKcal)} kcal${over > 0 ? ` · ${n(over)} over` : ''}`,
+    });
+    if (food.targetProtein > 0) out.push({ key: 'protein', label: 'Protein today', value: food.protein_g / food.targetProtein, done: food.protein_g, goal: food.targetProtein, text: `${n(food.protein_g)} of ${n(food.targetProtein)} g` });
   }
   return out;
 }

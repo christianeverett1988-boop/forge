@@ -47,11 +47,35 @@ test('rings: calories and protein join when food is passed (US-style numbers), a
   const food = { kcal: 1850, protein_g: 120.4, targetKcal: 2200, targetProtein: 160 };
   const r = todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food });
   eq(r.map((x) => x.key).join(), 'training,sets,recovery,calories,protein');
-  eq(r[3].text, '1,850 of 2,200 kcal');
-  eq(r[4].text, '120 of 160 g');
+  eq(r[3].text, '1,850 of 2,200 kcal');
+  eq(r[4].text, '120 of 160 g');
+  assert(!r[3].over, 'under target is not over');
   near(r[3].value, 1850 / 2200, 1e-9);
   assert(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW }).length === 3, 'no food: three rings as before');
   eq(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food: { ...food, kcal: 2500 } })[3].value > 1, true, 'over target reads above 1');
+});
+
+test('rings: over the calorie target is flagged, says how far over, and draws a darker second lap', async () => {
+  const { ringsHtml, foodSummary, foodRingSvg } = await import('../js/ui/rings.js');
+  const food = { kcal: 3380, protein_g: 123, targetKcal: 2070, targetProtein: 181 };
+  const r = todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food });
+  eq(r[3].over, true);
+  eq(r[3].text, '3,380 of 2,070 kcal · 1,310 over');
+  const html = ringsHtml(r);
+  assert(html.includes('data-ring="calories-over"'), 'second lap drawn');
+  assert(html.includes('var(--warn-deep)') && html.includes('class="warn"'), 'warn colours');
+  const ok = ringsHtml(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food: { ...food, kcal: 1270 } }));
+  assert(!ok.includes('calories-over') && ok.includes('var(--food-kcal)') && !ok.includes('var(--warn)'), 'normal eating is not warn');
+  // The Food card: same rules, and number and unit never split.
+  const s = foodSummary({ kcal: 3380, protein_g: 123 }, { calories: 2070, proteinG: 181 });
+  eq(s.over, true);
+  eq(s.note, '1,310 kcal over');
+  eq(s.protein, '123 of 181 g protein');
+  assert(!/\d (kcal|g)\b/.test(s.note + s.protein), 'no plain space between a number and its unit');
+  const svg = foodRingSvg({ kcal: 3380, protein_g: 123 }, { calories: 2070, proteinG: 181 }, 'x');
+  assert(svg.includes('data-over') && svg.includes('var(--warn)'), 'card ring shows the over lap');
+  const calm = foodRingSvg({ kcal: 1270, protein_g: 110 }, { calories: 2070, proteinG: 181 }, 'x');
+  assert(!calm.includes('data-over') && !calm.includes('var(--warn)') && calm.includes('var(--food-protein)'), 'card ring is calm under target');
 });
 
 test('rings: cardio counts as a training day', () => {

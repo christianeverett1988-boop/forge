@@ -7,6 +7,7 @@
 .meter { height: 8px; border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
 .meter i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--accent); }
 .meter.over i { background: var(--warn); }
+.food-card .over { color: var(--warn); }
 /* Today's Food card: a calories ring with protein inside it, big tabular numbers, two big buttons. */
 .food-card-top { display: flex; align-items: center; gap: var(--s-4); }
 .food-card-ring { flex: none; display: block; overflow: visible; }

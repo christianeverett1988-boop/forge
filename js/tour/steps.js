@@ -17,8 +17,8 @@ export const TOUR_STEPS = [
   },
   {
     id: 'rings', route: 'today', target: '.rings-card',
-    title: 'Your week at a glance',
-    body: 'These rings fill up as you work out this week. Fill them all to hit your weekly goal.',
+    title: 'Your rings',
+    body: 'The three outer rings are your week of training: workouts, sets and recovery. The two inner rings are today’s food: calories and protein. Aim to hit your protein and stay near your calories. Going over turns the calorie ring orange.',
   },
   {
     id: 'workout', route: 'today', target: '[data-tour="workout"]',
