@@ -73,18 +73,12 @@ export function renderBody(el) {
     <section class="stack">
       <h1>Body</h1>
       <div class="body-hero">
-        <div><b data-count>${fresh}</b><span>fresh muscle groups</span></div>
-        ${days == null ? '<div data-no-workouts><b class="bh-text">No workouts yet</b><span>Your first one starts the count</span></div>'
-          : `<div><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
+        <button type="button" class="bh-tile bh-tap" data-goto-recovery><b data-count>${fresh}</b><span>fresh muscle groups</span></button>
+        ${days == null ? '<a class="bh-tile bh-tap" href="#/train" data-no-workouts><b>0</b><span>Start your first workout</span></a>'
+          : days === 0 ? '<div class="bh-tile"><b class="bh-word">Today</b><span>last workout</span></div>'
+          : `<div class="bh-tile"><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
       </div>
-      <div data-photos-slot></div>
-      ${insightCards()}
-      ${compositionCard()}
-      ${programsCard()}
-      ${goalPathCard()}
-      ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
-      <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
-      <div class="card" data-tour="body-recovery">
+      <div class="card" data-tour="body-recovery" id="body-recovery" tabindex="-1">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>
         ${bodyMap(rec, { mode: 'recovery', tappable: true })}
         <div class="bm-legend">
@@ -95,8 +89,22 @@ export function renderBody(el) {
         ${tired.length ? `<p class="small muted">Least recovered: ${tired.map((m) => `${esc(MUSCLE_LABELS[m])} ${rec[m]}%`).join(' · ')}</p>` : '<p class="small muted">Everything is recovered. Good day to train anything.</p>'}
         <p class="small muted">Based on your sets, effort and time since (big muscles ~72 h, small ~48 h).</p>
       </div>
+      <div data-photos-slot></div>
+      ${insightCards()}
+      ${compositionCard()}
+      ${programsCard()}
+      ${goalPathCard()}
+      ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
+      <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
     </section>`;
 
+  $('[data-goto-recovery]', el)?.addEventListener('click', () => {
+    const card = $('#body-recovery', el);
+    if (!card) return;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    if (!calm) card.animate([{ boxShadow: '0 0 0 0 var(--accent)' }, { boxShadow: '0 0 0 3px var(--accent)' }, { boxShadow: '0 0 0 0 var(--accent)' }], { duration: 900 });
+  });
   bindInsightCards(el, dismissInsight);
   bindProgramsCard(el);
   import('../photos/cards.js').then((m) => m.mountBodyPhotosCard($('[data-photos-slot]', el)));

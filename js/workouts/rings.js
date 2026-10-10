@@ -55,6 +55,7 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
     {
       key: 'sets', label: deload ? 'Weekly sets · deload' : 'Weekly sets', value: setsDone / (per * 3), done: setsDone, goal: per * 3,
       text: `${sets.push}/${per} push · ${sets.pull}/${per} pull · ${sets.legs}/${per} legs`, groups: sets, per,
+      lines: [`${sets.push}/${per} push`, `${sets.pull}/${per} pull`, `${sets.legs}/${per} legs`],
     },
     { key: 'recovery', label: 'Recovery', value: fresh / 100, done: fresh, goal: 100, text: `${fresh}% fresh` },
   ];
@@ -64,11 +65,11 @@ export function todayRings({ workouts = [], cardio = [], profile = {}, exerciseB
     const over = Math.round(food.kcal - food.targetKcal);
     // Non-breaking spaces keep every number with its unit.
     out.push({
-      key: 'calories', label: 'Calories today', value: food.kcal / food.targetKcal, done: food.kcal, goal: food.targetKcal, over: over > 0,
+      key: 'calories', label: 'Calories', value: food.kcal / food.targetKcal, done: food.kcal, goal: food.targetKcal, over: over > 0,
       text: `${n(food.kcal)} of ${n(food.targetKcal)}\u00a0kcal`,
       extra: over > 0 ? `${n(over)}\u00a0kcal over` : '',
     });
-    if (food.targetProtein > 0) out.push({ key: 'protein', label: 'Protein today', value: food.protein_g / food.targetProtein, done: food.protein_g, goal: food.targetProtein, text: `${n(food.protein_g)} of ${n(food.targetProtein)} g` });
+    if (food.targetProtein > 0) out.push({ key: 'protein', label: 'Protein', value: food.protein_g / food.targetProtein, done: food.protein_g, goal: food.targetProtein, text: `${n(food.protein_g)} of ${n(food.targetProtein)} g` });
   }
   return out;
 }

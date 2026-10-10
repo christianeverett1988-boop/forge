@@ -301,11 +301,13 @@ function drawSet(el) {
         ${[null, 0, 1, 2, 3, 4].map((r) => `<button data-rir="${r}" class="${draft.rir === r ? 'on' : ''}" aria-pressed="${draft.rir === r}">${r == null ? '–' : r === 4 ? '4+' : r}</button>`).join('')}
       </div>` : ''}
 
+      <div class="pl-dock">
       <label class="haptic-btn pl-done ${s.done ? 'is-done' : ''}" data-done-label>
         ${hapticInput('data-done aria-label="Done set"')}
         <span data-done-text>${s.done ? `${icon('check')} Done` : isTimed ? `Start ${draft.reps} s` : 'Done set'}</span>
       </label>
-      <p class="pl-next">${nextUp ? `Next: <b>${esc(nextUp.name)}</b> · ${esc(nextUp.detail)}` : 'Last one. Finish strong!'}</p>
+      <p class="pl-next">${nextUp ? `<span class="pl-next-name">Next: <b>${esc(nextUp.name)}</b></span><span class="pl-next-meta">· ${esc(nextUp.detail)}</span>` : 'Last one. Finish strong!'}</p>
+      </div>
       <nav class="pl-nav" aria-label="Sets">
         <button data-prev ${k === 0 ? 'disabled' : ''}>${icon('back', { size: 16 })} Back</button>
         <button data-undo>Undo last set</button>

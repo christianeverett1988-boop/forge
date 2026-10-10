@@ -133,7 +133,7 @@ export function nextTarget(ex, history, { inventory = {}, unit = 'lb', role = 's
     return {
       ...base, weight: null, reps: hi, mode: 'start',
       note: ex.timed ? `Hold as long as you can with good form (aim ${lo}–${hi}s).`
-        : loaded ? `First time: pick a weight you could lift about ${hi + 2} times. Do ${hi}.${options}`
+        : loaded ? `First time: pick a weight you could lift about ${hi + 2} times. Do ${hi}.${options}`
         : `First time: do ${lo}–${hi} clean reps per set.`,
     };
   }

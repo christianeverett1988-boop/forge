@@ -50,6 +50,41 @@ export function fmtAmount(metric, v, units) {
   }
 }
 
+const PLURAL_LABEL = new Set(['steps', 'exercise_min']);
+// Per-day series measured as a daily amount; the unit says so ("steps/day", "min/night").
+const DAILY_UNIT = { count: 'steps/day', sleep: 'min/night', minutes: 'min/day' };
+
+/** The change over the whole window with its unit: "+2,520 steps/day", "−0.6 lb". The fit slope is per week, so scale by weeks in the window. */
+export function fmtChange(metric, slopePerWeek, windowDays, units) {
+  const kind = (trendMetric(metric) || {}).kind;
+  const total = slopePerWeek * (windowDays / 7);
+  const sign = total < 0 ? '−' : '+'; // a real minus sign, not a hyphen
+  const a = Math.abs(total);
+  const one = (v) => (Number(v.toFixed(1)) === 0 ? null : v.toFixed(1)); // null: rounds to no change
+  const out = (txt) => (txt == null ? null : `${sign}${txt}`);
+  if (metric === 'vo2max') { const t = one(a); return out(t && `${t} ml/kg/min`); }
+  if (kind === 'mass') { const t = one(weightToDisplay(a, units)); return out(t && `${t} ${weightUnit(units)}`); }
+  if (kind === 'pct') { const t = one(a); return out(t && `${t}% body fat`); }
+  if (kind === 'index') { const t = one(a); return out(t && `${t} on the visceral fat index`); }
+  if (kind === 'bpm') return Math.round(a) === 0 ? null : out(`${Math.round(a)} bpm`);
+  if (kind === 'ms') { const t = one(a); return out(t && `${t} ms`); }
+  if (kind === 'sleep' || kind === 'minutes' || kind === 'count') {
+    const r = Math.round(a);
+    if (r === 0) return null;
+    if (kind === 'sleep' && r >= 60) return out(`${Math.floor(r / 60)} h${r % 60 ? ` ${r % 60} min` : ''}/night`);
+    return out(`${fmtAmount(metric, total, units).replace(/ (steps|min)$/, '')} ${DAILY_UNIT[kind]}`);
+  }
+  return out(fmtAmount(metric, total, units));
+}
+
+function trendBody(metric, tr, w, units) {
+  const span = w === 28 ? '4 weeks' : '3 months';
+  const change = fmtChange(metric, tr.slopePerWeek, w, units);
+  const kind = (trendMetric(metric) || {}).kind;
+  if (change == null) return `About the same as ${span} ago.`;
+  return DAILY_UNIT[kind] ? `${change} vs ${span} ago.` : `${change} over ${span}.`;
+}
+
 // What a rising / falling 28-day trend means and what to do, per metric. { why, todo } per direction.
 const TREND_COPY = {
   weight_kg: {
@@ -117,12 +152,13 @@ function trendCard(t, units) {
   if (!tr.enough || tr.direction === 'flat') return null;
   const copy = (TREND_COPY[t.key] || {})[tr.direction];
   if (!copy) return null;
+  if (fmtChange(t.key, tr.slopePerWeek, w, units) == null) return null; // rounds to no change: no card
   const ratio = Math.abs(tr.slopePerWeek) / (NOISE_FLOOR[t.key] || 1);
   const severity = Math.min(0.7, 0.15 + 0.08 * ratio + (t.tone === 'bad' ? 0.1 : 0));
   return {
     id: `trend:${t.key}:${tr.direction}`, kind: 'trend', metric: t.key, severity, day: t.last.day,
-    title: `${t.label} is trending ${tr.direction === 'up' ? 'up' : 'down'}`,
-    body: `About ${fmtAmount(t.key, tr.slopePerWeek, units)} a week over the last ${w === 28 ? '4 weeks' : '3 months'}.`,
+    title: `${t.label} ${PLURAL_LABEL.has(t.key) ? 'are' : 'is'} trending ${tr.direction === 'up' ? 'up' : 'down'}`,
+    body: trendBody(t.key, tr, w, units),
     why: copy.why, todo: copy.todo, href: hrefFor(t.key), tone: t.tone,
     ...(MEDICAL_TREND.has(t.key) ? { note: MEDICAL } : {}),
   };
