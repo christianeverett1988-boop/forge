@@ -19,19 +19,25 @@ When I send a new zip, copy **all** its files over your repo folder. Replacing e
 ## If an update changes `firestore.rules`
 
 The CHANGELOG says when a version changes the rules (0.2.0, 0.3.0 and **0.4.0** did). Pushing to GitHub does **not** update the database rules. Publish them **before** you open the new version, or the app will show "Can't read your data":
-Firebase console → **Firestore Database → Rules** → select all, paste the new `firestore.rules` → **Publish**.
+the **Deploy** button with **rules** (see below), or Firebase console → **Firestore Database → Rules** → select all, paste the new `firestore.rules` → **Publish**.
 
-## Withings and Cloud Functions (from 0.4.0)
+## Cloud Functions and `firestore.rules`: the Deploy button
 
-Forge's Withings sync runs as Cloud Functions in your Firebase project (`functions/`). Pushing to GitHub does **not** deploy them. The one-time setup (Blaze plan, Node, Firebase tools, the Withings developer app, two secrets) is in **[docs/withings.md](docs/withings.md) → Your steps**.
+Pushing to GitHub does **not** deploy the backend. Deploy it with the **Deploy** button: GitHub app → **forge** → **Actions** → **Deploy** → **Run workflow**, pick what to deploy and the branch, then **Run workflow** again. No Mac, cable or hotspot needed. Tap-by-tap steps and the one-time setup are in **[docs/deploy-from-phone.md](docs/deploy-from-phone.md)**.
 
-After that, any update that touches `functions/` or `firestore.rules` is one command in Terminal, in your Forge folder, after pulling:
+- **functions**: any update that touches `functions/`.
+- **rules**: any update that changes `firestore.rules` (and indexes, if any are added).
+- **everything**: both. It never touches the website, which is on GitHub Pages.
+
+Deploy **before** opening the new version on your phone. To try a PR's backend before merging, type the PR's branch name in **Branch to deploy**.
+
+### Fallback: the Mac (needs the iPhone hotspot)
+
+Your home Wi-Fi blocks `googleapis.com`, so this only works on the hotspot. Use it if the button is broken, or for the few things the button can't do (listed in docs/deploy-from-phone.md → "When the button can't do it"). The one-time Mac setup (Blaze plan, Node, Firebase tools, the Withings developer app, two secrets) is in **[docs/withings.md](docs/withings.md) → Your steps**. Then, in Terminal, in your Forge folder, after pulling:
 
 ```
 firebase deploy --only functions,firestore:rules
 ```
-
-It also publishes `firestore.rules`, so you don't need to paste the rules in the console any more. Deploy **before** opening the new version on your phone.
 
 ## Demo photos (one time, needs Node 18+)
 
