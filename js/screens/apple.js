@@ -181,7 +181,7 @@ const OTHER_TYPES = [
 ];
 
 /** A tappable code chip: copies its text. (Text inside <code> is hard to select on iPhone.) */
-const copyChip = (text, label = text) => `<button type="button" class="copy-chip" data-copy-text="${esc(text)}" aria-label="Copy ${esc(label)}"><code>${esc(label)}</code><span aria-hidden="true">Copy</span></button>`;
+const copyChip = (text, label = text) => `<button type="button" class="copy-chip" data-copy-text="${esc(text)}" aria-label="Copy ${esc(label)}"><code>${esc(label).replace(/_/g, '_<wbr>')}</code><span aria-hidden="true">Copy</span></button>`;
 
 function recipe() {
   const keyList = (types) => `<ul>${types.map(([n, k]) => `<li>${esc(n)} → ${copyChip(k)}</li>`).join('')}</ul>`;

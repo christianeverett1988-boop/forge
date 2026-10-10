@@ -134,7 +134,7 @@ export async function startTour({ replay = false } = {}) {
     else await pause(0);
     if (!active || at !== tour.index) return; // moved on while the screen was loading
     place();
-    q('[data-next]').focus({ preventScroll: true, focusVisible: false });
+    q('[data-next]').focus({ preventScroll: true });
   }
 
   const onKey = (e) => {

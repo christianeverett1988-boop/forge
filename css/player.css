@@ -70,8 +70,8 @@ body.playing .navbar { display: none; }
 .stepper small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .pl-last { text-align: center; color: var(--muted); font-size: 14px; min-height: 20px; }
 
-.pl-rir { display: grid; grid-template-columns: auto repeat(6, 1fr); align-items: center; gap: 6px; }
-.pl-rir span { font-size: 12px; color: var(--muted); font-weight: 700; margin-right: 4px; }
+.pl-rir { display: grid; grid-template-columns: repeat(6, 1fr); align-items: center; gap: 6px; }
+.pl-rir span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-weight: 700; }
 .pl-rir button { min-width: 0; height: 44px; border-radius: 10px; border: 0; background: var(--surface-2); color: var(--muted); font: 700 14px var(--num); cursor: pointer; }
 .pl-rir button.on { background: var(--text-1); color: var(--bg); }
 
@@ -170,7 +170,7 @@ body.playing .navbar { display: none; }
 .body-hero span { color: var(--muted); font-size: 13px; font-weight: 700; }
 
 /* Progress tabs */
-.progress-seg a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 10px; color: var(--muted); font-weight: 700; text-decoration: none; }
+.progress-seg a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 10px; color: var(--muted); font-weight: 700; text-decoration: none; }
 .progress-seg a.on { background: var(--surface-3); color: var(--text); }
 
 @media (prefers-reduced-motion: reduce) {

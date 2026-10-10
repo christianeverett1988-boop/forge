@@ -97,8 +97,8 @@
 .ready-why-btn { min-height: 44px; min-width: 44px; padding: 0 8px; }
 .ready-stale { font-size: 14px; color: var(--muted); }
 .copy-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; margin: 2px 0; background: var(--surface-2); border: 0; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
-.copy-chip code { min-width: 0; overflow-wrap: anywhere; text-align: left; }
-.copy-chip span { font-size: 12px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }
+.copy-chip code { min-width: 0; overflow-wrap: normal; text-align: left; }
+.copy-chip span { flex: 0 0 auto; align-self: center; font-size: 12px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }
 
 /* ---------- v0.7.0 (W2b): trends, insights, weekly report, goal path, Body Profile. Tokens only. ---------- */
 .progress-seg a { font-size: 15px; }

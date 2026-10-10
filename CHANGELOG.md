@@ -13,9 +13,10 @@ Issue #64, first pass. No Cloud Functions, `firestore.rules`, `firebase.json` or
 - **Apple Health setup:** field tiles in one column under 400 px; copy-chip identifiers no longer split mid-word.
 - **Tour:** one focus ring on Next; a compact card on short phones.
 - **Body:** Recovery is the first card under the tiles, and the "fresh muscle groups" tile scrolls to it and pulses once (instant with reduced motion). The empty workout tile is "0 / Start your first workout" and links to Train. "Body profile" is sentence case. The photos slot reserves space so the page doesn't jump. Programs "Recommended" uses accent tokens.
-- **Insights:** "Steps are trending up"; the body states the change over the window with units (e.g. "+2,520 steps/day vs 4 weeks ago", "-60 min/night").
+- **Insights:** "Steps are trending up"; the body states the change over the window with units (e.g. "+2,520 steps/day vs 4 weeks ago", "−1 h/night").
 - Pages scroll with `scroll-padding-top` so jumps don't land under the nav bar.
 - Tests: `tests/v0156.test.js` pins the CSS/markup rules and the insight maths.
+- **Review round 1:** "In the tank" label sits above a row of six equal 44 px buttons; the Progress switcher is 44 px; Interval timer presets are one row of five equal segments with short labels (full names stay in the aria-label); Apple copy chips break identifiers only after `_`, with "Copy" in a fixed column; insight numbers use one decimal for weight, "ml/kg/min" for VO₂max, "2 h 34 min/night" for long sleep changes and a real minus sign; Body shows "Today / last workout" and the two tappable tiles get a chevron and press feedback; the tour's Next keeps one offset keyboard focus ring.
 
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
 

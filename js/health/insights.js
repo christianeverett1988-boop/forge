@@ -54,11 +54,19 @@ const PLURAL_LABEL = new Set(['steps', 'exercise_min']);
 // Per-day series measured as a daily amount; the unit says so ("steps/day", "min/night").
 const DAILY_UNIT = { count: 'steps/day', sleep: 'min/night', minutes: 'min/day' };
 
-/** The change over the whole window with its unit: "+2,520 steps/day", "-0.62 lb". The fit slope is per week, so scale by weeks in the window. */
+/** The change over the whole window with its unit: "+2,520 steps/day", "−0.6 lb". The fit slope is per week, so scale by weeks in the window. */
 export function fmtChange(metric, slopePerWeek, windowDays, units) {
   const kind = (trendMetric(metric) || {}).kind;
   const total = slopePerWeek * (windowDays / 7);
-  const sign = total < 0 ? '-' : '+';
+  const sign = total < 0 ? '−' : '+'; // a real minus sign, not a hyphen
+  const a = Math.abs(total);
+  if (metric === 'vo2max') return `${sign}${a.toFixed(1)} ml/kg/min`;
+  if (kind === 'mass') return `${sign}${weightToDisplay(a, units).toFixed(1)} ${weightUnit(units)}`;
+  if (kind === 'sleep' && Math.round(a) >= 60) {
+    const h = Math.floor(Math.round(a) / 60);
+    const m = Math.round(a) % 60;
+    return `${sign}${h} h${m ? ` ${m} min` : ''}/night`;
+  }
   const amt = fmtAmount(metric, total, units);
   const unit = DAILY_UNIT[kind];
   return `${sign}${unit ? `${amt.replace(/ (steps|min)$/, '')} ${unit}` : amt}`;
