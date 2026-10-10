@@ -41,3 +41,16 @@
 /* The picked food and its Add button stay at the bottom of the sheet while you scroll the list. */
 .food-dock { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-3); margin: 0 calc(var(--s-3) * -1); border-radius: var(--r-lg); background: var(--surface-2); }
 .food-dock[hidden], [data-quick][hidden] { display: none; }
+
+/* Daily targets live in the Food card (v0.15.3): one slim row of three, then the "why" folded away. */
+.food-targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.food-targets div { background: var(--surface-2); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); display: flex; flex-direction: column; min-width: 0; }
+.food-targets b { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.food-targets span { font-size: 12px; color: var(--text-2); }
+.food-why summary { min-height: 44px; display: flex; align-items: center; color: var(--text-2); font-size: 14px; }
+
+/* Coach, one line under Readiness. */
+.coach-line { display: flex; align-items: center; gap: var(--s-3); min-height: 48px; padding-top: var(--s-2); padding-bottom: var(--s-2); }
+.coach-line-ic { display: inline-flex; color: var(--accent-text); flex: none; }
+.coach-line-text { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rings-card .link { min-height: 44px; display: inline-flex; align-items: center; }

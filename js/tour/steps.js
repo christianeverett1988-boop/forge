@@ -28,12 +28,17 @@ export const TOUR_STEPS = [
   {
     id: 'food', route: 'today', target: '[data-tour="food"]',
     title: 'Log your food',
-    body: 'Your calories and protein for today live here. Tap Log food to add a meal in a couple of taps, or See meals to look at what you’ve eaten.',
+    body: 'Your calories and protein for today live here, with your daily targets. Tap Log food to add a meal in a couple of taps, or See meals to look at what you’ve eaten.',
   },
   {
     id: 'weight', route: 'today', target: '.weight-card [data-log]',
     title: 'Log your weight',
     body: 'Tap Log weight to add your weight by hand. The Withings scale can only link to one Forge account for now, so type your weight in here instead. A few times a week is plenty.',
+  },
+  {
+    id: 'coach', route: 'today', target: '[data-coach-card]',
+    title: 'Ask Coach',
+    body: 'Tap this line to ask Coach a question. It answers from your own numbers: your weight, workouts and food. It is not medical advice.',
   },
   {
     id: 'train', route: 'train', target: '[aria-label="Location"]',
@@ -44,6 +49,11 @@ export const TOUR_STEPS = [
     id: 'start', route: 'train', target: '.card.preview [data-start]',
     title: 'Start, then one set at a time',
     body: 'When you tap Start workout you’ll see one exercise at a time. Tap Done set after each set. Pause when you need a break, Swap if a move doesn’t suit you, and How to shows a demo. “RIR” means reps in reserve: how many more reps you could have done.',
+  },
+  {
+    id: 'body', route: 'body', target: '[data-tour="body-recovery"]',
+    title: 'Body: what’s recovered',
+    body: 'Green muscles are ready to train, red ones need rest. Tap a muscle for details. Your Progress photos card is at the top of this screen, and you can also reach it from Progress.',
   },
   {
     id: 'progress', route: 'weight', target: '.tabbar a[href="#/weight"]',
@@ -57,11 +67,20 @@ export const TOUR_STEPS = [
   },
 ];
 
-/** Profile fields to add when a profile is saved: a brand-new account gets the tour; editing one doesn't. */
-export const tourFieldsForSave = (hasProfile) => (hasProfile ? {} : { tour: 'pending' });
+// The one-time "New: Food and photos" offer for accounts that already existed. Change the id for the next offer.
+export const TOUR_OFFER = 'food-photos-0.15.3';
 
-/** Profile fields that mark the tour as seen (skipped or finished). */
-export const tourSeenFields = (iso) => ({ tour: 'seen', tour_seen_at: iso });
+/** Profile fields to add when a profile is saved: a brand-new account gets the tour (so no offer); editing one doesn't. */
+export const tourFieldsForSave = (hasProfile) => (hasProfile ? {} : { tour: 'pending', tour_offer: TOUR_OFFER });
+
+/** Profile fields that mark the tour as seen (skipped or finished). Also settles the offer: they've just seen everything. */
+export const tourSeenFields = (iso) => ({ tour: 'seen', tour_seen_at: iso, tour_offer: TOUR_OFFER });
+
+/** Profile fields for "Not now" or "Show me" on the offer: it never comes back. */
+export const tourOfferFields = () => ({ tour_offer: TOUR_OFFER });
+
+/** Show the offer card on Today: an existing account (not waiting for the full tour) that hasn't answered this offer. */
+export const tourOfferDue = (profile) => !!profile && !tourPending(profile) && profile.tour_offer !== TOUR_OFFER;
 
 /** The tour is waiting for this account (only brand-new accounts; existing profiles have no tour field). */
 export const tourPending = (profile) => !!profile && profile.tour === 'pending';

@@ -74,16 +74,17 @@ export function renderBody(el) {
       <h1>Body</h1>
       <div class="body-hero">
         <div><b data-count>${fresh}</b><span>fresh muscle groups</span></div>
-        <div><b data-count>${days == null ? '—' : days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>
+        ${days == null ? '<div data-no-workouts><b class="bh-text">No workouts yet</b><span>Your first one starts the count</span></div>'
+          : `<div><b data-count>${days}</b><span>${days === 1 ? 'day' : 'days'} since last workout</span></div>`}
       </div>
+      <div data-photos-slot></div>
       ${insightCards()}
       ${compositionCard()}
       ${programsCard()}
-      <div data-photos-slot></div>
       ${goalPathCard()}
       ${myBodyMeasures().length ? bodyProfileHtml(currentBodyProfile(), state.profile || {}) : ''}
       <a class="card row between center nav-card" href="#/trends"><div><p class="label">Trends</p><p class="small">See how every number is moving</p></div><span class="chev" aria-hidden="true">${icon('chev')}</span></a>
-      <div class="card">
+      <div class="card" data-tour="body-recovery">
         <div class="row between"><p class="label">Recovery</p><span class="small muted">Tap a muscle</span></div>
         ${bodyMap(rec, { mode: 'recovery', tappable: true })}
         <div class="bm-legend">

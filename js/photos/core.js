@@ -201,3 +201,8 @@ export function fmtBytes(n) {
   if (n < 1024 * 1024) return `${Math.max(0, Math.round(n / 1024))} KB`;
   return `${(n / (1024 * 1024)).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
 }
+
+/** The "where do my photos live" sentence. In the iPhone app there is no Safari data to clear: say what really deletes them. */
+export const photoLossLine = (native) => (native
+  ? 'If you delete the Forge app, they’re gone. Export a zip to keep them.'
+  : 'If you delete the app or clear Safari data, they’re gone.');

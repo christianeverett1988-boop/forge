@@ -7,13 +7,17 @@ import { mySessions } from './access.js';
 import { photoUrl } from './metrics.js';
 import { POSES, reminderDue, weekStart, DOW_NAMES } from './core.js';
 
+/** Shown instead of nothing when this phone's photo storage can't be opened (private browsing, storage blocked). */
+export const photosUnavailableHtml = () => `<div class="card row center gap" data-photos-unavailable>
+  <span aria-hidden="true">${icon('camera')}</span><span><b>Progress photos</b><br><span class="small muted">Photos can’t be saved here</span></span></div>`;
+
 /** Body tab card: an invitation when empty, otherwise your latest set and a link to the full screen. */
 export async function mountBodyPhotosCard(host) {
   if (!host) return;
   const { sessions, ok } = await mySessions();
   if (!host.isConnected) return;
   if (!ok) {
-    host.innerHTML = '';
+    host.innerHTML = photosUnavailableHtml();
     return;
   }
   if (!sessions.length) {

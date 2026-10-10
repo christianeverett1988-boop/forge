@@ -3,7 +3,7 @@
 // Reduced motion: no animation at all (the CSS only animates under no-preference; scrolling is instant).
 import { state } from '../state.js';
 import { toast } from '../ui.js';
-import { TOUR_STEPS, createTour, scrollToClear, shouldStartTour, tourSeenFields } from './steps.js';
+import { TOUR_STEPS, createTour, scrollToClear, shouldStartTour, tourSeenFields, tourOfferFields } from './steps.js';
 
 let active = null;
 
@@ -33,6 +33,17 @@ async function markSeen() {
   try {
     const { patch } = await import('../db.js');
     patch('profile', 'main', tourSeenFields(iso));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+/** "Show me" / "Not now" on the one-time offer: remember the answer on the profile so it never comes back. */
+export async function dismissTourOffer() {
+  state.set({ profile: { ...state.profile, ...tourOfferFields() } });
+  try {
+    const { patch } = await import('../db.js');
+    patch('profile', 'main', tourOfferFields());
   } catch (e) {
     console.error(e);
   }
