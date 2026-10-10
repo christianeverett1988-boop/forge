@@ -30,8 +30,6 @@ A red ✗ means nothing new is live, or only part of it. Tap the run, then the r
 
 This tells Google to accept deploys from this one GitHub workflow, started by you, from main. No password or key is created or stored anywhere: GitHub proves who it is to Google for each run with a token that lasts minutes. Nothing here is secret, so it's fine that the repo is public.
 
-The button can only be used once this PR is merged, because GitHub only shows "Run workflow" for workflow files on main.
-
 ### 1. Run the setup in Google Cloud Shell
 
 1. On your phone or any computer, open **console.cloud.google.com** and sign in as yourself.
@@ -45,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/christianeverett1988-boop/forge/mai
 
 5. It takes 1–3 minutes. At the end it prints **All set** and two values. Keep the tab open.
 
-If it stops with an error, copy the error and send it to me. Running the block again is always safe.
+If it stops with an error, copy the error and send it to me. Running the line again is always safe.
 
 ### 2. Add the two values to GitHub
 
@@ -101,7 +99,9 @@ The functions' account (`…-compute@developer…`) usually has broad access to 
 Use the Mac (`firebase deploy --only functions,firestore:rules` with the hotspot, see [DEPLOY.md](../DEPLOY.md)) for:
 
 - **A new kind of trigger** the project has never had, such as the first Firestore or Storage trigger. Those need project-permission changes, which the robot can't make.
-- **A new secret.** Set it in your own terminal (`firebase functions:secrets:set NAME`). Then add its name to the `SECRETS=` line in the block above and run the block again, so the functions can read it.
+- **A new secret.** Set it in your own terminal (`firebase functions:secrets:set NAME`). Then run the setup line from step 1 again with the new name on the end, so the functions can read it:
+  `curl -fsSL https://raw.githubusercontent.com/christianeverett1988-boop/forge/main/scripts/deploy-setup.sh | bash -s -- NEW_SECRET_NAME`
+  (Also ask for the name to be added to the `SECRETS=` line in `scripts/deploy-setup.sh`, so later re-runs keep it.)
 - **Removing or renaming a function.** The deploy stops rather than delete a live function. To delete on purpose, run the button with **Also delete live functions…** turned on. That option also skips a few other "are you sure?" questions: functions that start retrying on failure, or a higher minimum bill.
 
 ## How it works (for the next developer)

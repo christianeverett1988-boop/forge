@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Forge "Deploy" button: one-time Google Cloud setup. Keyless (no key file is ever created). Safe to re-run.
+# Run:  curl -fsSL https://raw.githubusercontent.com/christianeverett1988-boop/forge/main/scripts/deploy-setup.sh | bash
+# New secret names can be added on the end:  ... | bash -s -- NEW_SECRET_NAME
+# Everything runs inside main(), which is only called on the last line. So a cut-off download runs nothing,
+# and no command can read the rest of the script from the pipe.
 set -euo pipefail
+
+main() {
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 PROJECT=forge-web-f2351
 REGION=us-east1
@@ -13,6 +19,12 @@ SA_NAME=forge-deployer
 SA="${SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
 ROLE_ID=forgeDeployExtras
 SECRETS="WITHINGS_CLIENT_SECRET WITHINGS_WEBHOOK_KEY USDA_API_KEY XAI_API_KEY"
+for EXTRA in "$@"; do
+  if ! [[ "$EXTRA" =~ ^[A-Za-z0-9_-]{1,255}$ ]]; then
+    echo "Not a secret name: $EXTRA (letters, digits, _ and - only)" >&2; exit 1
+  fi
+  SECRETS="$SECRETS $EXTRA"
+done
 retry() { for _ in 1 2 3 4 5 6; do "$@" >/dev/null 2>&1 && return 0; sleep 10; done; "$@" >/dev/null; }
 
 gcloud config set project "$PROJECT" >/dev/null 2>&1
@@ -108,3 +120,6 @@ echo "${POOL_NAME}/providers/${PROVIDER}"
 echo
 echo "GCP_DEPLOY_SA"
 echo "${SA}"
+}
+
+main "$@"
