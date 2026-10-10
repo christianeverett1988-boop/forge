@@ -40,7 +40,7 @@ test('rings: training days vs goal, sets capped per group, recovery average', ()
   near(st.value, (per + 3) / (per * 3), 1e-9);
   assert(rc.value > 0 && rc.value < 1, 'fresh % drops after a big leg day');
   const none = todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW });
-  eq(none.map((r) => r.text).join(' | '), '0/3 days | 0/10 push · 0/10 pull · 0/10 legs | 100% fresh');
+  eq(none.map((r) => r.text).join(' | '), '0/3 days | 0/10 push · 0/10 pull · 0/10 legs | 100% fresh');
 });
 
 test('rings: calories and protein join when food is passed (US-style numbers), and cap nothing', () => {
@@ -60,10 +60,16 @@ test('rings: over the calorie target is flagged, says how far over, and draws a 
   const food = { kcal: 3380, protein_g: 123, targetKcal: 2070, targetProtein: 181 };
   const r = todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food });
   eq(r[3].over, true);
-  eq(r[3].text, '3,380 of 2,070 kcal · 1,310 over');
+  eq(r[3].text, '3,380 of 2,070\u00a0kcal');
+  eq(r[3].extra, '1,310\u00a0kcal over', 'the over amount is its own legend line');
   const html = ringsHtml(r);
   assert(html.includes('data-ring="calories-over"'), 'second lap drawn');
   assert(html.includes('var(--warn-deep)') && html.includes('class="warn"'), 'warn colours');
+  assert(html.includes('<small class="warn">1,310 kcal over</small>'), 'over amount sits on its own warn line');
+  assert(!/<small[^>]*>\s*·/.test(html), 'no legend line starts with a dot');
+  const css = (await import('node:fs')).readFileSync(new URL('../css/app.css', import.meta.url), 'utf8');
+  assert(css.includes('.ring-arc.ring-over { transition-delay: 1s; }'), 'second lap waits for the first');
+  assert(css.includes('.ring-arc.ring-over { transition: none; transition-delay: 0s; }'), 'second lap is instant under reduced motion');
   const ok = ringsHtml(todayRings({ workouts: [], profile: {}, exerciseById: byId, now: NOW, food: { ...food, kcal: 1270 } }));
   assert(!ok.includes('calories-over') && ok.includes('var(--food-kcal)') && !ok.includes('var(--warn)'), 'normal eating is not warn');
   // The Food card: same rules, and number and unit never split.

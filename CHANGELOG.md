@@ -9,9 +9,11 @@ Part 1 of the audit in issue #57. No Cloud Functions, `firestore.rules`, `fireba
 - **Calories and protein on the Today rings:** two new rings (today's calories vs target, today's protein vs target) join Training, Weekly sets and Recovery. The five rings are thinner so they fit the same circle. They never burst.
 - **Tour:** a new "Log your food" step spotlights the real Food card (9 steps).
 - **Food colours:** calories and protein have their own colours (`--food-kcal`, `--food-protein`), shared by the Today rings and the Food card. Orange (`--warn`) now means "over" only.
-- **Going over looks different:** past the calorie target the ring turns orange with the extra drawn as a darker second lap, and the note reads "1,310 kcal over" in orange (Food card and Today legend: "3,380 of 2,070 kcal · 1,310 over").
+- **Going over looks different:** past the calorie target the ring turns orange with the extra drawn as a darker second lap, and the note reads "1,310 kcal over" in orange (Food card and Today legend).
 - **No split numbers:** a number and its unit never wrap apart; protein sits on its own line on the Food card.
 - **Tour and label:** the rings step now explains the outer three (your week) and inner two (today's food); the card label is "Training and food".
+- **Legend wrapping:** the over amount is its own orange legend line ("1,310 kcal over"), and each Weekly sets count stays with its label, with the "·" kept at the end of the line above, so no line starts with a dot.
+- **Second lap timing:** the darker over-target lap now draws after the first lap closes (1s delay); instant under reduced motion.
 - Tests: Info.plist keys, the food rings, the over state in the Today rings and the Food card, the tour step.
 
 ## 0.15.1 — One-click weekly refresh for the iPhone app (2026-10-09)

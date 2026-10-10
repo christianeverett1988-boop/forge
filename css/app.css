@@ -442,6 +442,7 @@ body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
 .ring-track, .ring-arc { fill: none; stroke-width: 13; } /* thinner inline when five rings are drawn */
 .ring-track { opacity: 0.16; }
 .ring-arc { stroke-linecap: round; stroke-dashoffset: var(--off); transition: stroke-dashoffset 1s var(--ease-out); }
+.ring-arc.ring-over { transition-delay: 1s; } /* the second lap draws after the first closes */
 .rings-pre .ring-arc { stroke-dashoffset: var(--c); transition: none; }
 .ring-arc.ring-closed { filter: drop-shadow(0 0 6px currentColor); }
 .rings-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
@@ -450,7 +451,7 @@ body.resting main { padding-bottom: calc(var(--safe-bottom) + 170px); }
 .ring-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rc); margin-top: 6px; }
 .ring-done { color: var(--rc); display: inline-flex; vertical-align: -2px; }
 .ring-done svg { width: 14px; height: 14px; }
-@media (prefers-reduced-motion: reduce) { .ring-arc { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .ring-arc, .ring-arc.ring-over { transition: none; transition-delay: 0s; } }
 @media (max-width: 340px) { .rings { grid-template-columns: 1fr; justify-items: center; } }
 
 /* ---------- Body composition (v0.4.0) ---------- */

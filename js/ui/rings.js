@@ -63,8 +63,8 @@ export function ringsHtml(rings) {
   }).join('');
   const legend = rings.map((r) => `
     <li style="--rc:${r.over ? 'var(--warn)' : COLORS[r.key]}"><span class="ring-dot" aria-hidden="true"></span>
-      <span><b>${esc(r.label)}${r.value >= 1 && r.key !== 'calories' ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="${r.over ? 'warn' : 'muted'}">${esc(r.text)}</small></span></li>`).join('');
-  const aria = rings.map((r) => `${r.label}: ${r.text}`).join('; ');
+      <span><b>${esc(r.label)}${r.value >= 1 && r.key !== 'calories' ? ` <span class="ring-done">${icon('check', { size: 14 })}</span>` : ''}</b><small class="muted">${esc(r.text)}</small>${r.over && r.extra ? `<small class="warn">${esc(r.extra)}</small>` : ''}</span></li>`).join('');
+  const aria = rings.map((r) => `${r.label}: ${r.text}${r.extra ? `, ${r.extra}` : ''}`).join('; ');
   return `<div class="rings" role="img" aria-label="${esc(aria)}">
     <svg class="rings-svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" aria-hidden="true"><g transform="rotate(-90 ${SIZE / 2} ${SIZE / 2})">${arcs}</g></svg>
     <ul class="rings-legend">${legend}</ul></div>`;
