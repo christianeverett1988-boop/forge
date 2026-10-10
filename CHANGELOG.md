@@ -9,6 +9,11 @@ Issue #64, part 4. No Cloud Functions, `firestore.rules`, `firebase.json` or `co
 - **Steps insight:** the "Steps are trending up" wording from 0.15.6 comes from one function that both the Today card and the Body card use. A phone still showing "Steps is…" is on an older build.
 - **Food summary at 320:** each value and its "of target" stay on one line at 320, 375 and 390, at normal and large text. When they don't fit beside the label the value goes under it on purpose; Carbs and Fat stack label over value.
 - **Log food dock:** each macro keeps its number with its unit ("5 g fat" never splits); the line only breaks between macros.
+- **Round 1 review fixes:**
+  - Today weight card heading is "Weight" (the big number is the scale reading, the trend has its own line).
+  - "Trend 208.3 · ↑ 0.4 this week" stays on one line at 390 and 375; when it must break it breaks only at the dot. The text column takes the free width and the sparkline is narrower on small screens.
+  - "What's trend weight?" and Log weight share one row (44 pt targets); the explainer opens below. At 320 or large text the button drops to its own line instead of overflowing.
+  - Weight detail message: "No weigh-ins in the last 4 weeks." (not "Only no…"), and a separate honest line when there are enough readings but no clear change. Weight screen's first stat reads "Yesterday" / "Latest · Oct 8" when the newest reading isn't today.
 - Tests: `tests/v01510.test.js`; the layout test covers over-target Food at 320/375/390 (scale 1 and 1.35) and the dock macro line at 320/390 (scale 1 and 1.35).
 
 ## 0.15.9 — USDA food search (2026-10-10)

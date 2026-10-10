@@ -29,7 +29,13 @@ main {
 .row { display: flex; }
 .row.end { justify-content: flex-end; }
 .one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.weight-card > .row.end { margin-top: var(--s-2); }
+.weight-card .weight-text { flex: 1; min-width: 0; }
+.weight-card .spark { flex: none; width: 72px; margin-left: var(--s-2); }
+@media (min-width: 400px) { .weight-card .spark { width: 120px; } }
+.weight-card .nw { white-space: nowrap; }
+.weight-actions { flex-wrap: wrap; gap: 0 var(--s-3); margin-top: var(--s-1); }
+.weight-why { white-space: nowrap; background: none; border: 0; padding: 0; min-height: 44px; color: var(--accent-text); font: inherit; text-align: left; cursor: pointer; }
+.weight-actions .btn { min-height: 44px; flex: none; }
 .row.gap, .gap { gap: var(--s-3); }
 .between { justify-content: space-between; }
 .center { align-items: center; }

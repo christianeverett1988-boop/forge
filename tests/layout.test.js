@@ -88,6 +88,32 @@ if (standalone) {
 }
 
 if (standalone) {
+  test('layout: Today weight card: trend line breaks only at the dot, the two actions share one row', async () => {
+    if (skipReason()) return;
+    browser = browser || await launch();
+    for (const w of [320, 390]) for (const ts of [1, 1.35]) {
+      await browser.viewport(w, w === 320 ? 568 : 844, true);
+      await browser.open('today', seed());
+      if (ts !== 1) { await browser.eval(`document.documentElement.style.setProperty('--ts', '${ts}')`); await new Promise((r) => setTimeout(r, 300)); }
+      const r = await browser.eval(`(() => {
+        const c = document.querySelector('.weight-card'); if (!c) return null;
+        const lines = (e) => { const rg = document.createRange(); rg.selectNodeContents(e); return new Set([...rg.getClientRects()].map((q) => Math.round(q.top / 4))).size; };
+        const t = c.querySelector('[data-weight-trend]'); const why = c.querySelector('[data-weight-why]'); const log = c.querySelector('[data-log]');
+        const a = why.getBoundingClientRect(), b = log.getBoundingClientRect();
+        return { heading: c.querySelector('.label').innerText, tw: t ? t.getBoundingClientRect().width : 0, sw: t ? t.scrollWidth : 0, halves: t ? [...t.querySelectorAll('.nw')].map(lines) : [], whole: t ? lines(t) : 0,
+          sameRow: Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) < 4, h: [a.height, b.height], over: c.scrollWidth > c.clientWidth + 1 };
+      })()`);
+      if (!r) continue; // no weight data in the seed
+      const at = `${w}px text ${ts}`;
+      assert(r.heading === 'Weight', `heading reads "${r.heading}" at ${at}`);
+      assert(r.halves.every((n) => n === 1), `trend halves wrap at ${at}: ${JSON.stringify(r.halves)}`);
+      if (ts === 1 && w === 390) assert(r.whole === 1, `trend line wraps at ${at}: ${JSON.stringify(r)}`);
+      assert((r.sameRow || w === 320 || ts !== 1) && r.h[0] >= 44 && r.h[1] >= 44 && !r.over, `weight actions at ${at}: ${JSON.stringify(r)}`);
+    }
+  });
+}
+
+if (standalone) {
   test("layout: Change today's workout: the sheet, its steps and the Undo toast fit at every size", async () => {
     if (skipReason()) return;
     browser = browser || await launch();

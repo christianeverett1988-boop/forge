@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test, eq, assert } from './harness.js';
 import { pickLatest, readingLabel } from '../js/weight/reading.js';
 import { dailyWeights, smooth } from '../js/weight/smoothing.js';
-import { notEnoughText } from '../js/health/trends.js';
+import { notEnoughText, MIN_POINTS } from '../js/health/trends.js';
 
 const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -40,8 +40,19 @@ test('notEnoughText names the count and the advice', () => {
   assert(notEnoughText('steps', 2).includes('Only 2 readings'));
 });
 
+test('notEnoughText: none, one, and enough readings that still show no direction', () => {
+  assert(notEnoughText('weight_kg', 0).startsWith('No weigh-ins in the last 4 weeks.'));
+  assert(notEnoughText('steps', 0).startsWith('No readings in the last 4 weeks.'));
+  assert(!/Only no/.test(notEnoughText('steps', 0)));
+  assert(notEnoughText('steps', 1).startsWith('Only 1 reading in'));
+  const n = notEnoughText('weight_kg', MIN_POINTS + 2);
+  eq(n, 'Not enough change between readings to call a 4-week direction yet.');
+  assert(!n.includes('Only'));
+});
+
 test('Today weight card puts the reading first and the trend under it', () => {
   const t = src('js/screens/today.js');
   assert(t.includes('data-weight-when') && t.includes('data-weight-trend'));
   assert(t.includes('What’s trend weight?'));
+  assert(t.includes('<p class="label">Weight</p>'));
 });

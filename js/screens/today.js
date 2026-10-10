@@ -258,18 +258,21 @@ export function renderToday(el) {
       ${missionsCard()}
 
       <div class="card weight-card">
-        <div class="row between center card-head"><p class="label">Weight trend</p><a class="card-link" href="#/weight">See chart${icon('chev', { size: 14 })}</a></div>
-        <div class="row between center">
-          <div>
+        <div class="row between center card-head"><p class="label">Weight</p><a class="card-link" href="#/weight">See chart${icon('chev', { size: 14 })}</a></div>
+        <div class="row between center weight-main">
+          <div class="weight-text">
             <p class="small muted" data-weight-when>${reading ? esc(readingLabel(reading, todayKey())) : ''}</p>
             <p class="hero-num">${reading ? `<span data-count>${weightToDisplay(reading.kg, u).toFixed(1)}</span> <small>${weightUnit(u)}</small>` : '—'}</p>
-            <p class="small ${tone}" data-weight-trend>${!latest || change == null ? 'Log a few days to see your trend' : `Trend ${weightToDisplay(latest.trend, u).toFixed(1)} · ${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week`}</p>
+            <p class="small ${tone}" data-weight-trend>${!latest || change == null ? 'Log a few days to see your trend' : `<span class="nw">Trend ${weightToDisplay(latest.trend, u).toFixed(1)}</span> · <span class="nw">${arrow} ${Math.abs(weightToDisplay(change, u)).toFixed(1)} this week</span>`}</p>
           </div>
           ${sparklineSVG(series)}
         </div>
-        <details class="learn-more small"><summary>What’s trend weight?</summary><p class="small muted">Your trend smooths out daily ups and downs from water and salt, so it shows the real direction. Today’s number is just what the scale said.</p></details>
+        <div class="row between center weight-actions">
+          <button class="weight-why small" type="button" data-weight-why aria-expanded="false" aria-controls="weight-why-text">What’s trend weight?</button>
+          <button class="btn small" data-log type="button">Log weight</button>
+        </div>
+        <p class="small muted" id="weight-why-text" data-weight-why-text hidden>Your trend smooths out daily ups and downs from water and salt, so it shows the real direction. Today’s number is just what the scale said.</p>
         ${goalSentence ? `<p class="small muted" data-goal-line>${esc(goalSentence)}</p>` : ''}
-        <div class="row end"><button class="btn small" data-log>Log weight</button></div>
       </div>
 
       ${programLine()}
@@ -286,6 +289,11 @@ export function renderToday(el) {
     </section>`;
 
   $('[data-log]', el).onclick = openLogWeight;
+  $('[data-weight-why]', el).onclick = (e) => {
+    const open = e.currentTarget.getAttribute('aria-expanded') !== 'true';
+    e.currentTarget.setAttribute('aria-expanded', String(open));
+    $('[data-weight-why-text]', el).hidden = !open;
+  };
   $('[data-food-log]', el).onclick = () => import('./food.js').then((m) => m.openLogFood());
   const why = $('[data-ready-why]', el);
   if (why) why.onclick = () => {
