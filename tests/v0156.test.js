@@ -128,11 +128,20 @@ test('player: short screens compact the set view; Next line stays on one row; hi
   assert(src('js/workouts/progression.js').includes('times. Do' + String.fromCharCode(160) + '$'));
 });
 
-test('Body tiles: second value is --text, every value has one 48px box', () => {
+test('Body tiles: second value is --text, every value has one fixed 56px box', () => {
   const p = src('css/player.css');
-  assert(/\.body-hero b \{[^}]*min-height: 48px; display: flex; align-items: center/.test(p));
+  assert(/\.body-hero b \{[^}]*font: 900 40px\/1 var\(--num\)[^}]*height: 56px; display: flex; align-items: center/.test(p));
+  assert(!/min-height: 48px/.test(p.slice(p.indexOf('/* Body */'))));
   assert(/\.body-hero \.bh-tile \+ \.bh-tile b \{ color: var\(--text\)/.test(p));
   assert(!/\.body-hero div/.test(p));
+});
+
+test('player: very short screens (320x568) hide the picture and sit the steppers side by side', () => {
+  const p = src('css/player.css');
+  const m = p.slice(p.indexOf('@media (max-height: 600px)'));
+  assert(/\.pl-demo \.fig-wrap, \.pl-demo \.pl-muscles \{ display: none/.test(m));
+  assert(/\.pl-steppers \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/.test(m));
+  assert(/\.pl-demo\.has-fig, \.pl-demo \{ height: 44px/.test(m));
 });
 
 test('Programs badge uses accent tokens only', () => {

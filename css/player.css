@@ -86,6 +86,15 @@ body.playing .navbar { display: none; }
   .pl-hero { padding: 0; }
   .pl-hero-n b { font-size: 56px; }
 }
+/* Very short (320x568): drop the picture (How-To chip stays) and put the steppers side by side, so no row sits in the dock's fade. */
+@media (max-height: 600px) {
+  .pl-demo.has-fig, .pl-demo { height: 44px; min-height: 44px; }
+  .pl-demo .fig-wrap, .pl-demo .pl-muscles { display: none; }
+  .pl-steppers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .stepper { grid-template-columns: 40px 1fr 40px; padding: 4px; }
+  .stepper button { height: 44px; font-size: 22px; }
+  .stepper b { font-size: 22px; }
+}
 
 /* The big Done button is a <label> with an invisible native switch over it (haptic tick on iOS 18+). */
 .haptic-btn { position: relative; display: grid; place-items: center; cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -178,9 +187,9 @@ body.playing .navbar { display: none; }
 
 /* Body */
 .body-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.body-hero b { font: 900 40px var(--num); color: var(--rec-green); min-height: 48px; display: flex; align-items: center; }
+.body-hero b { font: 900 40px/1 var(--num); color: var(--rec-green); height: 56px; display: flex; align-items: center; }
 .body-hero .bh-tile + .bh-tile b { color: var(--text); }
-.body-hero b.bh-text { font: 800 20px var(--font); color: var(--text); line-height: 1.2; }
+.body-hero b.bh-text { font: 800 20px var(--font); color: var(--text); line-height: 1.2; overflow: hidden; }
 .body-hero b.bh-word { font-size: clamp(28px, 10.5vw, 40px); }
 .body-hero span { color: var(--muted); font-size: 13px; font-weight: 700; }
 
