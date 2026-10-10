@@ -16,6 +16,13 @@ Part 4 of the audit in issue #57. **This PR waits for a deploy: Christian runs `
   - Messages: the server's "That's a lot of searches…" line is shown as written; "isn’t available right now" is only for real outages.
   - Privacy: Delete everything now also removes the food-search counter (`private/food_search`), even if you never used Withings or Apple Health. **This is a Cloud Functions change (`withingsDisconnect`): redeploy with `firebase deploy --only functions`.**
   - Server brand text is cut cleanly at 40 characters with a real "…".
+- **Round 2 review fixes:**
+  - Serving-size chips are one scrolling row of one-line pills under a "Serving size" caption (the `.chips` grid no longer overrides them). "0.5 breast, bone and skin removed" now survives (limit 40 characters), and 0.5 / 0.25 read "½" / "¼".
+  - Toasts size to their text (`width: max-content`), so "Added to breakfast · 1,250 kcal" is one line. This applies to every toast in the app.
+  - The meal row's grey line is one line: brand (shortens first) · protein · portion. Calories are the number on the right.
+  - A cut brand ends where its "…" ends (the separator belongs to the brand). The loading skeleton bars line up with the row text.
+  - "Food search is busy. Try again in a minute." is shown as written.
+  - Privacy without a bypass: Delete everything removes `private/food_search` only after its hour window has passed, so it can't reset the 120 an hour limit.
 - **Server (`foodSearch`):** needs sign-in, 2–60 characters, 120 searches an hour per person, the key in a header (never in a URL), a 6 s timeout, a 5-minute in-memory cache. Whole foods rank first for "chicken breast"; brand-named queries ("quest bar") rank branded first. Near-duplicates are dropped, 25 results at most. The key, the request and what you typed are never logged.
 
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)

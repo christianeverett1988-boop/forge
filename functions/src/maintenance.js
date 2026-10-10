@@ -125,7 +125,7 @@ export async function disconnect({ db, api, uid, webhookUrl, deleteData = false,
   // Apple Health data is separate from Withings: it goes only when asked (Delete everything, or its own button).
   if (deleteApple) {
     deleted += (await deleteAppleData({ db, uid })).deleted;
-    await deleteFoodSearchData({ db, uid }); // the food-search counter lives in private/, which the app can't delete
+    await deleteFoodSearchData({ db, uid, now: now() }); // the food-search counter lives in private/, which the app can't delete (kept while its hour is open)
   }
   return { revoked, deleted };
 }

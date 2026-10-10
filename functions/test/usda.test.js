@@ -256,3 +256,28 @@ test('delete everything removes the food-search counter, and is fine when there 
   await disconnect({ db, api: {}, uid: 'u3', webhookUrl: 'x', deleteData: true });
   assert.ok(db.dump(P.foodSearch('u3')), 'the Withings-only dialog leaves it');
 });
+
+test('delete during a fresh search window keeps the limit in force; after the window it removes the doc', async () => {
+  const db = fakeDb();
+  const { P } = await import('../src/paths.js');
+  for (let i = 0; i < RATE_PER_HOUR; i++) await meterSearch({ db, uid: 'u1', now: NOW });
+  await deleteFoodSearchData({ db, uid: 'u1', now: NOW + 60000 });
+  assert.ok(db.dump(P.foodSearch('u1')), 'still there inside the hour');
+  assert.equal((await meterSearch({ db, uid: 'u1', now: NOW + 61000 })).limited, true, 'delete did not reset the 120 an hour');
+  await deleteFoodSearchData({ db, uid: 'u1', now: NOW + 3600000 + 1 });
+  assert.equal(db.dump(P.foodSearch('u1')), undefined, 'gone once the window has passed');
+  const { disconnect } = await import('../src/maintenance.js');
+  await meterSearch({ db, uid: 'u4', now: NOW });
+  await disconnect({ db, api: {}, uid: 'u4', webhookUrl: 'x', deleteData: true, deleteApple: true, now: () => NOW + 1000 });
+  assert.ok(db.dump(P.foodSearch('u4')), 'Delete everything inside the window leaves the counter');
+});
+
+test('SR Legacy measures: a 33-character "0.5 breast" survives as ½, 0.25 becomes ¼', () => {
+  const m = measuresOf({ foodMeasures: [
+    { disseminationText: '0.5 breast, bone and skin removed', gramWeight: 86 },
+    { disseminationText: '1 cup, chopped or diced', gramWeight: 140 },
+    { disseminationText: '0.25 cup, chopped or diced', gramWeight: 35 },
+    { disseminationText: '1 unit of a very very long and silly measure name here', gramWeight: 20 },
+  ] });
+  assert.deepEqual(m.map((x) => x.text), ['½ breast, bone and skin removed', '1 cup, chopped or diced', '¼ cup, chopped or diced']);
+});

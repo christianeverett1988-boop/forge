@@ -25,14 +25,17 @@ function itemLine(it) {
   return bits.join(' · ');
 }
 
+/** One-line grey text under a food name: brand (shortens first), the numbers that never split, then the portion. */
+function subLine({ brand, kcal, protein, portion }) {
+  const span = (cls, t) => `<span class="${cls}">${esc(t)}</span>`;
+  return `<small class="food-sub muted">${brand ? `<span class="food-brand"><i>${esc(brand)}</i></span>` : ''}${kcal == null ? '' : span('food-kcal', `${Math.round(kcal).toLocaleString('en-US')} kcal`)}${protein ? span('food-kcal', `${Math.round(protein)} g protein`) : ''}${portion ? span('food-serv', portion) : ''}</small>`;
+}
+
+/** A logged entry's grey line. The calories are the number on the right, so they aren't repeated here. */
 function entryLine(e) {
   const n = e.servings;
-  const bits = e.brand ? [e.brand] : [];
-  bits.push(`${Math.round(e.kcal * n).toLocaleString('en-US')} kcal`);
-  if (e.protein_g) bits.push(`${Math.round(e.protein_g * n)} g protein`);
-  if (e.portion) bits.push(n === 1 ? e.portion : `${servingsLabel(n)} × ${e.portion}`);
-  else bits.push(`${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`);
-  return bits.join(' · ');
+  const portion = e.portion ? (n === 1 ? e.portion : `${servingsLabel(n)} × ${e.portion}`) : `${fmtNum(n)} ${n === 1 ? 'serving' : 'servings'}`;
+  return subLine({ brand: e.brand, protein: e.protein_g * n, portion });
 }
 
 const stepBtns = (out = '') => `<button type="button" class="icon-btn" data-minus aria-label="Fewer servings">${icon('minus')}</button><output data-serv aria-live="polite">${out}</output><button type="button" class="icon-btn" data-plus aria-label="More servings">${icon('plus')}</button>`;
@@ -89,8 +92,8 @@ export function renderFood(el) {
               <button class="btn ghost small-btn" data-add-meal="${g.meal}" aria-label="Add to ${g.label.toLowerCase()}">Add</button></span>
           </div>
           ${g.entries.length ? `<ul class="list">${g.entries.map((e) => `
-            <li class="tap" data-entry="${esc(e.id)}"><div><b class="clamp2">${esc(e.name)}</b>
-              <small class="muted">${entryLine(e)}</small></div>
+            <li class="tap" data-entry="${esc(e.id)}"><div class="food-row"><b class="clamp2">${esc(e.name)}</b>
+              ${entryLine(e)}</div>
               <b>${Math.round(e.kcal * e.servings).toLocaleString('en-US')}</b></li>`).join('')}</ul>` : ''}
         </div>`;
       }).join('') : ''}
@@ -161,6 +164,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
             <span class="stepper" data-stepper>${stepBtns('1')}</span></div>
           <div class="portion" data-portion hidden>
             <div class="chips" role="radiogroup" aria-label="Servings">${SERVING_CHOICES.map((n) => `<button type="button" class="chip-btn" role="radio" data-serv-choice="${n}">${servingsLabel(n)}</button>`).join('')}</div>
+            <p class="portion-cap" data-measures-cap hidden>Serving size</p>
             <div class="chips chips--wrap" role="radiogroup" aria-label="Serving size" data-measures hidden></div>
             <div class="portion-amount">
               <label class="field"><input type="text" inputmode="decimal" autocomplete="off" data-amount aria-label="Amount"></label>
@@ -204,6 +208,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       const box = $('[data-measures]', dock);
       const ms = portion.base.usda.measures;
       box.hidden = ms.length < 2;
+      $('[data-measures-cap]', dock).hidden = box.hidden;
       box.innerHTML = ms.map((m, i) => `<button type="button" class="chip-btn" role="radio" data-measure="${i}">${esc(m.text)}</button>`).join('');
     };
     const setPortion = (patch) => { portion = { ...portion, ...patch }; lastUnit = portion.unit; applyPortion(); paintPortion(); paintDock(); };
@@ -238,7 +243,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       const picked = (it) => (flow.f.selected && flow.f.selected.key === it.key ? 'picked' : '');
       results.innerHTML = items.length ? items.map((it, i) => `
         <li class="tap ${picked(it)}" data-i="${i}" role="button" tabindex="0">
-          <div><b class="clamp2">${esc(it.name)}</b><small class="muted">${esc(itemLine(it))}</small></div>
+          <div class="food-row"><b class="clamp2">${esc(it.name)}</b>${subLine({ brand: it.brand, kcal: it.kcal, protein: it.protein_g, portion: it.serving })}</div>
           <span class="muted">${it.kind === 'recent' ? 'Recent' : ''}</span></li>`).join('')
         : q.length >= 2 ? '' // the USDA section below speaks for itself
           : `<li class="food-none"><div><b>${q ? 'No match in your foods' : 'Nothing saved yet'}</b><small class="muted">${q ? 'Try Quick add, or save it in My foods.' : 'Type a food to search the USDA database, or use Quick add.'}</small></div></li>`;
@@ -251,7 +256,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
         onlineNote.textContent = '';
         if (onlineItems.length) { onlineList.classList.add('stale'); return; } // keep the old rows (dimmed) so the list doesn't jump
         onlineHead.hidden = false;
-        onlineList.innerHTML = '<li class="food-skel" aria-hidden="true"><i class="skeleton food-skel-name"></i><i class="skeleton food-skel-sub"></i></li>'.repeat(3);
+        onlineList.innerHTML = '<li class="food-skel" aria-hidden="true"><div class="food-row"><i class="skeleton food-skel-name"></i><i class="skeleton food-skel-sub"></i></div></li>'.repeat(3);
         return;
       }
       onlineList.classList.remove('stale');
@@ -267,7 +272,7 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       onlineList.innerHTML = onlineItems.map((it, i) => `
         <li class="tap ${flow.f.selected && flow.f.selected.key === it.key ? 'picked' : ''}" data-o="${i}" role="button" tabindex="0">
           <div class="food-row"><b class="food-name">${esc(it.title)}</b>
-            <small class="food-sub">${it.brand ? `<span class="food-brand">${esc(it.brand)}</span>` : ''}<span class="food-kcal">${it.kcal.toLocaleString('en-US')} kcal</span><span class="food-serv">${esc(it.serving)}</span></small></div></li>`).join('');
+            <small class="food-sub">${it.brand ? `<span class="food-brand"><i>${esc(it.brand)}</i></span>` : ''}<span class="food-kcal">${it.kcal.toLocaleString('en-US')} kcal</span><span class="food-serv">${esc(it.serving)}</span></small></div></li>`).join('');
       onlineNote.textContent = onlineItems.length ? '' : 'No matches in the USDA database.';
     };
     const onlineSearch = createOnlineSearch({ onUpdate: paintOnline });

@@ -73,6 +73,8 @@ async function searchUsda(query) {
   } catch (e) {
     // The server's own "That's a lot of searches…" is a friendly line, not an outage: pass it through.
     if (e && e.code === 'resource-exhausted' && e.message) throw Object.assign(new Error(e.message), { kind: 'limited' });
+    // Same for "Food search is busy. Try again in a minute." (USDA answered 429): truer than "isn't available".
+    if (e && e.code === 'unavailable' && /busy/i.test(e.message || '')) throw Object.assign(new Error(e.message), { kind: 'limited' });
     throw Object.assign(new Error('unavailable'), { kind: isOffline() ? 'offline' : 'unavailable' });
   }
 }

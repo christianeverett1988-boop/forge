@@ -41,11 +41,16 @@
 .food-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .food-sub { display: flex; gap: 0; font-size: 13px; line-height: 1.35; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .food-sub > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.food-sub > span + span::before { content: " · "; white-space: pre; }
-.food-sub > .food-brand { flex: 0 1 auto; max-width: 45%; }
+.food-sub > span:not(:first-child)::before { content: " · "; white-space: pre; }
+/* The brand draws its own " · " after the (possibly cut) text, so the box ends where its "…" ends. */
+.food-sub > .food-brand { display: flex; flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: visible; }
+.food-sub > .food-brand::after { content: " · "; white-space: pre; flex: none; }
+.food-sub > .food-brand + span::before { content: none; }
+.food-brand > i { font-style: normal; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .food-sub > .food-kcal { flex: none; overflow: visible; }
 .food-sub > .food-serv { flex: 1 1 0; }
-.food-skel { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--s-2); min-height: 60px; cursor: default; }
+.food-skel { cursor: default; }
+.food-skel .food-row { gap: var(--s-2); justify-content: center; min-height: 44px; align-items: flex-start; }
 .food-skel .skeleton { display: block; border-radius: var(--r-sm, 6px); }
 .food-skel-name { width: 70%; height: 16px; }
 .food-skel-sub { width: 45%; height: 12px; }
@@ -53,8 +58,8 @@
 .food-dock-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .food-dock-title[hidden], [data-sel-brand][hidden], .chips--wrap[hidden] { display: none; }
 .food-dock-title > small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chips--wrap { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
-.chips--wrap .chip-btn { padding: var(--s-2) var(--s-2); line-height: 1.2; }
+.portion-cap { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.portion-cap[hidden] { display: none; }
 
 /* Portion picker for a USDA food: ½ 1 1½ 2, or an amount in servings / oz / g. */
 .portion { display: flex; flex-direction: column; gap: var(--s-2); }
@@ -72,6 +77,10 @@
 .stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-3); color: var(--text-1); border: 0; }
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+/* Serving-size chips (household measures): one scrolling row of one-line pills. Declared after .chips so it wins. */
+.chips.chips--wrap { display: flex; gap: var(--s-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 2px; }
+.chips.chips--wrap[hidden] { display: none; }
+.chips--wrap .chip-btn { flex: none; white-space: nowrap; padding: 0 var(--s-3); max-width: 100%; }
 .chip-btn { min-height: 44px; padding: 0 var(--s-1); border: 0; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .chip-btn.on { background: var(--accent-tint); color: var(--text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 55%, transparent); }
 

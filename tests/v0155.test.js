@@ -246,8 +246,8 @@ test('brand: recents keep it, the meal row and the result row show it first, kca
   const logs = [{ id: 'l1', day: '2026-10-09', meal: 'lunch', name: 'Chicken Strips', brand: 'Tyson', kcal: 1250, protein_g: 80, carbs_g: 5, fat_g: 9, servings: 1, food_id: 'usda:9', created_at: '2026-10-09T12:00:00Z' }];
   eq(recentItems(logs)[0].brand, 'Tyson');
   const src = readFileSync(new URL('../js/screens/food.js', import.meta.url), 'utf8');
-  assert(src.includes('const bits = e.brand ? [e.brand] : [];'), 'meal row: brand first on the grey line');
-  assert(src.includes("Math.round(e.kcal * n).toLocaleString('en-US')"), '1,250 kcal in the meal list');
+  assert(src.includes('subLine({ brand: e.brand,'), 'meal row: brand first on the grey line');
+  assert(src.includes("<b>${Math.round(e.kcal * e.servings).toLocaleString('en-US')}</b>"), '1,250 kcal in the meal list');
   assert(!/toLocaleString\(\)/.test(src), 'every kcal on this screen uses en-US');
   assert(src.includes('data-sel-brand') && src.includes('class="clamp2" data-sel-name'), 'dock: title (2 lines) with the brand under it');
   assert(!/toast\(`Added \$\{fields\.name\}/.test(src), 'the toast no longer carries the long name');
@@ -275,4 +275,18 @@ test('the sheet is wired: debounce, skeleton, portion picker, tabular numbers an
   assert(/font-variant-numeric: tabular-nums/.test(css));
   const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
   assert(rules.includes("(!('food_id' in d) || d.food_id is string)"), 'food_id (usda:<fdcId>) is already allowed, so no rules change');
+});
+
+test('round 2: chips, toast, meal row and busy message', () => {
+  const css = readFileSync(new URL('../css/food.css', import.meta.url), 'utf8');
+  assert(css.indexOf('.chips.chips--wrap {') > css.indexOf('\n.chips { display: grid'), '.chips--wrap is more specific and declared after .chips');
+  assert(/\.chips\.chips--wrap \{[^}]*overflow-x: auto/.test(css) && /\.chips--wrap \.chip-btn \{[^}]*white-space: nowrap/.test(css), 'one-line pills in a scrolling row');
+  assert(css.includes('.food-sub > .food-brand::after { content: " · "'), 'the brand draws its own separator');
+  const nav = readFileSync(new URL('../css/nav.css', import.meta.url), 'utf8');
+  assert(/\.toast \{[^}]*width: max-content;[^}]*max-width: calc\(100vw - 32px\)/.test(nav), 'toast sizes to its text');
+  const src = readFileSync(new URL('../js/screens/food.js', import.meta.url), 'utf8');
+  assert(src.includes('Serving size') && src.includes('data-measures-cap'));
+  const line = src.slice(src.indexOf('function entryLine'), src.indexOf('const stepBtns'));
+  assert(!line.includes('kcal'), 'the meal row grey line does not repeat the calories');
+  assert(readFileSync(new URL('../js/food/search.js', import.meta.url), 'utf8').includes("e.code === 'unavailable' && /busy/i"), 'the busy line is passed through');
 });

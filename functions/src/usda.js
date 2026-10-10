@@ -93,9 +93,10 @@ export function measuresOf(food) {
   const ranked = list.filter((m) => m && typeof m === 'object').map((m, i) => ({ m, i }))
     .sort((a, b) => (Number.isFinite(a.m.rank) && Number.isFinite(b.m.rank) ? a.m.rank - b.m.rank : 0) || a.i - b.i);
   for (const { m } of ranked) {
-    const text = String(m.disseminationText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const text = String(m.disseminationText || '').replace(/\s+/g, ' ').trim().toLowerCase()
+      .replace(/^(0?\.5|0?\.25)(?= )/, (n) => (n.endsWith('25') ? '¼' : '½'));
     const g = m.gramWeight;
-    if (!text || text.length > 30 || typeof g !== 'number' || !(g > 0) || g > 2000) continue;
+    if (!text || text.length > 40 || typeof g !== 'number' || !(g > 0) || g > 2000) continue;
     if (/not specified|^n\/?a$/.test(text) || /^(1 )?(g|gram|grams|oz|ounce|ounces)$/.test(text)) continue;
     if (seen.has(text)) continue;
     seen.add(text);
@@ -170,9 +171,20 @@ export function dedupe(foods) {
   });
 }
 
-/** "Delete everything": the search counter is the one thing foodSearch keeps. Already gone is fine. */
-export async function deleteFoodSearchData({ db, uid }) {
-  try { await db.doc(P.foodSearch(uid)).delete(); } catch (e) { if (e && (e.code === 5 || e.code === 'not-found')) return; throw e; }
+/**
+ * "Delete everything": the search counter ({ hour_start, hour_n }) is the one thing foodSearch keeps. It goes once its
+ * hour window has passed; while the window is open it stays, so deleting can't reset the 120 an hour limit (the next
+ * search overwrites it). Already gone is fine.
+ */
+export async function deleteFoodSearchData({ db, uid, now = Date.now() }) {
+  try {
+    const ref = db.doc(P.foodSearch(uid));
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const start = snap.data().hour_start;
+    if (typeof start === 'number' && now >= start && now - start < 3600000) return;
+    await ref.delete();
+  } catch (e) { if (e && (e.code === 5 || e.code === 'not-found')) return; throw e; }
 }
 
 export function createCache({ ttl = CACHE_MS, max = 200 } = {}) {
