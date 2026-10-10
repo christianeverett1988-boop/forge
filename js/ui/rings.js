@@ -27,7 +27,7 @@ export function macroTilesHtml(tot, t) {
   const aria = tiles.map(([l, e, g]) => `${l} ${num(e)} of ${num(g)} grams`).join(', ');
   return `<div role="group" aria-label="Today of target: ${aria}">
     <p class="food-targets-label" aria-hidden="true">Today of target</p>
-    <div class="food-targets" data-food-targets>${tiles.map(([l, e, g]) => `<div><b>${num(e)} / ${num(g)} g</b><span>${l}</span></div>`).join('')}</div></div>`;
+    <div class="food-targets" data-food-targets>${tiles.map(([l, e, g]) => `<div><b data-eaten>${num(e)}</b><small data-target>/ ${num(g)}${NB}g</small><span>${l}</span></div>`).join('')}</div></div>`;
 }
 
 /** The Food card's text lines: { note, over, protein }. Same wording rules as the Today rings legend. */

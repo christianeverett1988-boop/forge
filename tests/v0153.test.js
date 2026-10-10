@@ -131,7 +131,10 @@ test('Settings: the iPhone app hides the demo-photo download (media/ is bundled)
 test('Today: macro tiles show eaten / target under a "Today of target" label, with thousands separators', () => {
   const h = macroTilesHtml({ protein_g: 110.4, carbs_g: 1234, fat_g: 0 }, { proteinG: 181, carbG: 1500, fatG: 58 });
   assert(h.includes('Today of target'), 'label');
-  assert(h.includes('110 / 181 g') && h.includes('1,234 / 1,500 g') && h.includes('0 / 58 g'), 'eaten / target');
+  const flat = h.replace(/\u00a0/g, " ");
+  assert(flat.includes('<b data-eaten>110</b><small data-target>/ 181 g</small>'), 'eaten and target are separate elements');
+  assert(flat.includes('<b data-eaten>1,234</b><small data-target>/ 1,500 g</small>') && flat.includes('<b data-eaten>0</b><small data-target>/ 58 g</small>'), 'thousands and zero');
+  assert(/\.food-targets b \{ font-size: 20px/.test(src('css/food.css')) && /\.food-targets small \{ font-size: 13px/.test(src('css/food.css')), 'eaten big, target at 13px');
   assert(h.includes('Carbs 1,234 of 1,500 grams'), 'aria matches');
 });
 
