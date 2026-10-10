@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { fakeDb } from './fake-db.js';
 import { setSink } from '../src/log.js';
 import {
-  validateInput, tidyCase, normalizeFood, measuresOf, deleteFoodSearchData, per100Of, rankFoods, dedupe, looksLikeBrandQuery, searchFoods, createCache,
+  validateInput, tidyCase, shortBrand, normalizeFood, measuresOf, deleteFoodSearchData, per100Of, rankFoods, dedupe, looksLikeBrandQuery, searchFoods, createCache,
   meterSearch, RATE_PER_HOUR, MAX_RESULTS, FoodSearchError,
 } from '../src/usda.js';
 
@@ -234,10 +234,15 @@ test('household measures: Survey foods get "1 cup (158 g)" as the serving and up
   assert.deepEqual(measuresOf({ foodMeasures: 'nope' }), []);
 });
 
-test('brand is cut at 40 with a real ellipsis and no trailing space', () => {
-  const f = normalizeFood({ ...YOGURT, brandName: undefined, brandOwner: 'KRAFT HEINZ FOODS COMPANY INTERNATIONAL HOLDINGS' });
-  assert.ok(f.brand.length <= 40 && f.brand.endsWith('…') && !/\s…$/.test(f.brand), f.brand);
-  assert.equal(normalizeFood({ ...YOGURT, brandName: 'Perdue' }).brand, 'Perdue');
+test('shortBrand: drops corporate filler, cuts long names at a word with a real ellipsis', () => {
+  assert.equal(shortBrand('KRAFT HEINZ FOODS COMPANY INTERNATIONAL DIVISION'), 'Kraft Heinz');
+  assert.equal(shortBrand('General Mills Sales Inc.'), 'General Mills');
+  assert.equal(shortBrand('PERDUE'), 'Perdue');
+  assert.equal(shortBrand(''), '');
+  assert.equal(shortBrand('Foods'), 'Foods', 'keeps Foods when nothing else is left');
+  const long = shortBrand('Some Extraordinarily Long Brand Name Here');
+  assert.ok(long.length <= 23 && long.endsWith('…') && !/\s…$/.test(long), long);
+  assert.equal(normalizeFood({ ...YOGURT, brandName: undefined, brandOwner: 'KRAFT HEINZ FOODS COMPANY INTERNATIONAL HOLDINGS' }).brand, 'Kraft Heinz Holdings');
 });
 
 test('delete everything removes the food-search counter, and is fine when there is none', async () => {

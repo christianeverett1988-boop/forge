@@ -200,9 +200,13 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
       $$('[data-serv-choice]', dock).forEach((b) => { const on = unit === 'serv' && Number(b.dataset.servChoice) === servings; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       $$('[data-unit]', dock).forEach((b) => { const on = b.dataset.unit === unit; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       if (!keepTyped) amountEl.value = unit === 'serv' ? plain(servings) : unit === 'oz' ? String(Math.round(gramsToOz(grams) * 10) / 10) : String(Math.round(grams));
-      $('[data-portion-note]', dock).textContent = unit === 'serv'
-        ? `1 serving = ${serving.text}`
-        : `${amountLabel(grams, unit === 'oz' ? 'g' : 'oz')} · 1 serving = ${serving.text}`;
+      // With a chip row the selected chip already names the measure, so the note stays short; "(86 g)" never orphans.
+      const chips = portion.base.usda.measures.length >= 2;
+      const m = /^(.*?)(\s*\(\d[^()]*\))$/.exec(serving.text);
+      const named = chips ? `${plain(serving.g)} g` : (m ? `${esc(m[1])} <span class="nowrap">${esc(m[2].trim())}</span>` : esc(serving.text));
+      $('[data-portion-note]', dock).innerHTML = unit === 'serv'
+        ? `1 serving = ${named}`
+        : `${esc(amountLabel(grams, unit === 'oz' ? 'g' : 'oz'))} · 1 serving = ${named}`;
     };
     const paintMeasures = () => {
       const box = $('[data-measures]', dock);

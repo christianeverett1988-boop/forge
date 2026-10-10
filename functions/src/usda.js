@@ -82,6 +82,25 @@ function householdText(food, grams) {
   return /\bg\b|gram/.test(h) ? h : `${h} (${Math.round(grams)} g)`;
 }
 
+const FILLER = /^(company|co|inc|incorporated|llc|ltd|corp|corporation|international|intl|division|div|sales|usa|us|the)$/i;
+
+/**
+ * "Kraft Heinz Foods Company International Division" → "Kraft Heinz". Drops corporate filler (and Foods/Brands when
+ * another word stays), then cuts at a word boundary with a real "…" past 22 characters. The cut lives here, not in CSS,
+ * because text-overflow leaves a gap after the ellipsis.
+ */
+export function shortBrand(raw) {
+  const words = tidyCase(raw).split(' ').map((w) => w.replace(/[.,;:]+$/, '')).filter((w) => w && !FILLER.test(w));
+  const core = words.filter((w) => !/^(foods?|brands?)$/i.test(w));
+  let out = (core.length ? core : words).join(' ').replace(/[\s.,;:&-]+$/, '');
+  if (out.length > 22) {
+    const cut = out.slice(0, 22);
+    const sp = cut.lastIndexOf(' ');
+    out = `${(sp > 3 ? cut.slice(0, sp) : cut).replace(/[\s.,;:&-]+$/, '')}…`;
+  }
+  return out;
+}
+
 /**
  * USDA's household measures for a hit (Survey/FNDDS foods carry `foodMeasures`): up to 4 of { text: "1 cup", g: 140 },
  * in USDA's own order, without "Quantity not specified", bare gram/ounce measures, repeats or silly weights.
@@ -119,8 +138,7 @@ export function normalizeFood(food) {
   let name = tidyCase(food.description);
   if (!name) return null;
   if (name.length > 70) name = `${name.slice(0, 69).trimEnd()}…`;
-  let brand = tidyCase(food.brandName || food.brandOwner || '');
-  if (brand.length > 40) brand = `${brand.slice(0, 39).trimEnd()}…`;
+  const brand = shortBrand(food.brandName || food.brandOwner || '');
   const unit = String(food.servingSizeUnit || '').toLowerCase();
   const size = food.servingSize;
   const real = typeof size === 'number' && size > 0 && size <= 2000 && ['g', 'grm', 'ml', 'mlt'].includes(unit);

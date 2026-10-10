@@ -19,6 +19,7 @@ Part 4 of the audit in issue #57. **This PR waits for a deploy: Christian runs `
 - **Round 2 review fixes:**
   - Serving-size chips are one scrolling row of one-line pills under a "Serving size" caption (the `.chips` grid no longer overrides them). "0.5 breast, bone and skin removed" now survives (limit 40 characters), and 0.5 / 0.25 read "½" / "¼".
   - Toasts size to their text (`width: max-content`), so "Added to breakfast · 1,250 kcal" is one line. This applies to every toast in the app.
+  - Round 3: the server shortens brands in code (`shortBrand`: "Kraft Heinz Foods Company International Division" becomes "Kraft Heinz"; past 22 characters it cuts at a word with a real "…"), so no CSS ellipsis leaves a gap. With a serving-size chip row, the "1 serving = 86 g" note is one line (the selected chip names the measure); otherwise "(86 g)" never orphans. The chips deliberately wrap onto more rows.
   - The meal row's grey line is one line: brand (shortens first) · protein · portion. Calories are the number on the right.
   - A cut brand ends where its "…" ends (the separator belongs to the brand). The loading skeleton bars line up with the row text.
   - "Food search is busy. Try again in a minute." is shown as written.

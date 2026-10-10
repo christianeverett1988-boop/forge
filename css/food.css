@@ -46,7 +46,7 @@
 .food-sub > .food-brand { display: flex; flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: visible; }
 .food-sub > .food-brand::after { content: " · "; white-space: pre; flex: none; }
 .food-sub > .food-brand + span::before { content: none; }
-.food-brand > i { font-style: normal; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.food-brand > i { font-style: normal; min-width: 0; overflow: hidden; white-space: nowrap; } /* the brand is cut in code (shortBrand), not by CSS */
 .food-sub > .food-kcal { flex: none; overflow: visible; }
 .food-sub > .food-serv { flex: 1 1 0; }
 .food-skel { cursor: default; }
@@ -77,8 +77,9 @@
 .stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-3); color: var(--text-1); border: 0; }
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
-/* Serving-size chips (household measures): one scrolling row of one-line pills. Declared after .chips so it wins. */
-.chips.chips--wrap { display: flex; gap: var(--s-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 2px; }
+/* Serving-size chips (household measures): one-line pills that wrap onto more rows. Declared after .chips so it wins. */
+.chips.chips--wrap { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.nowrap { white-space: nowrap; }
 .chips.chips--wrap[hidden] { display: none; }
 .chips--wrap .chip-btn { flex: none; white-space: nowrap; padding: 0 var(--s-3); max-width: 100%; }
 .chip-btn { min-height: 44px; padding: 0 var(--s-1); border: 0; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }

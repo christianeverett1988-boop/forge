@@ -280,7 +280,7 @@ test('the sheet is wired: debounce, skeleton, portion picker, tabular numbers an
 test('round 2: chips, toast, meal row and busy message', () => {
   const css = readFileSync(new URL('../css/food.css', import.meta.url), 'utf8');
   assert(css.indexOf('.chips.chips--wrap {') > css.indexOf('\n.chips { display: grid'), '.chips--wrap is more specific and declared after .chips');
-  assert(/\.chips\.chips--wrap \{[^}]*overflow-x: auto/.test(css) && /\.chips--wrap \.chip-btn \{[^}]*white-space: nowrap/.test(css), 'one-line pills in a scrolling row');
+  assert(/\.chips\.chips--wrap \{[^}]*flex-wrap: wrap/.test(css) && !/\.chips\.chips--wrap \{[^}]*overflow-x/.test(css) && /\.chips--wrap \.chip-btn \{[^}]*white-space: nowrap/.test(css), 'one-line pills that wrap onto more rows');
   assert(css.includes('.food-sub > .food-brand::after { content: " · "'), 'the brand draws its own separator');
   const nav = readFileSync(new URL('../css/nav.css', import.meta.url), 'utf8');
   assert(/\.toast \{[^}]*width: max-content;[^}]*max-width: calc\(100vw - 32px\)/.test(nav), 'toast sizes to its text');
