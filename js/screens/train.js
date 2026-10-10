@@ -20,17 +20,29 @@ import { openExercisePicker } from './picker.js';
 import { patch } from '../db.js';
 import { unlockAudio } from '../ui/sound.js';
 import { icon } from '../ui/icons.js';
+import { haptic } from '../native/bridge.js';
+import { hapticsOn } from '../ui/haptic.js';
+import {
+  LENGTHS, blankEdits, takeSnapshot, restoreSnapshot, isChanged, pickedIds, withSwapAvoid, carryRest, swapResult, swapMessage, noSwapReason, lengthMessage,
+} from '../workouts/change.js';
 
 /** Guided player by default; List view if you chose it in Settings. */
 export const playerRoute = () => (state.settings && state.settings.player === 'list' ? '#/session' : '#/play');
 
 let dayOverride = null;
+let minOverride = null; // "Shorter or longer" for today only; never written to the profile
+let flash = new Set(); // exercises that just changed, so the card can highlight them once
 
-// Edits made in the preview before Start: ⋯ → Replace, ⋯ → Rest timer, and Switch. They belong to one
+// Edits made in the preview before Start: ⋯ → Replace, ⋯ → Rest timer, and Change. They belong to one
 // location + day; changing either starts fresh.
-let edits = { key: '', forced: {}, rest: {}, avoid: [] };
+let edits = blankEdits();
+let restoringTo = null; // Undo of a location change: the place whose edits were just put back, until the settings write lands
 const editsFor = (key) => {
-  if (edits.key !== key) edits = { key, forced: {}, rest: {}, avoid: [] };
+  if (restoringTo) {
+    if (key.startsWith(`${restoringTo}|`)) restoringTo = null; // the old place is active again
+    else if (edits.key.startsWith(`${restoringTo}|`)) return edits; // still showing the new place: keep what Undo restored
+  }
+  if (edits.key !== key) edits = blankEdits(key);
   return edits;
 };
 /**
@@ -41,7 +53,7 @@ export function previewPlan() {
   const loc = activeLocation();
   if (!loc) return null;
   const ed = editsFor(`${loc.id}|${dayOverride || ''}`);
-  const plan = planToday({ dayType: dayOverride, forced: ed.forced, avoidIds: ed.avoid });
+  const plan = planToday({ dayType: dayOverride, forced: ed.forced, avoidIds: ed.avoid, sessionMin: minOverride });
   if (plan) for (const it of plan.exercises) if (ed.rest[it.exercise_id]) it.rest_sec = ed.rest[it.exercise_id];
   return plan;
 }
@@ -52,7 +64,9 @@ export function startPlan(plan) {
   startWorkout(plan);
   cachePhotos(plan.exercises.map((it) => it.exercise_id)); // today's demo photos, for the gym's dead zones
   dayOverride = null;
-  edits = { key: '', forced: {}, rest: {}, avoid: [] };
+  minOverride = null;
+  edits = blankEdits();
+  restoringTo = null;
   location.hash = playerRoute();
 }
 
@@ -137,18 +151,14 @@ export function renderTrain(el) {
       </div>
     </section>`;
 
+  flash = new Set(); // the highlight plays once, on this render
   $$('input[name=loc]', el).forEach((r) =>
     r.addEventListener('change', () => {
       dayOverride = null;
+      restoringTo = null;
       setActiveLocation(r.value);
     })
   );
-  const day = $('[data-day]', el);
-  if (day)
-    day.addEventListener('change', () => {
-      dayOverride = day.value || null;
-      renderTrain(el);
-    });
   if (plan) wirePreview(el, plan);
   const start = $('[data-start]', el);
   if (start)
@@ -167,7 +177,7 @@ function previewCard(plan, { d, loc, program, u }) {
   const row = ({ it, i }, label) => {
     const ex = exerciseById(it.exercise_id);
     const rest = it.rest_sec ? ` · rest ${fmtRest(it.rest_sec)}` : '';
-    return `<li class="pv-ex">
+    return `<li class="pv-ex${flash.has(ex.id) ? ' flash' : ''}">
       <div class="pv-thumb" data-thumb="${esc(ex.id)}" aria-hidden="true"></div>
       <div class="pv-txt">${label ? `<span class="pv-tag">${label}</span>` : ''}<b>${esc(ex.name)}</b>
         <small class="muted">${esc(targetText(it.target, u, ex))}${it.warmups.length ? ` · ${it.warmups.length} warm-up` : ''}${rest}</small></div>
@@ -183,17 +193,11 @@ function previewCard(plan, { d, loc, program, u }) {
         <p class="label">Today${d.deload ? ' · deload' : ''}</p>
         <div class="row between center">
           <p class="big-title">${esc(plan.label)}</p>
-          ${n ? `<button class="btn ghost small" data-switch aria-label="Switch exercises">${icon('swap')} Switch</button>` : ''}
+          <button class="btn ghost small" data-change aria-label="Change today's workout">${icon('swap')} Change</button>
         </div>
         <div class="pv-chips">
           <span class="pill">${icon('timer')} ~${plan.est_minutes} min</span>
         </div>
-        <label class="field"><span class="small muted">Or train a different day</span>
-          <select data-day>
-            <option value="">Recommended</option>
-            ${dayChoices(program).map(([k, l]) => `<option value="${k}" ${dayOverride === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}
-          </select>
-        </label>
         ${plan.notes.map((x) => `<p class="notice info small">${esc(x)}</p>`).join('')}
         ${n ? `
         <div class="pv-sum">
@@ -201,10 +205,11 @@ function previewCard(plan, { d, loc, program, u }) {
           <p><b>${n} exercise${n === 1 ? '' : 's'} · ${muscles} muscle${muscles === 1 ? '' : 's'}</b><small class="muted">Tap the dots to replace an exercise, see its history or set its rest.</small></p>
         </div>
         <div class="pv-warm">
-          <p class="pv-group-h"><span>Warm-up</span><small class="muted">~5 min</small></p>
+          <p class="pv-group-h"><span>Warm-up</span><small class="muted">~${plan.warm_min || 5} min</small></p>
           <ul class="pv-wlist">
-            <li>3–5 min easy cardio or brisk walk</li>
-            <li>Arm circles, hip hinges and bodyweight squats, 10 each</li>
+            ${(plan.warm_min || 5) <= 3
+              ? '<li>2 min easy cardio</li><li>Arm circles and bodyweight squats, 10 each</li>'
+              : '<li>3–5 min easy cardio or brisk walk</li><li>Arm circles, hip hinges and bodyweight squats, 10 each</li>'}
             ${warm.map((it) => `<li>${esc(exerciseById(it.exercise_id).name)}: ${it.warmups.length} lighter set${it.warmups.length === 1 ? '' : 's'} first (built in)</li>`).join('')}
           </ul>
         </div>
@@ -234,22 +239,158 @@ function wirePreview(el, plan) {
     paintThumbs();
   }));
 
-  const sw = $('[data-switch]', el);
-  if (sw) sw.onclick = () => {
-    const ed = edits;
-    const now = plan.exercises.map((it) => it.exercise_id);
-    ed.avoid = [...new Set([...ed.avoid, ...now])];
-    ed.forced = {};
-    const fresh = planToday({ dayType: dayOverride, forced: {}, avoidIds: ed.avoid });
-    const changed = fresh ? fresh.exercises.filter((it) => !now.includes(it.exercise_id)).length : 0;
-    if (!changed) {
-      ed.avoid = []; // nothing else fits: start the rotation over
-      toast('No other options here for this day. Back to the recommended picks.');
-    } else toast(`Switched ${changed} exercise${changed === 1 ? '' : 's'}`);
-    renderTrain(el);
-  };
+  const ch = $('[data-change]', el);
+  if (ch) ch.onclick = () => openChange(el, plan);
 
   $$('[data-more]', el).forEach((b) => (b.onclick = () => exerciseMore(el, plan, Number(b.dataset.more))));
+}
+
+const tick = (kind = 'select') => { if (hapticsOn()) haptic(kind); };
+const snap = () => takeSnapshot({ edits, dayOverride, minOverride, locationId: (activeLocation() || {}).id || null });
+
+/** Put the whole preview back the way it was (the Undo on the toast). */
+function undoTo(el, before) {
+  const s = restoreSnapshot(before);
+  const loc = activeLocation();
+  edits = s.edits;
+  dayOverride = s.dayOverride;
+  minOverride = s.minOverride;
+  flash = new Set();
+  const moving = s.locationId && (!loc || loc.id !== s.locationId);
+  if (moving) {
+    // setActiveLocation is a database write; until it lands activeLocation() is still the new place. Keep the
+    // restored edits through that gap (see editsFor) and let the settings listener do the redraw.
+    restoringTo = s.locationId;
+    setActiveLocation(s.locationId);
+  } else if (el.isConnected) renderTrain(el);
+  tick('light');
+}
+
+/** Redraw, highlight what changed, and offer Undo. */
+function changed(el, before, message, flashIds = []) {
+  flash = new Set(flashIds);
+  if (el.isConnected) renderTrain(el);
+  tick('success');
+  toast(message, 6000, { action: { label: 'Undo', onClick: () => undoTo(el, before) } });
+}
+
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+/**
+ * "Change today's workout": a sheet of plain-language options. Nothing changes until one is picked, and every
+ * change comes with an Undo toast. Each step takes over the sheet's title, with a back chevron in the header.
+ */
+function openChange(el, plan) {
+  const loc = activeLocation();
+  const program = activeProgram();
+  const focusLabel = plan.label;
+  const ids = plan.exercises.map((it) => it.exercise_id);
+  const picks = pickedIds(edits);
+  const tryNew = (replacePicks) => {
+    const next = withSwapAvoid(edits, ids, { replacePicks });
+    const fresh = planToday({ dayType: dayOverride, forced: next.forced, avoidIds: next.avoid, sessionMin: minOverride });
+    const afterIds = fresh ? fresh.exercises.map((it) => it.exercise_id) : ids;
+    return { next, afterIds, res: swapResult(ids, afterIds) };
+  };
+  const canSwap = ids.length > 0 && tryNew(false).res.state !== 'none';
+  const recommended = planToday({ dayType: null, sessionMin: minOverride });
+  const usual = (state.profile && state.profile.sessionMin) || 60;
+  const where = loc ? loc.name : 'this location';
+  const row = (attr, title, sub, { disabled = false, check = false, one = false, wrap = false } = {}) => `
+    <button class="pick" type="button" ${attr} ${disabled ? 'disabled' : ''}>
+      <span class="pick-text"><b>${title}</b>${sub ? `<small${one ? ' class="one"' : ''}${wrap ? ' data-layout-ok' : ''}>${sub}</small>` : ''}</span>
+      <span class="chev" aria-hidden="true">${check ? icon('check') : icon('chev')}</span>
+    </button>`;
+
+  sheet('Change workout', (body, close, head) => {
+    const home = () => {
+      head.setStep('Change workout', null);
+      const otherFocus = dayChoices(program).filter(([k]) => k !== plan.dayType).map(([, l]) => l);
+      const otherPlaces = state.locations.filter((l) => !loc || l.id !== loc.id).map((l) => l.name);
+      body.innerHTML = `
+        <div class="stack">
+          <p class="small muted">Nothing changes until you pick one. You can undo it right after.</p>
+          <div class="pick-group">
+            ${row('data-o="new"', 'New exercises', canSwap ? `Same ${esc(focusLabel)} focus, different moves.` : esc(noSwapReason(where, focusLabel)), { disabled: !canSwap, wrap: true })}
+            ${row('data-o="focus"', 'Train a different focus', esc(otherFocus.join(', ')), { one: true, wrap: true })}
+            ${row('data-o="length"', 'Session length', `Now ${minOverride || usual} min, for today only.`, { wrap: true })}
+            ${state.locations.length > 1 ? row('data-o="place"', 'Different location', esc(otherPlaces.join(', ')), { one: true, wrap: true }) : ''}
+            ${isChanged({ edits, dayOverride, minOverride }) ? row('data-o="reset"', 'Back to recommended', 'Clears every change for today.') : ''}
+          </div>
+          ${picks.size && canSwap ? '<label class="choice check"><input type="checkbox" data-replace-picks><span>Also replace the ones I picked<small>Otherwise your own picks stay.</small></span></label>' : ''}
+        </div>`;
+      const on = (o, fn) => { const b = $(`[data-o="${o}"]`, body); if (b) b.onclick = () => { tick(); fn(); }; };
+      on('new', () => {
+        const before = snap();
+        const replace = !!($('[data-replace-picks]', body) || {}).checked;
+        const { next, afterIds, res } = tryNew(replace);
+        if (!res.changed) { toast(noSwapReason(where, focusLabel)); return; }
+        edits = { ...next, rest: carryRest(next.rest, ids, afterIds) };
+        close();
+        changed(el, before, swapMessage(res), afterIds.filter((id) => !ids.includes(id)));
+      });
+      on('focus', focusStep);
+      on('length', lengthStep);
+      on('place', placeStep);
+      on('reset', () => {
+        const before = snap();
+        edits = { ...blankEdits(edits.key), rest: { ...edits.rest } };
+        dayOverride = null;
+        minOverride = null;
+        close();
+        changed(el, before, 'Back to the recommended workout');
+      });
+    };
+    const listStep = (title, rows, onPick) => {
+      head.setStep(title, () => { tick(); home(); });
+      body.innerHTML = `<div class="stack"><div class="pick-group">${rows}</div></div>`;
+      $$('[data-v]', body).forEach((b) => (b.onclick = () => { tick(); onPick(b.dataset.v); }));
+    };
+    const focusStep = () => {
+      const choices = dayChoices(program);
+      const recKey = recommended ? recommended.dayType : null;
+      const recLabel = recommended ? recommended.label : 'the usual';
+      const rows = [row('data-v=""', `Recommended: ${esc(recLabel)}`, 'Forge’s pick for today.', { check: !dayOverride })]
+        .concat(choices.filter(([k]) => k !== recKey).map(([k, l]) => row(`data-v="${esc(k)}"`, esc(l), '', { check: dayOverride === k })));
+      listStep('Focus', rows.join(''), (v) => {
+        const before = snap();
+        dayOverride = v || null;
+        const label = v ? (choices.find(([k]) => k === v) || [0, v])[1] : recLabel;
+        close();
+        changed(el, before, lengthMessage(label, minOverride));
+      });
+    };
+    const lengthStep = () => {
+      // Each row previews the real result of picking it.
+      const rows = LENGTHS.map((n) => {
+        const p = planToday({ dayType: dayOverride, forced: edits.forced, avoidIds: edits.avoid, sessionMin: n === usual ? null : n });
+        const fits = !!p && p.exercises.length > 0 && p.est_minutes <= n + 2;
+        const sub = fits ? `${plural(p.exercises.length, 'exercise')}${n === usual ? ' · your usual' : ''}` : 'Too short for this workout here';
+        return row(`data-v="${n}"`, `${n} min`, sub, { disabled: !fits, check: (minOverride || usual) === n, one: true });
+      });
+      listStep('Session length', rows.join(''), (v) => {
+        const before = snap();
+        minOverride = Number(v) === usual ? null : Number(v);
+        close();
+        changed(el, before, lengthMessage(focusLabel, Number(v)));
+      });
+    };
+    const placeStep = () => {
+      const rows = state.locations.map((l) => row(`data-v="${esc(l.id)}"`, esc(l.name), '', { check: loc && l.id === loc.id }));
+      listStep('Location', rows.join(''), (v) => {
+        if (loc && v === loc.id) { close(); return; }
+        const before = snap();
+        dayOverride = null;
+        setActiveLocation(v);
+        close();
+        const to = state.locations.find((l) => l.id === v);
+        flash = new Set();
+        tick('success');
+        toast(`Now at ${to ? to.name : 'a new location'}`, 6000, { action: { label: 'Undo', onClick: () => undoTo(el, before) } });
+      });
+    };
+    home();
+  });
 }
 
 function exerciseMore(el, plan, i) {

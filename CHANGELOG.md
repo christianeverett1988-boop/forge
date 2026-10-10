@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.15.8 — Fit-and-finish, part 3: "Change today's workout" (2026-10-10)
+
+Issue #64, item 25. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes, and #65's branch is untouched. Update-on-resume (26) and the iPhone Duo layouts (27–31) are not in this release.
+
+- **Change replaces Switch:** the button says "Change" (⇄ icon, 44 px, aria-label "Change today's workout") and opens a bottom sheet. Nothing changes until you pick an option, and each option says what it does:
+  - **New exercises:** same focus, different moves. Your hand-picked ⋯ → Replace exercises stay unless you tick "Also replace the ones I picked". Greyed out with the reason when nothing else fits ("No other moves fit Home gym for Upper. Try a different focus or location."). If only some can change, the toast says "2 of 6 swapped".
+  - **Train a different focus:** a second step with "Recommended: …" first, then the focuses (the custom days for a custom program). This replaces the "Or train a different day" menu on the card.
+  - **Session length:** 20, 30, 45 or 60 min for today only. New per-day override through `planToday` → `generateWorkout({ sessionMin })`; the profile is never written.
+  - **Different location:** only when you have 2+ locations.
+  - **Back to recommended:** only when something was changed.
+- **Undo:** every change shows a toast with an Undo button that restores the exact previous workout (swapped exercises, picks, rest timers, focus, length and location). Rest-timer choices move along with their slot when an exercise is swapped. Swapped rows get a brief highlight (none with reduced motion). Haptics on native.
+- **Toast:** `toast(message, ms, { action: { label, onClick } })`; the action is a 44 px button.
+- Hidden while a workout is in progress, as before. Works offline (all local).
+- Tests: `tests/v0158.test.js` (option logic, snapshot/Undo, rest carry-over, per-day length) and a layout case that opens the sheet, each step and the Undo toast at 320, 375, 390 and 440 wide (plus light mode and long location names).
+- **Review round 1:** 20 and 30 min now really shorten the workout: after accessories, sets on the later lifts are trimmed toward 2, then lifts are dropped from the end (the first always stays); 20 min also gets a 3-minute warm-up with one lighter-set ramp. Every day type fits its length (+2 min) at home and at the gym. Undo after "Different location" keeps earlier swaps, picks and rest timers. The Undo toast is one line (long place names ellipsize) with a plain accent "Undo". The sheet's rows name the focus, the other focuses, the current length and the other places; the focus list no longer repeats the recommended day; each step is the sheet's title with a back chevron in the header (slides in; no motion with reduced motion); length rows preview the real result ("3 exercises · your usual"), disabled with a reason when a length can't be met.
+- Not done: the optional "Log weight beside the goal line" tweak. The goal sentence can fill the whole row, so it stays on its own row rather than squeeze at 320.
+
 ## 0.15.7 — Fit-and-finish, part 2: large text, stale readings, Today and a layout test (2026-10-10)
 
 Issue #64, second pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 25–31 (Change sheet, update-on-resume, iPhone Duo) are **not** in this release. If #65 (v0.15.5) merges after this one, rebase and fix the CHANGELOG order.

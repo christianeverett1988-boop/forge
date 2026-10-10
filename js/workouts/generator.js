@@ -170,7 +170,10 @@ export function generateWorkout(opts) {
     // Readiness (js/health/readiness.js): { level: 'green'|'amber'|'red', override?: true }. Amber takes a set
     // off every accessory; Red makes it a light day unless you override.
     readiness = null,
+    // A one-day session length in minutes (Change → Shorter or longer); otherwise the profile's.
+    sessionMin: sessionMinOpt = null,
   } = opts;
+  const sessionMin = sessionMinOpt || profile.sessionMin || 60;
   const experience = profile.experience || 'beginner';
   const notes = [];
   const prog = PROGRAMS[programKey] || PROGRAMS.smart;
@@ -287,16 +290,28 @@ export function generateWorkout(opts) {
   }
 
   // Fit the session length: drop accessories from the end until it fits.
-  const budget = (profile.sessionMin || 60) - 5;
+  // A 20-minute session gets a shorter warm-up and only one lighter-set ramp.
+  const warmMin = sessionMin <= 20 ? 3 : 5;
+  if (sessionMin <= 20) for (const it of items) it.warmups = it.warmups.slice(0, items.indexOf(it) === 0 ? 1 : 0);
+  const budget = sessionMin - warmMin;
   const total = () => items.reduce((m, it) => m + minutesFor(exercises.find((e) => e.id === it.exercise_id), it.target.sets, it.role, it.target), 0);
   while (total() > budget) {
     const idx = items.map((it) => it.role).lastIndexOf('accessory');
     if (idx === -1) break;
     items.splice(idx, 1);
   }
+  // Still too long: trim sets on the later lifts toward a floor of 2 (not on a deload, which is already light)…
+  while (total() > budget && !lighter) {
+    let pick = -1;
+    items.forEach((it, i) => { if (it.target.sets > 2 && (pick === -1 || it.target.sets >= items[pick].target.sets)) pick = i; });
+    if (pick === -1) break;
+    items[pick].target.sets -= 1;
+  }
+  // …then drop lifts from the end, always keeping the first one.
+  while (total() > budget && items.length > 1) items.pop();
 
   // Short sessions: pair accessories into supersets.
-  if ((profile.sessionMin || 60) <= 45) {
+  if (sessionMin <= 45) {
     const acc = items.filter((it) => it.role === 'accessory' && !exercises.find((e) => e.id === it.exercise_id).timed);
     for (let i = 0; i + 1 < acc.length; i += 2) {
       const g = String.fromCharCode(65 + i / 2);
@@ -306,5 +321,5 @@ export function generateWorkout(opts) {
   }
 
   const readinessApplied = rLevel === 'amber' ? 'amber' : readinessDeload ? 'red' : null;
-  return { dayType, label: day.label, deload, readinessDeload, readiness: readinessApplied, week, cycle, notes, exercises: items, est_minutes: Math.round(total() + 5) };
+  return { dayType, label: day.label, deload, readinessDeload, readiness: readinessApplied, week, cycle, notes, exercises: items, est_minutes: Math.round(total() + warmMin), warm_min: warmMin };
 }
