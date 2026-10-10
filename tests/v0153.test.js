@@ -32,7 +32,7 @@ test('Today: targets are inside the Food card; Coach is a single line; "This wee
   assert(rings.indexOf('href="#/weekly"') > 0 && rings.indexOf('href="#/weekly"') < rings.indexOf('href="#/awards"'), 'This week link before Awards');
   assert(src('js/screens/today.js').includes("showReportCard(todayKey())"), 'the weekly report card itself stays Sun/Mon');
   const css = src('css/food.css');
-  assert(/\.coach-line-text \{[^}]*white-space: nowrap[^}]*text-overflow: ellipsis/.test(css), 'Coach teaser is one line with an ellipsis');
+  assert(/\.coach-line-text \{[^}]*text-wrap: balance/.test(css) && !/\.coach-line-text \{[^}]*nowrap/.test(css), 'Coach teaser may take two balanced lines, never cut off');
 });
 
 test('Today budget: the sections above the fold-and-a-half carry a fixed, small set of cards', () => {
@@ -85,10 +85,12 @@ test('Body Profile: fat mass comes from weight × fat_ratio_pct when the scale s
   eq(p.status, 'ok');
 });
 
-test('Body: new user sees "No workouts yet", not a bare dash; photos card sits above Body composition', () => {
+test('Body: new user gets a tappable "Start your first workout" tile, never a dash; Recovery sits first under the tiles', () => {
   const b = src('js/screens/body.js');
-  assert(b.includes('No workouts yet') && !b.includes("days == null ? '—'"), 'hero copy');
+  assert(b.includes('Start your first workout') && b.includes('href="#/train"') && !b.includes("days == null ? '—'"), 'hero copy');
   const t = b.slice(idx(b, 'el.innerHTML = `'));
+  assert(t.indexOf('data-tour="body-recovery"') < t.indexOf('data-photos-slot'), 'recovery first');
+  assert(b.includes('data-goto-recovery'), 'fresh tile jumps to recovery');
   assert(t.indexOf('data-photos-slot') < t.indexOf('${compositionCard()}'), 'photos above composition');
 });
 

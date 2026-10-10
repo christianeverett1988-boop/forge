@@ -70,9 +70,9 @@ body.playing .navbar { display: none; }
 .stepper small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .pl-last { text-align: center; color: var(--muted); font-size: 14px; min-height: 20px; }
 
-.pl-rir { display: flex; align-items: center; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.pl-rir { display: grid; grid-template-columns: auto repeat(6, 1fr); align-items: center; gap: 6px; }
 .pl-rir span { font-size: 12px; color: var(--muted); font-weight: 700; margin-right: 4px; }
-.pl-rir button { min-width: 40px; height: 36px; border-radius: 10px; border: 0; background: var(--surface-2); color: var(--muted); font: 700 14px var(--num); cursor: pointer; }
+.pl-rir button { min-width: 0; height: 44px; border-radius: 10px; border: 0; background: var(--surface-2); color: var(--muted); font: 700 14px var(--num); cursor: pointer; }
 .pl-rir button.on { background: var(--text-1); color: var(--bg); }
 
 /* The big Done button is a <label> with an invisible native switch over it (haptic tick on iOS 18+). */
@@ -98,7 +98,8 @@ body.playing .navbar { display: none; }
 .rest-ring .ring-fg { stroke: var(--ember); stroke-width: 5; }
 .rest-ring .ring-bg { stroke-width: 5; }
 .rest-ring b { font: 900 72px var(--num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
-.rest-ctl .btn { min-height: 56px; font-size: 17px; }
+.rest-ctl { display: grid; grid-template-columns: 1fr 1.4fr 1fr; }
+.rest-ctl .btn { min-height: 56px; font-size: 17px; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 .next-card { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; text-align: left; padding: 12px; border-radius: 20px; border: 0; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; margin-top: 6px; }
 .next-fig { width: 96px; height: 100px; border-radius: 14px; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); font-size: 12px; font-weight: 700; overflow: hidden; }
 

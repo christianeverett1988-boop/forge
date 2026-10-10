@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.15.6 — Fit-and-finish, part 1: chips, steppers and Body (2026-10-10)
+
+Issue #64, first pass. No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. Items 16, 20, 22, 25, 26 and 27–31 (large text, stale body readings, photos card accent, the Change sheet, update-on-resume, iPhone Duo layouts) are **not** in this release.
+
+- **Root cause fixed:** `css/food.css` no longer redefines the global `.chips`, `.chip-btn` and `.stepper`. Food uses `.meal-chips` and `.serv-stepper`. This un-squeezes the Train location chips and the exercise rest chips, and restores the player's weight/reps steppers (56 px −/+ with the value centred).
+- **Chips** size to their text; wrapped segmented controls (Interval timer presets) really wrap instead of overlapping.
+- **Tap targets:** segmented controls are 44 px tall; "In the tank" is one row of label + 6 buttons, 44 px tall.
+- **Player rest:** −15 s / Skip rest / +15 s sit in a 3-column grid and stay on one line.
+- **Today:** the Coach line may take two balanced lines instead of being cut off; the rings legend uses short titles ("Calories", "Protein") and Weekly sets as three rows with no "·".
+- **Train:** the preview card drops the duplicate location pill. **Health summary:** buttons say "Save PDF" and "Share text" and stack on narrow phones.
+- **Apple Health setup:** field tiles in one column under 400 px; copy-chip identifiers no longer split mid-word.
+- **Tour:** one focus ring on Next; a compact card on short phones.
+- **Body:** Recovery is the first card under the tiles, and the "fresh muscle groups" tile scrolls to it and pulses once (instant with reduced motion). The empty workout tile is "0 / Start your first workout" and links to Train. "Body profile" is sentence case. The photos slot reserves space so the page doesn't jump. Programs "Recommended" uses accent tokens.
+- **Insights:** "Steps are trending up"; the body states the change over the window with units (e.g. "+2,520 steps/day vs 4 weeks ago", "-60 min/night").
+- Pages scroll with `scroll-padding-top` so jumps don't land under the nav bar.
+- Tests: `tests/v0156.test.js` pins the CSS/markup rules and the insight maths.
+
 ## 0.15.4 — Exports, shares and Print work in the iPhone app (2026-10-10)
 
 Part 3 of the audit in issue #57 (item 5). No Cloud Functions, `firestore.rules`, `firebase.json` or `config.js` changes. **Christian: run Refresh Forge once** (it installs the two new plugins), then check on the phone: Settings → Export everything, Export photos, and Health summary → Print or share should each open the iOS sheet.

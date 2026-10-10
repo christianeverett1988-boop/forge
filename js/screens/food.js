@@ -146,9 +146,9 @@ export function openLogFood({ day = todayKey(), meal } = {}) {
         </form>
         <div class="food-dock" data-dock hidden>
           <div class="row between center"><b data-sel-name></b>
-            <span class="stepper">${stepBtns('1')}</span></div>
+            <span class="serv-stepper">${stepBtns('1')}</span></div>
           <p class="small muted" data-sel-line></p>
-          <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
+          <div class="meal-chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
           <button class="btn" data-add></button>
         </div>
       </div>`;
@@ -225,8 +225,8 @@ function openEditEntry(e) {
       <div class="stack">
         <p class="small muted" data-line></p>
         <div class="row between center"><b>Servings</b>
-          <span class="stepper">${stepBtns()}</span></div>
-        <div class="chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
+          <span class="serv-stepper">${stepBtns()}</span></div>
+        <div class="meal-chips" role="radiogroup" aria-label="Meal">${MEALS.map((m) => `<button type="button" class="chip-btn" role="radio" data-meal="${m}">${MEAL_LABEL[m]}</button>`).join('')}</div>
         <button class="btn" data-save>Save</button>
         <button class="btn danger-ghost" data-del>Delete this entry</button>
       </div>`;

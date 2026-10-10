@@ -28,8 +28,8 @@ export function renderReport(el) {
         <p class="muted">A one-to-two page summary for your doctor or dietitian, made on this phone. Nothing is uploaded or sent anywhere.</p>
         ${rangeSegHtml(range)}
         ${empty ? '' : `<div class="row gap rp-actions">
-          <button class="btn primary grow" data-print>${icon(native ? 'share' : 'download')}${native ? 'Print or share' : 'Print / Save PDF'}</button>
-          <button class="btn ghost grow" data-share>${icon('share')}Share as text</button></div>`}
+          <button class="btn primary grow" data-print>${icon(native ? 'share' : 'download')}${native ? 'Print or share' : 'Save PDF'}</button>
+          <button class="btn ghost grow" data-share>${icon('share')}Share text</button></div>`}
       </div>
       ${empty
         ? `<div class="card" data-empty>${emptyState({ icon: 'heart', title: 'Nothing to summarise yet', text: `There is no data in the last ${range === 365 ? 'year' : `${range} days`}. Weigh in, train, or connect Apple Health or your scale and this fills in.`, action: { href: '#/weight', label: 'Log a weigh-in' } })}</div>`

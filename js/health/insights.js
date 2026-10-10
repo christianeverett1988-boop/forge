@@ -50,6 +50,27 @@ export function fmtAmount(metric, v, units) {
   }
 }
 
+const PLURAL_LABEL = new Set(['steps', 'exercise_min']);
+// Per-day series measured as a daily amount; the unit says so ("steps/day", "min/night").
+const DAILY_UNIT = { count: 'steps/day', sleep: 'min/night', minutes: 'min/day' };
+
+/** The change over the whole window with its unit: "+2,520 steps/day", "-0.62 lb". The fit slope is per week, so scale by weeks in the window. */
+export function fmtChange(metric, slopePerWeek, windowDays, units) {
+  const kind = (trendMetric(metric) || {}).kind;
+  const total = slopePerWeek * (windowDays / 7);
+  const sign = total < 0 ? '-' : '+';
+  const amt = fmtAmount(metric, total, units);
+  const unit = DAILY_UNIT[kind];
+  return `${sign}${unit ? `${amt.replace(/ (steps|min)$/, '')} ${unit}` : amt}`;
+}
+
+function trendBody(metric, tr, w, units) {
+  const span = w === 28 ? '4 weeks' : '3 months';
+  const change = fmtChange(metric, tr.slopePerWeek, w, units);
+  const kind = (trendMetric(metric) || {}).kind;
+  return DAILY_UNIT[kind] ? `${change} vs ${span} ago.` : `${change} over ${span}.`;
+}
+
 // What a rising / falling 28-day trend means and what to do, per metric. { why, todo } per direction.
 const TREND_COPY = {
   weight_kg: {
@@ -121,8 +142,8 @@ function trendCard(t, units) {
   const severity = Math.min(0.7, 0.15 + 0.08 * ratio + (t.tone === 'bad' ? 0.1 : 0));
   return {
     id: `trend:${t.key}:${tr.direction}`, kind: 'trend', metric: t.key, severity, day: t.last.day,
-    title: `${t.label} is trending ${tr.direction === 'up' ? 'up' : 'down'}`,
-    body: `About ${fmtAmount(t.key, tr.slopePerWeek, units)} a week over the last ${w === 28 ? '4 weeks' : '3 months'}.`,
+    title: `${t.label} ${PLURAL_LABEL.has(t.key) ? 'are' : 'is'} trending ${tr.direction === 'up' ? 'up' : 'down'}`,
+    body: trendBody(t.key, tr, w, units),
     why: copy.why, todo: copy.todo, href: hrefFor(t.key), tone: t.tone,
     ...(MEDICAL_TREND.has(t.key) ? { note: MEDICAL } : {}),
   };

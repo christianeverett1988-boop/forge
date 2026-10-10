@@ -31,12 +31,12 @@
 .food-results li.picked { background: var(--accent-tint); }
 
 /* Servings stepper and meal chips: 44px+ targets for one-handed use. */
-.stepper { display: inline-flex; align-items: center; gap: var(--s-2); }
-.stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-.stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-3); color: var(--text-1); border: 0; }
-.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
-.chip-btn { min-height: 44px; padding: 0 var(--s-1); border: 0; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.chip-btn.on { background: var(--accent-tint); color: var(--text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 55%, transparent); }
+.serv-stepper { display: inline-flex; align-items: center; gap: var(--s-2); }
+.serv-stepper output { min-width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.serv-stepper .icon-btn { width: 44px; height: 44px; font-size: 22px; line-height: 1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-3); color: var(--text-1); border: 0; }
+.meal-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+.meal-chips .chip-btn { padding: 0 var(--s-1); border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: 14px; white-space: nowrap; }
+.meal-chips .chip-btn.on { background: var(--accent-tint); color: var(--text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 55%, transparent); }
 
 /* The picked food and its Add button stay at the bottom of the sheet while you scroll the list. */
 .food-dock { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-3); margin: 0 calc(var(--s-3) * -1); border-radius: var(--r-lg); background: var(--surface-2); }
@@ -54,5 +54,5 @@
 /* Coach, one line under Readiness. */
 .coach-line { display: flex; flex-direction: row; align-items: center; text-align: left; gap: var(--s-3); min-height: 48px; padding-top: var(--s-2); padding-bottom: var(--s-2); }
 .coach-line-ic { display: inline-flex; color: var(--accent-text); flex: none; }
-.coach-line-text { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coach-line-text { flex: 1; min-width: 0; font-size: 15px; line-height: 1.3; text-wrap: balance; }
 .rings-card .link { min-height: 44px; display: inline-flex; align-items: center; }

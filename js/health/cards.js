@@ -171,7 +171,7 @@ export function bodyProfileHtml(bp, { sex, age }) {
       <p class="small muted">The bright dot (You) is now. Faint dots are earlier months. Ranges are approximate and not adjusted for age.</p>`;
   }
   return `<div class="card stack" data-bodyprofile>
-    <p class="label">Body Profile</p>${inner}
+    <p class="label">Body profile</p>${inner}
     <details><summary>What is this?</summary>
       <p class="small muted" style="margin-top:8px">FFMI is your lean mass divided by height squared. FMI is your fat mass divided by height squared. Putting both on one grid tells you more than BMI, which can’t tell muscle from fat. Based on Kyle UG et al., “Body composition interpretation”, Nutrition 2003;19:597-604. The bands are approximate adult reference ranges for ${who}, not adjusted for age. General information, not medical advice.</p>
     </details>

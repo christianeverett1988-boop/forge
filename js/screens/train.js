@@ -187,7 +187,6 @@ function previewCard(plan, { d, loc, program, u }) {
         </div>
         <div class="pv-chips">
           <span class="pill">${icon('timer')} ~${plan.est_minutes} min</span>
-          <span class="pill">${icon('pin')} ${esc(loc.name)}</span>
         </div>
         <label class="field"><span class="small muted">Or train a different day</span>
           <select data-day>
